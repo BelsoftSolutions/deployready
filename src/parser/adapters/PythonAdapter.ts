@@ -40,6 +40,7 @@ export class PythonAdapter implements ParserAdapter {
       if (def && def[1]) exports.add(def[1]);
     });
 
-    return { imports: [...imports], exports: [...exports], routes };
+    // Sub-router prefix composition (FastAPI include_router) is a future upgrade.
+    return { imports: [...imports], exports: [...exports], routes, mounts: [] };
   }
 }

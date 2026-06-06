@@ -7,12 +7,27 @@
  */
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
-import type { ParserAdapter, ParseResult, RouteHit } from './ParserAdapter';
+import type { ParserAdapter, ParseResult, RouteHit, MountHit } from './ParserAdapter';
 
 // @babel/traverse ships as a CJS module with a `.default` in some setups.
 const traverse = (_traverse as unknown as { default?: typeof _traverse }).default ?? _traverse;
 
-const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use']);
+// `use` is handled separately as a mount, not an HTTP verb.
+const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all']);
+
+/** True if a node is `require('some-string')`. */
+function requireSource(node: import('@babel/types').Node | null | undefined): string | null {
+  if (
+    node &&
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier' &&
+    node.callee.name === 'require' &&
+    node.arguments[0]?.type === 'StringLiteral'
+  ) {
+    return node.arguments[0].value;
+  }
+  return null;
+}
 
 export class BabelAdapter implements ParserAdapter {
   readonly extensions = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
@@ -21,6 +36,11 @@ export class BabelAdapter implements ParserAdapter {
     const imports = new Set<string>();
     const exports = new Set<string>();
     const routes: RouteHit[] = [];
+    const mounts: MountHit[] = [];
+    // local identifier -> module specifier it was imported/required from.
+    const bindings = new Map<string, string>();
+    // mounts whose router identifier we resolve to a specifier after traversal.
+    const pendingMounts: { prefix: string; ident: string }[] = [];
 
     let ast;
     try {
@@ -37,13 +57,23 @@ export class BabelAdapter implements ParserAdapter {
         ],
       });
     } catch {
-      return { imports: [], exports: [], routes: [] };
+      return { imports: [], exports: [], routes: [], mounts: [] };
     }
 
     try {
       traverse(ast, {
         ImportDeclaration(p) {
-          imports.add(p.node.source.value);
+          const src = p.node.source.value;
+          imports.add(src);
+          // Record default/named/namespace bindings so mounts can resolve them.
+          for (const spec of p.node.specifiers) {
+            bindings.set(spec.local.name, src);
+          }
+        },
+        VariableDeclarator(p) {
+          // const authRoutes = require('./routes/auth')
+          const src = requireSource(p.node.init);
+          if (src && p.node.id.type === 'Identifier') bindings.set(p.node.id.name, src);
         },
         CallExpression(p) {
           const callee = p.node.callee;
@@ -53,23 +83,40 @@ export class BabelAdapter implements ParserAdapter {
             if (arg && arg.type === 'StringLiteral') imports.add(arg.value);
             return;
           }
-          // app.get('/path', ...), router.post('/x', auth, handler)
-          if (callee.type === 'MemberExpression' && callee.property.type === 'Identifier') {
-            const method = callee.property.name.toLowerCase();
-            if (!HTTP_METHODS.has(method)) return;
-            const args = p.node.arguments;
-            const first = args[0];
-            if (!first || first.type !== 'StringLiteral') return;
-            const routePath = first.value;
-            if (method === 'use' && !routePath.startsWith('/')) return;
-            routes.push({
-              method: method === 'all' || method === 'use' ? 'ALL' : method.toUpperCase(),
-              path: routePath,
-              line: p.node.loc?.start.line,
-              // >2 args means middleware sits between the path and the final handler.
-              guarded: args.length > 2,
-            });
+          if (callee.type !== 'MemberExpression' || callee.property.type !== 'Identifier') return;
+          const method = callee.property.name.toLowerCase();
+          const args = p.node.arguments;
+
+          // app.use('/api/auth', authRoutes) — a sub-router mount.
+          if (method === 'use') {
+            let prefix = '';
+            let i = 0;
+            if (args[0]?.type === 'StringLiteral') {
+              prefix = args[0].value;
+              i = 1;
+            }
+            for (; i < args.length; i++) {
+              const a = args[i]!;
+              if (a.type === 'Identifier') pendingMounts.push({ prefix, ident: a.name });
+              else {
+                const src = requireSource(a); // app.use('/x', require('./y'))
+                if (src) mounts.push({ prefix, source: src });
+              }
+            }
+            return;
           }
+
+          // app.get('/path', ...), router.post('/x', auth, handler)
+          if (!HTTP_METHODS.has(method)) return;
+          const first = args[0];
+          if (!first || first.type !== 'StringLiteral') return;
+          routes.push({
+            method: method === 'all' ? 'ALL' : method.toUpperCase(),
+            path: first.value,
+            line: p.node.loc?.start.line,
+            // >2 args means middleware sits between the path and the final handler.
+            guarded: args.length > 2,
+          });
         },
         ExportNamedDeclaration(p) {
           const decl = p.node.declaration;
@@ -102,10 +149,17 @@ export class BabelAdapter implements ParserAdapter {
       // Traversal can still throw on exotic nodes — keep whatever we gathered.
     }
 
+    // Resolve mounted router identifiers to the module they were imported from.
+    for (const m of pendingMounts) {
+      const source = bindings.get(m.ident);
+      if (source) mounts.push({ prefix: m.prefix, source });
+    }
+
     return {
       imports: [...imports],
       exports: [...exports],
       routes,
+      mounts,
     };
   }
 }
