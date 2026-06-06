@@ -122,23 +122,34 @@ export class CodeParser {
     return routes;
   }
 
-  /** Resolve a relative module specifier to a known project file, or null. */
+  /**
+   * Resolve a module specifier to a known project file, or null. Handles
+   * relative JS/TS imports and (for Python) both relative and project-root
+   * specifiers, trying common extensions and index/package files. Bare package
+   * imports (e.g. "express") resolve to nothing.
+   */
   private static resolveSpecifier(fromFile: string, spec: string, known: Set<string>): string | null {
-    if (!spec.startsWith('.')) return null;
     const baseDir = path.posix.dirname(fromFile);
-    const target = path.posix.normalize(path.posix.join(baseDir, spec));
-    const candidates = [
-      target,
-      `${target}.js`,
-      `${target}.ts`,
-      `${target}.jsx`,
-      `${target}.tsx`,
-      `${target}.mjs`,
-      `${target}.cjs`,
-      `${target}/index.js`,
-      `${target}/index.ts`,
-    ];
-    return candidates.find((c) => known.has(c)) ?? null;
+    const rel = spec.startsWith('.') ? path.posix.normalize(path.posix.join(baseDir, spec)) : spec;
+    const bases = spec.startsWith('.') ? [rel] : [rel, path.posix.normalize(path.posix.join(baseDir, spec))];
+    for (const target of bases) {
+      const candidates = [
+        target,
+        `${target}.js`,
+        `${target}.ts`,
+        `${target}.jsx`,
+        `${target}.tsx`,
+        `${target}.mjs`,
+        `${target}.cjs`,
+        `${target}.py`,
+        `${target}/index.js`,
+        `${target}/index.ts`,
+        `${target}/__init__.py`,
+      ];
+      const hit = candidates.find((c) => known.has(c));
+      if (hit) return hit;
+    }
+    return null;
   }
 
   private static async safeRead(file: WalkedFile): Promise<string | null> {
