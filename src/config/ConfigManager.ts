@@ -1,5 +1,5 @@
 /**
- * Loads/saves ~/.enterpriseready/config.json.
+ * Loads/saves ~/.deployready/config.json.
  *
  * Security posture:
  * - API keys from environment variables (ANTHROPIC_API_KEY / OPENAI_API_KEY)
@@ -17,7 +17,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type { AppConfig } from '../types';
 
-const CONFIG_DIR = path.join(os.homedir(), '.enterpriseready');
+const CONFIG_DIR = path.join(os.homedir(), '.deployready');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
 const DEFAULTS: AppConfig = {

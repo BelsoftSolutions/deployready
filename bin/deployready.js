@@ -14,7 +14,7 @@ try {
   });
 } catch (err) {
   if (err && err.code === 'MODULE_NOT_FOUND') {
-    console.error('EnterpriseReady is not built yet. Run `npm run build` first (or `npm install -g .`).');
+    console.error('DeployReady is not built yet. Run `npm run build` first (or `npm install -g .`).');
     process.exit(1);
   }
   throw err;

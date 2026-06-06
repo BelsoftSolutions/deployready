@@ -71,12 +71,12 @@ export class ModelRouter {
     switch (this.config.model) {
       case 'claude': {
         const key = ConfigManager.resolveKey(this.config);
-        if (!key) throw new Error('No Claude API key configured. Run `enterpriseready init` or set ANTHROPIC_API_KEY.');
+        if (!key) throw new Error('No Claude API key configured. Run `deployready init` or set ANTHROPIC_API_KEY.');
         return { handler: new ClaudeHandler(key), contextTokens: ClaudeHandler.contextTokens };
       }
       case 'openai': {
         const key = ConfigManager.resolveKey(this.config);
-        if (!key) throw new Error('No OpenAI API key configured. Run `enterpriseready init` or set OPENAI_API_KEY.');
+        if (!key) throw new Error('No OpenAI API key configured. Run `deployready init` or set OPENAI_API_KEY.');
         return { handler: new OpenAIHandler(key), contextTokens: OpenAIHandler.contextTokens };
       }
       case 'ollama':

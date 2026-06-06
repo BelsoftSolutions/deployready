@@ -1,6 +1,6 @@
 /**
  * Library + CLI entry. `run()` parses argv and dispatches commands.
- * The bin shim (bin/enterpriseready.js) calls run().
+ * The bin shim (bin/deployready.js) calls run().
  */
 import { buildProgram } from './cli/Commands';
 

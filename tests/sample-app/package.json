@@ -2,7 +2,7 @@
   "name": "sample-vulnerable-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Intentionally vulnerable Express app used as an EnterpriseReady test fixture. DO NOT deploy.",
+  "description": "Intentionally vulnerable Express app used as a DeployReady test fixture. DO NOT deploy.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

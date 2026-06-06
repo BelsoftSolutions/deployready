@@ -1,12 +1,12 @@
 {
-  "name": "enterpriseready",
+  "name": "deployready",
   "version": "0.1.0",
   "description": "Local-first, AI-optional production-readiness scanner for your app. Finds security, performance, and architecture issues before you deploy.",
   "license": "MIT",
   "author": "Belal · Belsoft Solutions",
   "type": "commonjs",
   "bin": {
-    "enterpriseready": "./bin/enterpriseready.js"
+    "deployready": "./bin/deployready.js"
   },
   "main": "./dist/index.js",
   "files": [
@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
-    "start": "node bin/enterpriseready.js",
+    "start": "node bin/deployready.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "tsc -p tsconfig.json --noEmit",

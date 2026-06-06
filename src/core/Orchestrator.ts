@@ -143,7 +143,7 @@ export class Orchestrator {
 
   private static async runAi(report: ScanReport, opts: AnalyzeOptions): Promise<ScanReport> {
     if (!(await ConfigManager.exists()) && !process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
-      logger.info('No AI model configured — showing local results only. Run `enterpriseready init` to enable AI analysis.');
+      logger.info('No AI model configured — showing local results only. Run `deployready init` to enable AI analysis.');
       return report;
     }
 

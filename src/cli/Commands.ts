@@ -16,7 +16,7 @@ export function buildProgram(): Command {
   const program = new Command();
 
   program
-    .name('enterpriseready')
+    .name('deployready')
     .description('Local-first, AI-optional production-readiness scanner for your app.')
     .version(VERSION)
     .option('-v, --verbose', 'verbose debug output', false)
@@ -45,7 +45,7 @@ export function buildProgram(): Command {
     .option('--no-dynamic', 'skip live localhost testing')
     .option('--no-ai', 'skip AI analysis (local results only)')
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
-    .option('--export', 'write enterpriseready-report.md to the project root', false)
+    .option('--export', 'write deployready-report.md to the project root', false)
     .action(async (path: string, opts) => {
       await guard(async () => {
         await Orchestrator.analyze(path, {
