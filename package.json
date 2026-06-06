@@ -4,6 +4,7 @@
   "description": "Local-first, AI-optional production-readiness scanner for your app. Finds security, performance, and architecture issues before you deploy.",
   "license": "MIT",
   "author": "Belal · Belsoft Solutions",
+  "homepage": "https://deployready.dev",
   "type": "commonjs",
   "bin": {
     "deployready": "./bin/deployready.js"

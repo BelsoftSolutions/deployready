@@ -40,8 +40,8 @@ const EXTRA_FILES = new Set([
   'next.config.mjs',
 ]);
 
-const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
-const MAX_FILES = 5000;
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB — skip larger (generated/minified) files
+const MAX_FILES = 20000; // cap for very large monorepos; keeps the scan bounded
 
 export interface WalkedFile {
   /** Absolute path on disk. */
