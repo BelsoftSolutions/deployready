@@ -17,6 +17,7 @@ import { IssueAggregator } from '../analysis/IssueAggregator';
 import { LocalhostDetector } from '../dynamic/LocalhostDetector';
 import { DynamicTester } from '../dynamic/DynamicTester';
 import { ModelRouter } from '../ai/ModelRouter';
+import { Verifier } from '../core/Verifier';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
 import { Banner } from '../ui/Banner';
@@ -126,6 +127,7 @@ export class InteractiveShell {
       case 'issues': case 'list': case 'ls': return this.issues(args[0]);
       case 'show': return this.show(args[0]);
       case 'fix': return this.fix(args[0]);
+      case 'verify': case 'v': return this.verify(args[0]);
       case 'done': case 'resolve': return this.mark(args[0], 'fixed');
       case 'ignore': return this.mark(args[0], 'ignored');
       case 'score': return this.printScore();
@@ -265,8 +267,7 @@ export class InteractiveShell {
         const res = await FixManager.autoFix(f, editor);
         logger.success(res.message);
         if (res.backup) logger.info(`Backup: ${res.backup}`);
-        this.markFinding(f, 'fixed');
-        this.printScore();
+        await this.verifyAndMark(f, true);
       }
       return;
     }
@@ -308,11 +309,50 @@ export class InteractiveShell {
     if (await this.confirm('Apply this fix to the file? (a backup is created first)', false)) {
       const backup = await FixManager.applySuggestion(f, snippet, suggestion.newCode, editor);
       logger.success(`Applied. Backup saved to ${backup}`);
-      this.markFinding(f, 'fixed');
-      this.printScore();
+      await this.verifyAndMark(f, true);
     } else {
       logger.info('Fix not applied.');
     }
+  }
+
+  /**
+   * Re-run the check for a finding. `appliedChange` = we just edited something,
+   * so an "unknown" result is treated as fixed-but-unverified; a standalone
+   * `verify` leaves an unknown/failed finding open.
+   */
+  private async verifyAndMark(f: Finding, appliedChange: boolean): Promise<void> {
+    const spinner = ora('Verifying the fix…').start();
+    const ctx = {
+      target: this.state.target,
+      dynamic: this.state.dynamic
+        ? { baseUrl: this.state.dynamic.baseUrl, routes: this.state.graph?.routes ?? [] }
+        : undefined,
+    };
+    const res = await Verifier.verify(f, ctx).catch((err) => ({ status: 'unknown' as const, detail: (err as Error).message }));
+
+    if (res.status === 'fixed') {
+      spinner.succeed('Verified — the issue is gone. ✓');
+      this.markFinding(f, 'fixed');
+    } else if (res.status === 'still-present') {
+      spinner.warn(`Not fixed yet — ${(res.detail ?? 'the check still fails').replace(/\.$/, '')}. Leaving it open.`);
+      if (appliedChange && f.source === 'dynamic') {
+        logger.info('Tip: restart your running app so it picks up the code change, then `verify` again.');
+      }
+    } else {
+      spinner.info(`Could not auto-verify — ${res.detail ?? 'no check available'}.`);
+      if (appliedChange) {
+        this.markFinding(f, 'fixed');
+        logger.info('Marked fixed (change applied, but not automatically verified).');
+      }
+    }
+    this.printScore();
+  }
+
+  /** `verify <n>` — re-check a finding on demand without changing files. */
+  private async verify(arg?: string): Promise<void> {
+    const f = this.findingAt(arg);
+    if (!f) return;
+    await this.verifyAndMark(f, false);
   }
 
   private async offerManualMark(f: Finding): Promise<void> {
@@ -491,7 +531,8 @@ export class InteractiveShell {
       ['ai', 'send the findings report to your AI model for deeper analysis'],
       ['issues [crit|warn|info]', 'list findings (optionally filter by severity)'],
       ['show <n>', 'full detail of finding n'],
-      ['fix <n>', 'interactive fix: auto-fix, AI-proposed diff, or guidance'],
+      ['fix <n>', 'interactive fix: auto-fix, AI-proposed diff, or guidance (auto-verifies)'],
+      ['verify <n>', 're-run the check for a finding to confirm it is resolved'],
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],
       ['deploy [aws|do]', 'print a deployment guide for the detected stack'],

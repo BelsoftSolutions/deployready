@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { VulnerabilityDetector } from '../src/analysis/VulnerabilityDetector';
 import { IssueAggregator } from '../src/analysis/IssueAggregator';
@@ -14,6 +16,15 @@ describe('VulnerabilityDetector', () => {
     expect(rules.has('sql-injection')).toBe(true);
     expect(rules.has('eval-usage')).toBe(true);
     expect(rules.has('env-not-ignored')).toBe(true);
+  });
+
+  it('does NOT flag env-not-ignored when .env is gitignored', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'er-env-'));
+    fs.writeFileSync(path.join(dir, '.env'), 'API_TOKEN=abc123def456ghi789');
+    fs.writeFileSync(path.join(dir, '.gitignore'), 'node_modules\n.env\n');
+    const findings = await VulnerabilityDetector.scan(dir);
+    expect(findings.some((f) => f.rule === 'env-not-ignored')).toBe(false);
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });
 
