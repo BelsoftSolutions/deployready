@@ -1,0 +1,14 @@
+{
+  "name": "sample-vulnerable-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable Express app used as an EnterpriseReady test fixture. DO NOT deploy.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
