@@ -31,6 +31,7 @@ const EXTRA_FILES = new Set([
   '.env',
   '.env.local',
   '.env.production',
+  '.gitignore', // needed so the env-not-ignored check can see ignore rules
   'package.json',
   'requirements.txt',
   'composer.json',
