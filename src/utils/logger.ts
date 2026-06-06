@@ -7,9 +7,15 @@ import chalk from 'chalk';
 import { redact } from './redact';
 
 let verbose = false;
+let quiet = false;
 
 export function setVerbose(v: boolean): void {
   verbose = v;
+}
+
+/** In quiet mode (e.g. `--json`), human notices go to stderr so stdout stays clean. */
+export function setQuiet(v: boolean): void {
+  quiet = v;
 }
 
 function clean(args: unknown[]): unknown[] {
@@ -18,10 +24,10 @@ function clean(args: unknown[]): unknown[] {
 
 export const logger = {
   info(...args: unknown[]): void {
-    console.log(...clean(args));
+    (quiet ? console.error : console.log)(...clean(args));
   },
   success(msg: string): void {
-    console.log(chalk.green(`✓ ${redact(msg)}`));
+    (quiet ? console.error : console.log)(chalk.green(`✓ ${redact(msg)}`));
   },
   warn(msg: string): void {
     console.warn(chalk.yellow(`⚠ ${redact(msg)}`));

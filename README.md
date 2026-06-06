@@ -68,9 +68,12 @@ deployready init                 # first-time setup (pick model, store key)
 deployready analyze ./my-app     # single non-interactive scan, prints results
 deployready analyze . --no-ai --no-dynamic   # static only, fully offline
 deployready report ./my-app      # scan and export markdown
+deployready analyze . --no-ai --no-dynamic --fail-on critical   # CI gate: exit 2 on any critical
 ```
 
-One-shot flags: `-y/--yes` (auto-approve prompts), `--aggressive` (rate-limit burst), `--export`, `-v/--verbose`.
+One-shot flags: `-y/--yes` (auto-approve prompts), `--aggressive` (rate-limit burst), `--export`, `--json` (machine-readable output), `--fail-on <critical|warning|info|none>` (CI exit code), `-v/--verbose`.
+
+**CI:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error). A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
 
 ## Features
 
