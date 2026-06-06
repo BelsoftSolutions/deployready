@@ -23,11 +23,22 @@ npm install -g enterpriseready
 
 ### Interactive session (default)
 
-Run `enterpriseready` in your project to open a persistent session. It stays open and you drive it one step at a time until you `exit`:
+Run `enterpriseready` in your project to open a persistent session. You're greeted with an animated welcome and a **guided menu** — no need to know any commands; just pick a number. It stays open and you drive it one step at a time until you `exit`:
 
 ```bash
 enterpriseready ./my-app     # or just: enterpriseready
 ```
+
+```
+  What would you like to do?
+   1  Scan this project now            (recommended)
+   2  Set up or change the AI model
+   3  How does EnterpriseReady work?
+   4  Go to the command prompt
+   5  Exit
+```
+
+After any action it suggests your next step (e.g. “type `fix 1` to fix the top issue”). Type `menu` anytime to bring the guide back. Power users can ignore the menu and type commands directly:
 
 ```
 enterpriseready › scan        # parse → live tests → optional AI
