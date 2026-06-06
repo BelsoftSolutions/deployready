@@ -78,10 +78,11 @@ export class PromptBuilder {
    * the single snippet around an issue the user chose to fix).
    */
   static buildFixPrompt(finding: Finding, snippet: string): BuiltPrompt {
-    const system = `You are a senior security engineer fixing one issue in a code snippet.
-Respond with STRICT JSON only: { "explanation": "1-2 sentences", "newCode": "the corrected snippet" }.
-Rules: change only what is needed to fix the issue; preserve indentation and surrounding lines;
-return the FULL replacement for the snippet you were given; never invent secrets.`;
+    const system = `You are a senior security engineer fixing ONE issue in a code snippet.
+First write a single short sentence explaining the fix.
+Then output the COMPLETE corrected snippet inside one fenced code block (triple backticks). Output nothing after the code block.
+Rules: change only what is needed to fix the issue; preserve surrounding lines and indentation;
+return a full replacement for the snippet you were given; never invent secrets.`;
     const user = `Issue: ${finding.title}
 Severity: ${finding.severity}${finding.owasp ? ` (${finding.owasp})` : ''}
 Recommendation: ${finding.recommendation}

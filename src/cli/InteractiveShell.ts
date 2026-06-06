@@ -133,7 +133,7 @@ export class InteractiveShell {
       case 'score': return this.printScore();
       case 'status': return this.status();
       case 'deploy': return this.deploy(args[0]);
-      case 'export': return this.export();
+      case 'export': return this.export(args[0]);
       case 'config': return this.showConfig();
       case 'clear': case 'cls': console.clear(); return;
       case 'exit': case 'quit': case 'q': this.running = false; return;
@@ -402,10 +402,17 @@ export class InteractiveShell {
     console.log('');
   }
 
-  private async export(): Promise<void> {
-    if (!this.hasFindings()) return logger.warn('Nothing to export yet.');
-    const file = await ExportManager.saveMarkdown(this.buildReport(), this.state.target);
-    logger.success(`Report saved to ${file}`);
+  /** `export [md|html|all]` — defaults to a full report (both formats). */
+  private async export(fmt?: string): Promise<void> {
+    if (!this.hasFindings()) return logger.warn('Nothing to export yet. Run `scan` first.');
+    const report = this.buildReport();
+    const f = (fmt ?? 'all').toLowerCase();
+    if (f === 'md' || f === 'markdown' || f === 'all') {
+      logger.success(`Markdown report saved to ${await ExportManager.saveMarkdown(report, this.state.target)}`);
+    }
+    if (f === 'html' || f === 'dashboard' || f === 'all') {
+      logger.success(`HTML dashboard saved to ${await ExportManager.saveHtml(report, this.state.target)}`);
+    }
   }
 
   private showConfig(): void {
@@ -536,7 +543,7 @@ export class InteractiveShell {
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],
       ['deploy [aws|do]', 'print a deployment guide for the detected stack'],
-      ['export', 'write deployready-report.md'],
+      ['export [md|html|all]', 'save the report — markdown, HTML dashboard, or both'],
       ['config / clear / help', 'show config / clear screen / this help'],
       ['exit', 'leave the session'],
     ];
