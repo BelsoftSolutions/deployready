@@ -21,6 +21,11 @@ export class ClaudeHandler {
   ) {}
 
   async analyze(prompt: BuiltPrompt): Promise<AiAnalysis> {
+    return parseAiResponse(await this.complete(prompt));
+  }
+
+  /** Raw text completion — used for fix suggestions and analysis alike. */
+  async complete(prompt: BuiltPrompt): Promise<string> {
     try {
       const res = await axios.post(
         API_URL,
@@ -39,11 +44,10 @@ export class ClaudeHandler {
           },
         },
       );
-      const text = (res.data?.content ?? [])
+      return (res.data?.content ?? [])
         .filter((b: { type: string }) => b.type === 'text')
         .map((b: { text: string }) => b.text)
         .join('\n');
-      return parseAiResponse(text);
     } catch (err) {
       throw new Error(`Claude API request failed: ${describeHttpError(err)}`);
     }

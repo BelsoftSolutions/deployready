@@ -19,6 +19,11 @@ export class OpenAIHandler {
   ) {}
 
   async analyze(prompt: BuiltPrompt): Promise<AiAnalysis> {
+    return parseAiResponse(await this.complete(prompt, true));
+  }
+
+  /** Raw text completion. `jsonMode` requests a JSON object response. */
+  async complete(prompt: BuiltPrompt, jsonMode = false): Promise<string> {
     try {
       const res = await axios.post(
         API_URL,
@@ -28,7 +33,7 @@ export class OpenAIHandler {
             { role: 'system', content: prompt.system },
             { role: 'user', content: prompt.user },
           ],
-          response_format: { type: 'json_object' },
+          ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
         },
         {
           timeout: 60_000,
@@ -38,8 +43,7 @@ export class OpenAIHandler {
           },
         },
       );
-      const text = res.data?.choices?.[0]?.message?.content ?? '';
-      return parseAiResponse(text);
+      return res.data?.choices?.[0]?.message?.content ?? '';
     } catch (err) {
       throw new Error(`OpenAI API request failed: ${describeHttpError(err)}`);
     }

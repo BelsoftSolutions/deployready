@@ -15,10 +15,17 @@ import { OllamaHandler } from './OllamaHandler';
 import { PromptBuilder } from './PromptBuilder';
 import { ContextChunker } from './ContextChunker';
 import { ConfigManager } from '../config/ConfigManager';
-import type { AiAnalysis, AppConfig, ScanReport } from '../types';
+import { redact } from '../utils/redact';
+import type { AiAnalysis, AppConfig, Finding, ScanReport } from '../types';
 
 interface Handler {
   analyze(prompt: { system: string; user: string }): Promise<AiAnalysis>;
+  complete(prompt: { system: string; user: string }): Promise<string>;
+}
+
+export interface FixSuggestion {
+  explanation: string;
+  newCode: string;
 }
 
 export class ModelRouter {
@@ -47,6 +54,19 @@ export class ModelRouter {
     return handler.analyze(prompt);
   }
 
+  /**
+   * Ask the model to rewrite `snippet` to fix `finding`. The snippet is redacted
+   * before sending. Caller is responsible for obtaining the user's consent.
+   */
+  async suggestFix(finding: Finding, snippet: string): Promise<FixSuggestion> {
+    const { handler } = this.resolveHandler();
+    const prompt = PromptBuilder.buildFixPrompt(finding, redact(snippet));
+    const raw = await handler.complete(prompt);
+    const parsed = extractFix(raw);
+    if (!parsed) throw new Error('The model did not return a usable fix.');
+    return parsed;
+  }
+
   private resolveHandler(): { handler: Handler; contextTokens: number } {
     switch (this.config.model) {
       case 'claude': {
@@ -67,5 +87,19 @@ export class ModelRouter {
       default:
         throw new Error(`Unknown model: ${String(this.config.model)}`);
     }
+  }
+}
+
+/** Extract { explanation, newCode } from a model's (possibly noisy) JSON reply. */
+function extractFix(text: string): FixSuggestion | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    const obj = JSON.parse(text.slice(start, end + 1)) as Partial<FixSuggestion>;
+    if (typeof obj.newCode !== 'string') return null;
+    return { explanation: typeof obj.explanation === 'string' ? obj.explanation : '', newCode: obj.newCode };
+  } catch {
+    return null;
   }
 }

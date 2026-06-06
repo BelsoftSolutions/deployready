@@ -6,7 +6,7 @@
  * advantage of EnterpriseReady over "send your whole repo to an LLM" tools.
  */
 import { redactObject } from '../utils/redact';
-import type { ScanReport } from '../types';
+import type { Finding, ScanReport } from '../types';
 
 export interface BuiltPrompt {
   system: string;
@@ -69,5 +69,27 @@ export class PromptBuilder {
   /** Exactly what will leave the machine, for the consent prompt. */
   static preview(report: ScanReport): string {
     return PromptBuilder.build(report).user;
+  }
+
+  /**
+   * Build a prompt asking the model to rewrite a specific code snippet to fix
+   * one finding. The snippet IS code — callers must redact it and obtain consent
+   * before sending (this is the only place code leaves the machine, and only for
+   * the single snippet around an issue the user chose to fix).
+   */
+  static buildFixPrompt(finding: Finding, snippet: string): BuiltPrompt {
+    const system = `You are a senior security engineer fixing one issue in a code snippet.
+Respond with STRICT JSON only: { "explanation": "1-2 sentences", "newCode": "the corrected snippet" }.
+Rules: change only what is needed to fix the issue; preserve indentation and surrounding lines;
+return the FULL replacement for the snippet you were given; never invent secrets.`;
+    const user = `Issue: ${finding.title}
+Severity: ${finding.severity}${finding.owasp ? ` (${finding.owasp})` : ''}
+Recommendation: ${finding.recommendation}
+
+Code snippet to fix:
+\`\`\`
+${snippet}
+\`\`\``;
+    return { system, user };
   }
 }

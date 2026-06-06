@@ -4,6 +4,7 @@
  */
 import { Command } from 'commander';
 import { Orchestrator } from '../core/Orchestrator';
+import { InteractiveShell } from './InteractiveShell';
 import { Onboarding } from './Onboarding';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
@@ -23,10 +24,22 @@ export function buildProgram(): Command {
       if (thisCmd.opts().verbose) setVerbose(true);
     });
 
-  // Default + explicit `analyze`
+  // Default: launch the interactive session.
   program
-    .command('analyze', { isDefault: true })
-    .description('Scan a project (and its running localhost app) for issues')
+    .command('interactive', { isDefault: true })
+    .alias('shell')
+    .description('Start the interactive session (default when no command is given)')
+    .argument('[path]', 'path to the project', '.')
+    .action(async (path: string) => {
+      await guard(async () => {
+        await new InteractiveShell(path).start();
+      });
+    });
+
+  // Explicit one-shot scan (non-interactive / CI).
+  program
+    .command('analyze')
+    .description('Run a single non-interactive scan and print results')
     .argument('[path]', 'path to the project', '.')
     .option('-y, --yes', 'auto-approve all prompts (non-interactive)', false)
     .option('--no-dynamic', 'skip live localhost testing')
