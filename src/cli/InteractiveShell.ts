@@ -19,6 +19,7 @@ import { DynamicTester } from '../dynamic/DynamicTester';
 import { ModelRouter } from '../ai/ModelRouter';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
+import { Banner } from '../ui/Banner';
 import { DeploymentGuide, type Platform } from '../ui/DeploymentGuide';
 import { ScoreTracker } from '../tracker/ScoreTracker';
 import { ChecklistManager } from '../tracker/ChecklistManager';
@@ -50,10 +51,16 @@ export class InteractiveShell {
   private lineBuffer: string[] = [];
   private lineWaiters: ((line: string | null) => void)[] = [];
   private closed = false;
+  private muted = false;
 
   constructor(target: string) {
     this.state = { target: path.resolve(target), graph: null, staticFindings: [], dynamic: null, aiFindings: [] };
     this.rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    // Suppress echo while reading secrets (askHidden sets `muted`).
+    const rlAny = this.rl as unknown as { _writeToOutput: (s: string) => void };
+    rlAny._writeToOutput = (s: string) => {
+      if (!this.muted) process.stdout.write(s);
+    };
     this.rl.on('line', (line) => {
       const waiter = this.lineWaiters.shift();
       if (waiter) waiter(line);
@@ -69,7 +76,9 @@ export class InteractiveShell {
 
   async start(): Promise<void> {
     this.config = await ConfigManager.load();
-    this.banner();
+    await Banner.play(VERSION);
+    await this.intro();
+    await this.menu(); // guided first action — no command knowledge required
 
     while (this.running) {
       const line = await this.ask(chalk.cyan('enterpriseready › '));
@@ -96,9 +105,20 @@ export class InteractiveShell {
     return new Promise((resolve) => this.lineWaiters.push(resolve));
   }
 
+  /** Read a line without echoing it (for API keys). */
+  private async askHidden(prompt: string): Promise<string> {
+    process.stdout.write(prompt);
+    this.muted = true;
+    const v = await this.ask('');
+    this.muted = false;
+    process.stdout.write('\n');
+    return v ?? '';
+  }
+
   private async dispatch(cmd: string, args: string[]): Promise<void> {
     switch (cmd) {
       case 'help': case '?': return this.help();
+      case 'menu': case 'm': return this.menu();
       case 'scan': return this.scan();
       case 'parse': return this.parse();
       case 'dynamic': case 'live': return this.dynamic();
@@ -464,6 +484,7 @@ export class InteractiveShell {
 
   private help(): void {
     const rows: [string, string][] = [
+      ['menu', 'open the guided menu (great if you are not sure what to do)'],
       ['scan', 'run the full pipeline (parse → live tests → optional AI)'],
       ['parse', 'static parse + vulnerability scan'],
       ['dynamic', 'live tests against your running localhost app'],
@@ -483,9 +504,120 @@ export class InteractiveShell {
     console.log('');
   }
 
-  private banner(): void {
-    console.log(chalk.bold('\n  EnterpriseReady ') + chalk.gray(`v${VERSION} — interactive session`));
-    console.log(chalk.gray(`  target: ${this.state.target}`));
-    console.log(chalk.gray('  Type ') + chalk.cyan('scan') + chalk.gray(' to begin, or ') + chalk.cyan('help') + chalk.gray(' for commands. ') + chalk.cyan('exit') + chalk.gray(' to quit.\n'));
+  // ---------------------------------------------------------------- guided onboarding
+
+  /** Friendly, plain-language intro shown after the banner. */
+  private async intro(): Promise<void> {
+    console.log(`  ${chalk.bold('Welcome!')} I check your app for security, performance, and architecture issues`);
+    console.log('  before you ship it — then help you fix them, one at a time.');
+    console.log('');
+    console.log(`  ${chalk.gray('Project:')} ${this.state.target}`);
+    const configured = await ConfigManager.exists();
+    if (!configured && !process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
+      console.log(`  ${chalk.gray('AI:')} not set up yet ${chalk.gray('— that\'s fine, the scan works fully offline without it.')}`);
+    } else {
+      console.log(`  ${chalk.gray('AI:')} ${this.config.model} ${chalk.gray('(used only with your permission, for deeper analysis)')}`);
+    }
+    console.log('');
+  }
+
+  /** Numbered, guided menu so a new user never needs to know command names. */
+  private async menu(): Promise<void> {
+    console.log(chalk.bold('  What would you like to do?'));
+    console.log(`   ${chalk.cyan('1')}  Scan this project now            ${chalk.gray('(recommended)')}`);
+    console.log(`   ${chalk.cyan('2')}  Set up or change the AI model`);
+    console.log(`   ${chalk.cyan('3')}  How does EnterpriseReady work?`);
+    console.log(`   ${chalk.cyan('4')}  Go to the command prompt`);
+    console.log(`   ${chalk.cyan('5')}  Exit`);
+    console.log('');
+    const ans = await this.ask(chalk.cyan('  Pick 1–5 (or type a command) › '));
+    if (ans === null) {
+      this.running = false;
+      return;
+    }
+    const choice = ans.trim().toLowerCase();
+    switch (choice) {
+      case '1': case 'scan': return this.guidedScan();
+      case '2': case 'setup': return this.setupModel();
+      case '3': case 'how': case 'explain': this.explain(); return this.menu();
+      case '4': case 'prompt': case '': this.hints(); return;
+      case '5': case 'exit': case 'quit': case 'q': this.running = false; return;
+      default:
+        // Power users can type any real command straight from the menu.
+        { const [cmd, ...args] = choice.split(/\s+/); return this.dispatch(cmd!, args); }
+    }
+  }
+
+  /** Run a scan with a short explanation of each phase, then suggest next steps. */
+  private async guidedScan(): Promise<void> {
+    console.log(chalk.gray('\n  I will: (1) read your code, (2) test your running app if I find one, (3) score it.\n'));
+    await this.scan();
+    this.hints();
+  }
+
+  /** Context-aware next-step suggestions so the user always knows what to type. */
+  private hints(): void {
+    console.log('');
+    if (this.hasFindings()) {
+      console.log(chalk.gray('  Next: ') + chalk.cyan('fix 1') + chalk.gray(' to fix the top issue · ') + chalk.cyan('show 1') + chalk.gray(' for details · ') + chalk.cyan('issues') + chalk.gray(' to list all'));
+      console.log(chalk.gray('        ') + chalk.cyan('menu') + chalk.gray(' for options · ') + chalk.cyan('export') + chalk.gray(' to save a report · ') + chalk.cyan('exit') + chalk.gray(' to quit'));
+    } else {
+      console.log(chalk.gray('  Next: ') + chalk.cyan('scan') + chalk.gray(' to analyze this project · ') + chalk.cyan('menu') + chalk.gray(' for options · ') + chalk.cyan('help') + chalk.gray(' for all commands'));
+    }
+    console.log('');
+  }
+
+  /** Short, friendly explainer of the flow + privacy model. */
+  private explain(): void {
+    console.log('');
+    console.log(chalk.bold('  How it works'));
+    console.log(`  ${chalk.cyan('1.')} I parse your code and run security/performance checks locally.`);
+    console.log(`  ${chalk.cyan('2.')} If your app is running on localhost, I safely probe it (GET requests only, with your OK).`);
+    console.log(`  ${chalk.cyan('3.')} You get a 0–100 readiness score and a ranked list of issues (OWASP / CWE tagged).`);
+    console.log(`  ${chalk.cyan('4.')} ${chalk.cyan('fix <n>')} walks you through fixing each one — auto-fix, an AI-proposed diff you approve, or guidance.`);
+    console.log('');
+    console.log(chalk.bold('  Your privacy'));
+    console.log('  The scan is local. Nothing is sent to an AI unless you choose to, and even then only a');
+    console.log('  redacted findings summary — never your raw code (the one exception is a single snippet');
+    console.log('  during ' + chalk.cyan('fix') + ', shown and confirmed first). Use Ollama to stay 100% offline.');
+    console.log('');
+  }
+
+  /** In-session AI model setup (no need to leave for `init`). */
+  private async setupModel(): Promise<void> {
+    console.log('');
+    console.log(chalk.bold('  Choose an AI model') + chalk.gray('  (optional — scan works without one)'));
+    console.log(`   ${chalk.cyan('1')}  Claude (Anthropic)`);
+    console.log(`   ${chalk.cyan('2')}  OpenAI`);
+    console.log(`   ${chalk.cyan('3')}  Ollama (local, fully offline)`);
+    console.log(`   ${chalk.cyan('4')}  Skip for now`);
+    const pick = (await this.ask(chalk.cyan('  Pick 1–4 › ')))?.trim();
+
+    if (pick === '1' || pick === '2') {
+      const isClaude = pick === '1';
+      this.config.model = isClaude ? 'claude' : 'openai';
+      const envName = isClaude ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+      if (process.env[envName]) {
+        logger.success(`Using ${this.config.model} via ${envName} from your environment (key not stored on disk).`);
+      } else {
+        const key = await this.askHidden(`  Paste your ${isClaude ? 'Anthropic' : 'OpenAI'} API key (hidden), or press Enter to skip: `);
+        if (key.trim().length > 10) {
+          if (isClaude) this.config.claudeApiKey = key.trim();
+          else this.config.openaiApiKey = key.trim();
+          logger.success('Key saved (config file is owner-only, 0600).');
+        } else {
+          logger.info(`No key entered. You can set ${envName} as an environment variable instead.`);
+        }
+      }
+      await ConfigManager.save(this.config);
+    } else if (pick === '3') {
+      this.config.model = 'ollama';
+      await ConfigManager.save(this.config);
+      logger.success(`Set to Ollama (local). Make sure it's running: \`ollama serve\` on port ${this.config.ollamaPort}.`);
+    } else {
+      logger.info('Skipped AI setup.');
+    }
+    console.log('');
+    return this.menu();
   }
 }
