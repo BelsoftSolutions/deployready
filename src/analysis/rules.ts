@@ -38,8 +38,9 @@ const JS_RULES: LineRule[] = [
     title: 'Use of eval() / new Function() (code injection risk)',
     severity: 'critical',
     category: 'security',
-    re: null, // Remove the regex pattern
+    re: /\b(?:eval|new\s+Function)\s*\(/,
     exts: JS,
+    evidence: true,
     owasp: 'A05:2025',
     cwe: 'CWE-95',
     recommendation:
