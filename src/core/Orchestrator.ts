@@ -18,6 +18,7 @@ import { ModelRouter } from '../ai/ModelRouter';
 import { ConfigManager } from '../config/ConfigManager';
 import { IssuePresenter } from '../ui/IssuePresenter';
 import { ExportManager } from '../ui/ExportManager';
+import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
 import type { DynamicResults, Finding, ScanReport } from '../types';
 
@@ -34,6 +35,8 @@ export interface AnalyzeOptions {
   export?: boolean;
   /** Write an HTML dashboard report to the project root. */
   html?: boolean;
+  /** Open the HTML dashboard in the browser after the scan (implies html). */
+  open?: boolean;
   /** Suppress the pretty terminal report (caller emits machine-readable JSON). */
   json?: boolean;
 }
@@ -89,9 +92,14 @@ export class Orchestrator {
       const file = await ExportManager.saveMarkdown(report, projectPath);
       logger.success(`Markdown report saved to ${file}`);
     }
-    if (opts.html) {
+    // --open implies an HTML report. Don't auto-open in JSON/CI mode.
+    if (opts.html || opts.open) {
       const file = await ExportManager.saveHtml(report, projectPath);
       logger.success(`HTML dashboard saved to ${file}`);
+      if (opts.open && !opts.json) {
+        openInBrowser(file);
+        logger.info(`Opening ${file} in your browser…`);
+      }
     }
 
     return report;

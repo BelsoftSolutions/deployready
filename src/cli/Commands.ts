@@ -48,6 +48,7 @@ export function buildProgram(): Command {
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
     .option('--export', 'write deployready-report.md to the project root', false)
     .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
+    .option('--open', 'open the HTML dashboard in your browser after the scan (implies --html)', false)
     .option('--json', 'print a machine-readable JSON report to stdout (implies --yes)', false)
     .option(
       '--fail-on <severity>',
@@ -66,6 +67,7 @@ export function buildProgram(): Command {
           aggressive: opts.aggressive,
           export: opts.export,
           html: opts.html,
+          open: opts.open,
           json: opts.json,
         });
 
