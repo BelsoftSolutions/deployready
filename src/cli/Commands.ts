@@ -11,7 +11,7 @@ import { ExportManager } from '../ui/ExportManager';
 import { parseFailOn, shouldFail, toCiJson, EXIT } from '../core/CiGate';
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 
 export function buildProgram(): Command {
   const program = new Command();
