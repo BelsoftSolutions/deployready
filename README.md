@@ -1,31 +1,31 @@
 # DeployReady
 
-> Local-first, AI-optional production-readiness scanner for your app. It runs 30+ structured tests against your code and your running localhost app, then **optionally** sends only the structured findings report — never your source code — to an AI model for deeper analysis.
+> Local-first, AI-optional production-readiness scanner. It runs 30+ structured tests against your code **and** your running localhost app, gives you a 0–100 readiness score, and **optionally** sends only the structured findings report — never your source code — to an AI model for deeper analysis.
 
-```
+```bash
 deployready analyze ./my-app
 ```
 
-> 📋 **See [STATUS.md](STATUS.md)** for the full usage guide, step-by-step npm publishing instructions, and an honest, always-current breakdown of what works today vs. what's still to be built.
-
-## Why
-
-Research in 2025–2026 found that **~91.5% of "vibe-coded" (AI-generated) apps ship with vulnerabilities**, only **~55%** of AI codegen tasks produce secure code, **86%** fail to defend against XSS, and AI-assisted commits leak secrets at roughly **2× the human baseline**. DeployReady catches those exact failure modes before you deploy.
-
-- **Other tools:** send your whole repo to an AI. Expensive, slow, privacy risk.
-- **DeployReady:** run the tests locally first. Send only structured findings to AI (if you want). Expert analysis without the token waste — and it works with no AI at all.
-
 ## Install
+
+**Global install** (recommended for repeated use):
 
 ```bash
 npm install -g deployready
+deployready ./my-app
 ```
 
-## Usage
+**Or run without installing** (one-off / try it out):
 
-### Interactive session (default)
+```bash
+npx deployready ./my-app
+```
 
-Run `deployready` in your project to open a persistent session. You're greeted with an animated welcome and a **guided menu** — no need to know any commands; just pick a number. It stays open and you drive it one step at a time until you `exit`:
+Requires Node.js >= 18.
+
+## Quick start
+
+Run `deployready` inside your project to open an interactive, guided session — no commands to memorize, just pick a number:
 
 ```bash
 deployready ./my-app     # or just: deployready
@@ -40,79 +40,106 @@ deployready ./my-app     # or just: deployready
    5  Exit
 ```
 
-After any action it suggests your next step (e.g. “type `fix 1` to fix the top issue”). Type `menu` anytime to bring the guide back. Power users can ignore the menu and type commands directly:
+After each action it suggests your next step (e.g. “type `fix 1` to fix the top issue”). Type `menu` anytime to bring the guide back.
+
+## Interactive commands
+
+Once a session is open, you can drive it directly:
 
 ```
-deployready › scan        # parse → live tests → optional AI
+deployready › scan        # full pipeline: parse → live tests → optional AI
 deployready › issues      # list findings, numbered
-deployready › show 3      # full detail of a finding
-deployready › fix 3       # interactive fix: auto-fix, AI-proposed diff, or guidance
+deployready › show 3      # full detail of finding #3
+deployready › fix 3       # auto-fix, or an AI-proposed diff you approve (backup created)
+deployready › verify 3    # re-run the checks to confirm a fix worked
 deployready › done 3      # mark fixed (score updates live)
-deployready › deploy aws  # deployment walkthrough for your stack
-deployready › export      # write deployready-report.md
+deployready › open        # open the HTML dashboard in your browser
 deployready › exit
 ```
 
 | Command | What it does |
 |---|---|
-| `scan` / `parse` / `dynamic` / `ai` | run the whole pipeline, or one step at a time |
-| `issues [crit\|warn\|info]` · `show <n>` | list findings (filterable) · show one in detail |
-| `fix <n>` | auto-fix where safe; else an AI-proposed diff you approve (creates a backup); else guidance |
-| `done <n>` · `ignore <n>` | mark fixed/ignored — the score recomputes immediately |
-| `score` · `status` · `deploy [aws\|do]` · `export` · `config` · `help` · `exit` | session utilities |
+| `scan` · `parse` · `dynamic` · `ai` | run the whole pipeline, or one step at a time |
+| `issues [crit\|warn\|info]` · `show <n>` | list findings (optionally filtered) · show one in detail |
+| `fix <n>` | auto-fix where safe; otherwise an AI-proposed diff you approve (creates a backup); otherwise guidance |
+| `verify <n>` | re-run the relevant checks to confirm a fix actually resolved the issue |
+| `done <n>` · `ignore <n>` | mark fixed / ignored — the score recomputes immediately |
+| `score` · `status` | show the current readiness score / session state |
+| `deploy [aws\|do]` | deployment walkthrough for your stack |
+| `export` · `open` | write `deployready-report.md` · open the HTML dashboard |
+| `config` · `help` · `menu` · `clear` · `exit` | session utilities |
 
-### One-shot (CI / scripting)
+## One-shot (CI / scripting)
 
 ```bash
-deployready init                 # first-time setup (pick model, store key)
-deployready analyze ./my-app     # single non-interactive scan, prints results
-deployready analyze . --no-ai --no-dynamic   # static only, fully offline
-deployready report ./my-app      # scan and export markdown
-deployready analyze . --no-ai --no-dynamic --fail-on critical   # CI gate: exit 2 on any critical
+deployready init                              # first-time setup (pick model, store key)
+deployready analyze ./my-app                  # single non-interactive scan, prints results
+deployready analyze . --no-ai --no-dynamic    # static only, fully offline
+deployready report ./my-app                   # scan and export the markdown report
+deployready config                            # show the active config (secrets never printed)
 ```
 
-One-shot flags: `-y/--yes` (auto-approve prompts), `--aggressive` (rate-limit burst), `--export` (markdown), `--html` + `--open` (HTML dashboard, opened in your browser), `--json` (machine-readable output), `--fail-on <critical|warning|info|none>` (CI exit code), `-v/--verbose`.
+**Flags for `analyze`:**
 
-**CI:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error). A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
+| Flag | Effect |
+|---|---|
+| `-y, --yes` | auto-approve all prompts (non-interactive) |
+| `--no-dynamic` | skip live localhost testing |
+| `--no-ai` | skip AI analysis (local results only) |
+| `--aggressive` | enable aggressive tests (rate-limit burst) |
+| `--export` | write `deployready-report.md` |
+| `--html` / `--open` | write an HTML dashboard / and open it in your browser |
+| `--json` | print a machine-readable JSON report (implies `--yes`) |
+| `--fail-on <severity>` | exit non-zero if findings at/above `critical \| warning \| info \| none` exist |
+| `-v, --verbose` | verbose debug output |
 
-## Features
+**CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
 
-- **Static analysis** — Babel-based AST parsing (pure JS, no native build), dependency graph, stack detection (Express, Next.js, Fastify, NestJS, Koa, FastAPI, Flask, Django, Laravel).
-- **Secret & vulnerability scanning** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
-- **Live dynamic testing** — detects your running localhost app and checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, version-banner and stack-trace leaks.
-- **Production-readiness score (0–100)** with critical/warning/info breakdown.
-- **AI-optional** — works with no key; or send the structured report to Claude, OpenAI, or local Ollama.
-- **Markdown export** to share with your team.
+```bash
+deployready analyze . --no-ai --no-dynamic --fail-on critical
+```
 
-## How It Works
+A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
+
+## What it checks
+
+- **Static analysis** — Babel-based AST parsing (pure JS, no native build) for JavaScript/TypeScript, plus Python. Dependency graph, route-mount resolution across files, and stack detection (Express, Next.js, Fastify, NestJS, Koa, FastAPI, Flask, Django, Laravel).
+- **Secrets & vulnerabilities** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
+- **Live dynamic testing** — detects your running localhost app and checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, and version/stack-trace leaks.
+- **Readiness score (0–100)** with a critical / warning / info breakdown.
+- **Reports** — terminal output, markdown export, and an HTML dashboard.
+
+## How it works
 
 ```
 parse → static scan → (you approve) live localhost tests → aggregate + score
       → (you approve) AI analysis of findings JSON → terminal report → export
 ```
 
-Only the **structured findings JSON** is ever sent to an AI — and only after you approve, with all secrets redacted first. Ollama runs fully offline.
+Only the **structured findings JSON** is ever sent to an AI — and only after you approve, with all secrets redacted first. With Ollama, nothing leaves your machine at all.
 
-## Supported AI Models
+## AI models (optional)
+
+DeployReady works fully offline with no AI. To enable deeper analysis, configure one via `deployready init`:
 
 | Model | Notes |
 |---|---|
 | Claude (Anthropic) | Set `ANTHROPIC_API_KEY` or store via `init`. Default: `claude-sonnet-4-6`. |
 | OpenAI | Set `OPENAI_API_KEY` or store via `init`. |
-| Ollama (local) | Fully offline, no key, nothing leaves your machine. |
+| Ollama (local) | Fully offline, no key — nothing leaves your machine. |
 
-## Security & Privacy
+## Security & privacy
 
-DeployReady is itself built to a high security bar — it reads your code, probes your ports, and holds your keys:
+DeployReady reads your code, probes your ports, and holds your keys — so it's built to a high bar:
 
-- API keys are read from environment variables first and **never logged**. The on-disk config is written with `0600` permissions.
-- All output and any AI payload pass through a central **secret redactor**.
+- API keys are read from environment variables first and **never logged**; the on-disk config is written with `0600` permissions.
+- All terminal output and any AI payload pass through a central **secret redactor**.
 - Dynamic testing is **loopback-only** and **GET-only** by default; aggressive tests require explicit consent.
-- File scanning is confined to the project root with symlink/traversal protection and size caps.
+- File scanning is confined to the project root, with symlink/traversal protection and size caps.
 
 ## Configuration
 
-`~/.deployready/config.json` — see [`docs/sample-config.json`](docs/sample-config.json). Prefer env vars for keys.
+Config lives at `~/.deployready/config.json` — see [`docs/sample-config.json`](docs/sample-config.json). Prefer environment variables for API keys.
 
 ## Development
 
@@ -125,12 +152,8 @@ npm run dev        # run from source via tsx
 
 ## Contributing
 
-Issues and PRs welcome. Each module has a single responsibility and a documented interface contract; extend by adding new files rather than modifying existing modules (see the architecture spec).
-
-## Roadmap (Phase 1.5 / 2)
-
-Agentic fix application (propose → diff → approve → apply → verify), interactive deployment guides, real-time checklist sidebar, MCP database connectors, GitHub Action, and a compliance module.
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-_Belal · Belsoft Solutions · 2026 · MIT License_
+_Belal · Belsoft Solutions · MIT License_
