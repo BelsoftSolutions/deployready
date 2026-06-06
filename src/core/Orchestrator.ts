@@ -32,6 +32,8 @@ export interface AnalyzeOptions {
   aggressive?: boolean;
   /** Write a markdown report to the project root. */
   export?: boolean;
+  /** Write an HTML dashboard report to the project root. */
+  html?: boolean;
   /** Suppress the pretty terminal report (caller emits machine-readable JSON). */
   json?: boolean;
 }
@@ -85,7 +87,11 @@ export class Orchestrator {
     if (!opts.json) IssuePresenter.display(report);
     if (opts.export) {
       const file = await ExportManager.saveMarkdown(report, projectPath);
-      logger.success(`Report saved to ${file}`);
+      logger.success(`Markdown report saved to ${file}`);
+    }
+    if (opts.html) {
+      const file = await ExportManager.saveHtml(report, projectPath);
+      logger.success(`HTML dashboard saved to ${file}`);
     }
 
     return report;

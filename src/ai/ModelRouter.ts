@@ -16,6 +16,7 @@ import { PromptBuilder } from './PromptBuilder';
 import { ContextChunker } from './ContextChunker';
 import { ConfigManager } from '../config/ConfigManager';
 import { redact } from '../utils/redact';
+import { extractFix, type FixSuggestion } from './parseFix';
 import type { AiAnalysis, AppConfig, Finding, ScanReport } from '../types';
 
 interface Handler {
@@ -23,10 +24,7 @@ interface Handler {
   complete(prompt: { system: string; user: string }): Promise<string>;
 }
 
-export interface FixSuggestion {
-  explanation: string;
-  newCode: string;
-}
+export type { FixSuggestion } from './parseFix';
 
 export class ModelRouter {
   constructor(private readonly config: AppConfig) {}
@@ -90,16 +88,3 @@ export class ModelRouter {
   }
 }
 
-/** Extract { explanation, newCode } from a model's (possibly noisy) JSON reply. */
-function extractFix(text: string): FixSuggestion | null {
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end <= start) return null;
-  try {
-    const obj = JSON.parse(text.slice(start, end + 1)) as Partial<FixSuggestion>;
-    if (typeof obj.newCode !== 'string') return null;
-    return { explanation: typeof obj.explanation === 'string' ? obj.explanation : '', newCode: obj.newCode };
-  } catch {
-    return null;
-  }
-}

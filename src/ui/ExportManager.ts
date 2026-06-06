@@ -4,6 +4,7 @@
  */
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { HtmlReporter } from './HtmlReporter';
 import type { Finding, ScanReport, Severity } from '../types';
 
 export class ExportManager {
@@ -11,6 +12,13 @@ export class ExportManager {
   static async saveMarkdown(report: ScanReport, outDir: string): Promise<string> {
     const file = path.join(outDir, 'deployready-report.md');
     await fs.writeFile(file, ExportManager.toMarkdown(report), 'utf8');
+    return file;
+  }
+
+  /** Write a self-contained HTML dashboard to `outDir`; returns the path. */
+  static async saveHtml(report: ScanReport, outDir: string): Promise<string> {
+    const file = path.join(outDir, 'deployready-report.html');
+    await fs.writeFile(file, HtmlReporter.render(report), 'utf8');
     return file;
   }
 

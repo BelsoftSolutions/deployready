@@ -47,6 +47,7 @@ export function buildProgram(): Command {
     .option('--no-ai', 'skip AI analysis (local results only)')
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
     .option('--export', 'write deployready-report.md to the project root', false)
+    .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
     .option('--json', 'print a machine-readable JSON report to stdout (implies --yes)', false)
     .option(
       '--fail-on <severity>',
@@ -64,6 +65,7 @@ export function buildProgram(): Command {
           noAi: !opts.ai,
           aggressive: opts.aggressive,
           export: opts.export,
+          html: opts.html,
           json: opts.json,
         });
 
