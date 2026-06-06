@@ -8,7 +8,8 @@ import { InteractiveShell } from './InteractiveShell';
 import { Onboarding } from './Onboarding';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
-import { logger, setVerbose } from '../utils/logger';
+import { parseFailOn, shouldFail, toCiJson, EXIT } from '../core/CiGate';
+import { logger, setVerbose, setQuiet } from '../utils/logger';
 
 const VERSION = '0.1.0';
 
@@ -46,15 +47,36 @@ export function buildProgram(): Command {
     .option('--no-ai', 'skip AI analysis (local results only)')
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
     .option('--export', 'write deployready-report.md to the project root', false)
+    .option('--json', 'print a machine-readable JSON report to stdout (implies --yes)', false)
+    .option(
+      '--fail-on <severity>',
+      'exit non-zero (code 2) if findings at/above this severity exist: critical | warning | info | none',
+      'none',
+    )
     .action(async (path: string, opts) => {
       await guard(async () => {
-        await Orchestrator.analyze(path, {
-          yes: opts.yes,
+        const failOn = parseFailOn(opts.failOn);
+        if (opts.json) setQuiet(true); // keep stdout clean for JSON consumers
+
+        const report = await Orchestrator.analyze(path, {
+          yes: opts.yes || opts.json, // JSON mode is non-interactive
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
           aggressive: opts.aggressive,
           export: opts.export,
+          json: opts.json,
         });
+
+        if (opts.json) {
+          process.stdout.write(JSON.stringify(toCiJson(report, failOn), null, 2) + '\n');
+        }
+
+        if (shouldFail(report.summary, failOn)) {
+          logger.error(
+            `Gate failed: findings at or above "${failOn}" (${report.summary.critical} critical, ${report.summary.warning} warning, ${report.summary.info} info).`,
+          );
+          process.exitCode = EXIT.GATE;
+        }
       });
     });
 

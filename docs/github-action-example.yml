@@ -1,0 +1,38 @@
+# Example GitHub Actions workflow — gate merges/deploys on DeployReady findings.
+# Copy this to .github/workflows/deployready.yml in your project.
+#
+# This runs a pure static scan (no AI, no live app) so it's deterministic and
+# needs no secrets. It fails the job (exit code 2) if any CRITICAL finding exists.
+
+name: DeployReady security gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Install the published CLI (or pin a version: deployready@0.1.0)
+      - name: Install DeployReady
+        run: npm install -g deployready
+
+      # Fail the build on any critical finding. Use --fail-on warning to be stricter.
+      - name: Run security gate
+        run: deployready analyze . --no-ai --no-dynamic --fail-on critical --json > deployready.json
+        # exit codes: 0 = clean, 2 = gate failed, 1 = tool error
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployready-report
+          path: deployready.json
