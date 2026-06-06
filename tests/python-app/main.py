@@ -6,9 +6,12 @@ from .routers.users import router as users_router
 
 app = FastAPI()
 
-# VULN: hardcoded secrets in source
-SECRET_KEY = "sk_live_51AbCdEfGhIjKlMnOpQrStUvWxYz"
-DATABASE_URL = "postgres://admin:supersecretpassword@localhost:5432/app"
+# VULN: hardcoded secrets in source.
+# NOTE: the values below are FAKE, non-functional test data used only to exercise
+# DeployReady's hardcoded-secret detection. They are NOT real credentials. Do not
+# replace them with anything resembling a live key (it would trip secret scanners).
+SECRET_KEY = "FAKE_TEST_SECRET_not_a_real_key_0000000000"  # fake — for tests only
+DATABASE_URL = "postgres://admin:supersecretpassword@localhost:5432/app"  # fake — for tests only
 
 # Sub-router mounts — routes inside these files live under these prefixes.
 app.include_router(auth.router, prefix="/api/auth")
