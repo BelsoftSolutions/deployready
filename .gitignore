@@ -24,6 +24,8 @@ deployready-report.html
 *.pem
 *.key
 .npmrc
+# ...except this fake .env test fixture (no real secrets) the test suite scans
+!tests/sample-app/.env
 
 # Editor / OS
 .DS_Store
