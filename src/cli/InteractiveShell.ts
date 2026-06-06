@@ -26,6 +26,7 @@ import { ScoreTracker } from '../tracker/ScoreTracker';
 import { ChecklistManager } from '../tracker/ChecklistManager';
 import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
+import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
 import type { AppConfig, CodeGraph, DynamicResults, Finding, ScanReport, Severity } from '../types';
 
@@ -134,6 +135,7 @@ export class InteractiveShell {
       case 'status': return this.status();
       case 'deploy': return this.deploy(args[0]);
       case 'export': return this.export(args[0]);
+      case 'open': return this.open();
       case 'config': return this.showConfig();
       case 'clear': case 'cls': console.clear(); return;
       case 'exit': case 'quit': case 'q': this.running = false; return;
@@ -415,6 +417,15 @@ export class InteractiveShell {
     }
   }
 
+  /** `open` — write the HTML dashboard and launch it in the browser. */
+  private async open(): Promise<void> {
+    if (!this.hasFindings()) return logger.warn('Nothing to open yet. Run `scan` first.');
+    const file = await ExportManager.saveHtml(this.buildReport(), this.state.target);
+    logger.success(`HTML dashboard saved to ${file}`);
+    openInBrowser(file);
+    logger.info('Opening the dashboard in your browser…');
+  }
+
   private showConfig(): void {
     const c = this.config;
     console.log(
@@ -544,6 +555,7 @@ export class InteractiveShell {
       ['score / status', 'show the current score / session state'],
       ['deploy [aws|do]', 'print a deployment guide for the detected stack'],
       ['export [md|html|all]', 'save the report — markdown, HTML dashboard, or both'],
+      ['open', 'save the HTML dashboard and open it in your browser'],
       ['config / clear / help', 'show config / clear screen / this help'],
       ['exit', 'leave the session'],
     ];
@@ -608,7 +620,7 @@ export class InteractiveShell {
     console.log('');
     if (this.hasFindings()) {
       console.log(chalk.gray('  Next: ') + chalk.cyan('fix 1') + chalk.gray(' to fix the top issue · ') + chalk.cyan('show 1') + chalk.gray(' for details · ') + chalk.cyan('issues') + chalk.gray(' to list all'));
-      console.log(chalk.gray('        ') + chalk.cyan('menu') + chalk.gray(' for options · ') + chalk.cyan('export') + chalk.gray(' to save a report · ') + chalk.cyan('exit') + chalk.gray(' to quit'));
+      console.log(chalk.gray('        ') + chalk.cyan('menu') + chalk.gray(' for options · ') + chalk.cyan('open') + chalk.gray(' for the HTML dashboard · ') + chalk.cyan('exit') + chalk.gray(' to quit'));
     } else {
       console.log(chalk.gray('  Next: ') + chalk.cyan('scan') + chalk.gray(' to analyze this project · ') + chalk.cyan('menu') + chalk.gray(' for options · ') + chalk.cyan('help') + chalk.gray(' for all commands'));
     }
