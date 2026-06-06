@@ -54,14 +54,22 @@ export class InteractiveShell {
   private lineWaiters: ((line: string | null) => void)[] = [];
   private closed = false;
   private muted = false;
+  private out: NodeJS.WritableStream;
 
-  constructor(target: string) {
+  constructor(
+    target: string,
+    io?: { input?: NodeJS.ReadableStream; output?: NodeJS.WritableStream },
+  ) {
     this.state = { target: path.resolve(target), graph: null, staticFindings: [], dynamic: null, aiFindings: [] };
-    this.rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    this.out = io?.output ?? process.stdout;
+    this.rl = readline.createInterface({
+      input: io?.input ?? process.stdin,
+      output: this.out,
+    });
     // Suppress echo while reading secrets (askHidden sets `muted`).
     const rlAny = this.rl as unknown as { _writeToOutput: (s: string) => void };
     rlAny._writeToOutput = (s: string) => {
-      if (!this.muted) process.stdout.write(s);
+      if (!this.muted) this.out.write(s);
     };
     this.rl.on('line', (line) => {
       const waiter = this.lineWaiters.shift();
@@ -101,7 +109,7 @@ export class InteractiveShell {
 
   /** Write a prompt and read the next buffered line. Resolves null when closed. */
   private ask(prompt: string): Promise<string | null> {
-    process.stdout.write(prompt);
+    this.out.write(prompt);
     if (this.lineBuffer.length) return Promise.resolve(this.lineBuffer.shift()!);
     if (this.closed) return Promise.resolve(null);
     return new Promise((resolve) => this.lineWaiters.push(resolve));
@@ -109,11 +117,11 @@ export class InteractiveShell {
 
   /** Read a line without echoing it (for API keys). */
   private async askHidden(prompt: string): Promise<string> {
-    process.stdout.write(prompt);
+    this.out.write(prompt);
     this.muted = true;
     const v = await this.ask('');
     this.muted = false;
-    process.stdout.write('\n');
+    this.out.write('\n');
     return v ?? '';
   }
 

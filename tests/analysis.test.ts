@@ -14,6 +14,7 @@ describe('VulnerabilityDetector', () => {
     const rules = new Set(findings.map((f) => f.rule));
     expect(rules.has('hardcoded-secret')).toBe(true);
     expect(rules.has('sql-injection')).toBe(true);
+    expect(rules.has('eval-usage')).toBe(true);
     expect(rules.has('cors-wildcard')).toBe(true);
     expect(rules.has('env-not-ignored')).toBe(true);
   });
