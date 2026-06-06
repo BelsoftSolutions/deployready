@@ -21,16 +21,43 @@ npm install -g enterpriseready
 
 ## Usage
 
+### Interactive session (default)
+
+Run `enterpriseready` in your project to open a persistent session. It stays open and you drive it one step at a time until you `exit`:
+
 ```bash
-enterpriseready init                 # first-time setup (pick model, store key)
-enterpriseready analyze ./my-app     # full scan (default command)
-enterpriseready analyze . --no-ai    # local checklist + score only, fully offline
-enterpriseready analyze . --no-dynamic   # static analysis only
-enterpriseready report ./my-app      # scan and export markdown
-enterpriseready config               # show active config (secrets never printed)
+enterpriseready ./my-app     # or just: enterpriseready
 ```
 
-Useful flags: `-y/--yes` (non-interactive), `--aggressive` (rate-limit burst), `--export` (write `enterpriseready-report.md`), `-v/--verbose`.
+```
+enterpriseready › scan        # parse → live tests → optional AI
+enterpriseready › issues      # list findings, numbered
+enterpriseready › show 3      # full detail of a finding
+enterpriseready › fix 3       # interactive fix: auto-fix, AI-proposed diff, or guidance
+enterpriseready › done 3      # mark fixed (score updates live)
+enterpriseready › deploy aws  # deployment walkthrough for your stack
+enterpriseready › export      # write enterpriseready-report.md
+enterpriseready › exit
+```
+
+| Command | What it does |
+|---|---|
+| `scan` / `parse` / `dynamic` / `ai` | run the whole pipeline, or one step at a time |
+| `issues [crit\|warn\|info]` · `show <n>` | list findings (filterable) · show one in detail |
+| `fix <n>` | auto-fix where safe; else an AI-proposed diff you approve (creates a backup); else guidance |
+| `done <n>` · `ignore <n>` | mark fixed/ignored — the score recomputes immediately |
+| `score` · `status` · `deploy [aws\|do]` · `export` · `config` · `help` · `exit` | session utilities |
+
+### One-shot (CI / scripting)
+
+```bash
+enterpriseready init                 # first-time setup (pick model, store key)
+enterpriseready analyze ./my-app     # single non-interactive scan, prints results
+enterpriseready analyze . --no-ai --no-dynamic   # static only, fully offline
+enterpriseready report ./my-app      # scan and export markdown
+```
+
+One-shot flags: `-y/--yes` (auto-approve prompts), `--aggressive` (rate-limit burst), `--export`, `-v/--verbose`.
 
 ## Features
 

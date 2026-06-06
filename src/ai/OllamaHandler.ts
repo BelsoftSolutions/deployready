@@ -18,6 +18,11 @@ export class OllamaHandler {
   ) {}
 
   async analyze(prompt: BuiltPrompt): Promise<AiAnalysis> {
+    return parseAiResponse(await this.complete(prompt));
+  }
+
+  /** Raw text completion against the local Ollama instance. */
+  async complete(prompt: BuiltPrompt): Promise<string> {
     const url = `http://127.0.0.1:${this.port}/api/chat`;
     try {
       const res = await axios.post(
@@ -32,8 +37,7 @@ export class OllamaHandler {
         },
         { timeout: 120_000, headers: { 'content-type': 'application/json' } },
       );
-      const text = res.data?.message?.content ?? '';
-      return parseAiResponse(text);
+      return res.data?.message?.content ?? '';
     } catch (err) {
       throw new Error(
         `Ollama request failed: ${describeHttpError(err)}. Is Ollama running on port ${this.port} with model "${this.model}"?`,
