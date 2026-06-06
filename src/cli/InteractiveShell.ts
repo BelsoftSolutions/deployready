@@ -1,5 +1,5 @@
 /**
- * Interactive terminal session for EnterpriseReady. Stays open and accepts one
+ * Interactive terminal session for DeployReady. Stays open and accepts one
  * command per step (scan, parse, dynamic, ai, issues, fix, ...) until the user
  * exits. Holds the scan state in memory and updates the score live as issues
  * are fixed or ignored.
@@ -81,7 +81,7 @@ export class InteractiveShell {
     await this.menu(); // guided first action — no command knowledge required
 
     while (this.running) {
-      const line = await this.ask(chalk.cyan('enterpriseready › '));
+      const line = await this.ask(chalk.cyan('deployready › '));
       if (line === null) break; // stream closed
       const trimmed = line.trim();
       if (!trimmed) continue;
@@ -94,7 +94,7 @@ export class InteractiveShell {
       }
     }
     this.rl.close();
-    console.log(chalk.gray('\nBye — stay enterprise ready. 👋\n'));
+    console.log(chalk.gray('\nBye — stay deploy ready. 👋\n'));
   }
 
   /** Write a prompt and read the next buffered line. Resolves null when closed. */
@@ -181,7 +181,7 @@ export class InteractiveShell {
 
     const router = new ModelRouter(this.config);
     if (!router.isConfigured()) {
-      return logger.warn('No AI model configured. Run `enterpriseready init` (or set an API key) first.');
+      return logger.warn('No AI model configured. Run `deployready init` (or set an API key) first.');
     }
     if (router.sendsExternally && this.config.warnBeforeExternalSend) {
       logger.warn(`This sends a STRUCTURED findings report (no source code, secrets redacted) to the ${this.config.model} API.`);
@@ -495,7 +495,7 @@ export class InteractiveShell {
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],
       ['deploy [aws|do]', 'print a deployment guide for the detected stack'],
-      ['export', 'write enterpriseready-report.md'],
+      ['export', 'write deployready-report.md'],
       ['config / clear / help', 'show config / clear screen / this help'],
       ['exit', 'leave the session'],
     ];
@@ -526,7 +526,7 @@ export class InteractiveShell {
     console.log(chalk.bold('  What would you like to do?'));
     console.log(`   ${chalk.cyan('1')}  Scan this project now            ${chalk.gray('(recommended)')}`);
     console.log(`   ${chalk.cyan('2')}  Set up or change the AI model`);
-    console.log(`   ${chalk.cyan('3')}  How does EnterpriseReady work?`);
+    console.log(`   ${chalk.cyan('3')}  How does DeployReady work?`);
     console.log(`   ${chalk.cyan('4')}  Go to the command prompt`);
     console.log(`   ${chalk.cyan('5')}  Exit`);
     console.log('');

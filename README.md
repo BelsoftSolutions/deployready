@@ -1,39 +1,39 @@
-# EnterpriseReady
+# DeployReady
 
 > Local-first, AI-optional production-readiness scanner for your app. It runs 30+ structured tests against your code and your running localhost app, then **optionally** sends only the structured findings report — never your source code — to an AI model for deeper analysis.
 
 ```
-enterpriseready analyze ./my-app
+deployready analyze ./my-app
 ```
 
 ## Why
 
-Research in 2025–2026 found that **~91.5% of "vibe-coded" (AI-generated) apps ship with vulnerabilities**, only **~55%** of AI codegen tasks produce secure code, **86%** fail to defend against XSS, and AI-assisted commits leak secrets at roughly **2× the human baseline**. EnterpriseReady catches those exact failure modes before you deploy.
+Research in 2025–2026 found that **~91.5% of "vibe-coded" (AI-generated) apps ship with vulnerabilities**, only **~55%** of AI codegen tasks produce secure code, **86%** fail to defend against XSS, and AI-assisted commits leak secrets at roughly **2× the human baseline**. DeployReady catches those exact failure modes before you deploy.
 
 - **Other tools:** send your whole repo to an AI. Expensive, slow, privacy risk.
-- **EnterpriseReady:** run the tests locally first. Send only structured findings to AI (if you want). Expert analysis without the token waste — and it works with no AI at all.
+- **DeployReady:** run the tests locally first. Send only structured findings to AI (if you want). Expert analysis without the token waste — and it works with no AI at all.
 
 ## Install
 
 ```bash
-npm install -g enterpriseready
+npm install -g deployready
 ```
 
 ## Usage
 
 ### Interactive session (default)
 
-Run `enterpriseready` in your project to open a persistent session. You're greeted with an animated welcome and a **guided menu** — no need to know any commands; just pick a number. It stays open and you drive it one step at a time until you `exit`:
+Run `deployready` in your project to open a persistent session. You're greeted with an animated welcome and a **guided menu** — no need to know any commands; just pick a number. It stays open and you drive it one step at a time until you `exit`:
 
 ```bash
-enterpriseready ./my-app     # or just: enterpriseready
+deployready ./my-app     # or just: deployready
 ```
 
 ```
   What would you like to do?
    1  Scan this project now            (recommended)
    2  Set up or change the AI model
-   3  How does EnterpriseReady work?
+   3  How does DeployReady work?
    4  Go to the command prompt
    5  Exit
 ```
@@ -41,14 +41,14 @@ enterpriseready ./my-app     # or just: enterpriseready
 After any action it suggests your next step (e.g. “type `fix 1` to fix the top issue”). Type `menu` anytime to bring the guide back. Power users can ignore the menu and type commands directly:
 
 ```
-enterpriseready › scan        # parse → live tests → optional AI
-enterpriseready › issues      # list findings, numbered
-enterpriseready › show 3      # full detail of a finding
-enterpriseready › fix 3       # interactive fix: auto-fix, AI-proposed diff, or guidance
-enterpriseready › done 3      # mark fixed (score updates live)
-enterpriseready › deploy aws  # deployment walkthrough for your stack
-enterpriseready › export      # write enterpriseready-report.md
-enterpriseready › exit
+deployready › scan        # parse → live tests → optional AI
+deployready › issues      # list findings, numbered
+deployready › show 3      # full detail of a finding
+deployready › fix 3       # interactive fix: auto-fix, AI-proposed diff, or guidance
+deployready › done 3      # mark fixed (score updates live)
+deployready › deploy aws  # deployment walkthrough for your stack
+deployready › export      # write deployready-report.md
+deployready › exit
 ```
 
 | Command | What it does |
@@ -62,10 +62,10 @@ enterpriseready › exit
 ### One-shot (CI / scripting)
 
 ```bash
-enterpriseready init                 # first-time setup (pick model, store key)
-enterpriseready analyze ./my-app     # single non-interactive scan, prints results
-enterpriseready analyze . --no-ai --no-dynamic   # static only, fully offline
-enterpriseready report ./my-app      # scan and export markdown
+deployready init                 # first-time setup (pick model, store key)
+deployready analyze ./my-app     # single non-interactive scan, prints results
+deployready analyze . --no-ai --no-dynamic   # static only, fully offline
+deployready report ./my-app      # scan and export markdown
 ```
 
 One-shot flags: `-y/--yes` (auto-approve prompts), `--aggressive` (rate-limit burst), `--export`, `-v/--verbose`.
@@ -98,7 +98,7 @@ Only the **structured findings JSON** is ever sent to an AI — and only after y
 
 ## Security & Privacy
 
-EnterpriseReady is itself built to a high security bar — it reads your code, probes your ports, and holds your keys:
+DeployReady is itself built to a high security bar — it reads your code, probes your ports, and holds your keys:
 
 - API keys are read from environment variables first and **never logged**. The on-disk config is written with `0600` permissions.
 - All output and any AI payload pass through a central **secret redactor**.
@@ -107,7 +107,7 @@ EnterpriseReady is itself built to a high security bar — it reads your code, p
 
 ## Configuration
 
-`~/.enterpriseready/config.json` — see [`docs/sample-config.json`](docs/sample-config.json). Prefer env vars for keys.
+`~/.deployready/config.json` — see [`docs/sample-config.json`](docs/sample-config.json). Prefer env vars for keys.
 
 ## Development
 

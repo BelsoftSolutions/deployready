@@ -1,5 +1,5 @@
 /**
- * Shared type contracts for EnterpriseReady.
+ * Shared type contracts for DeployReady.
  * Every module imports from here so findings, reports, and config stay consistent.
  */
 

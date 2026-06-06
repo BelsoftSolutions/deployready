@@ -10,7 +10,7 @@ import type { AiModel, AppConfig } from '../types';
 
 export class Onboarding {
   static async run(): Promise<AppConfig> {
-    logger.info('\nWelcome to EnterpriseReady — first-time setup.\n');
+    logger.info('\nWelcome to DeployReady — first-time setup.\n');
 
     const { model } = await inquirer.prompt<{ model: AiModel }>([
       {

@@ -3,7 +3,7 @@
  *
  * Hard rule: raw source code is never included. We send a compact, redacted
  * JSON summary of findings + architecture. This is the core privacy/token
- * advantage of EnterpriseReady over "send your whole repo to an LLM" tools.
+ * advantage of DeployReady over "send your whole repo to an LLM" tools.
  */
 import { redactObject } from '../utils/redact';
 import type { Finding, ScanReport } from '../types';
@@ -13,7 +13,7 @@ export interface BuiltPrompt {
   user: string;
 }
 
-const SYSTEM = `You are EnterpriseReady, an expert application security and QA engineer.
+const SYSTEM = `You are DeployReady, an expert application security and QA engineer.
 You are given a STRUCTURED scan report of a developer's app (no raw source code).
 Analyze it and respond with STRICT JSON only, matching this shape:
 {

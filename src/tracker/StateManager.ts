@@ -1,5 +1,5 @@
 /**
- * Persists per-project checklist state under ~/.enterpriseready/state so a
+ * Persists per-project checklist state under ~/.deployready/state so a
  * session can be resumed. Keyed by a hash of the project path.
  */
 import * as crypto from 'crypto';
@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type { ItemStatus } from './ChecklistManager';
 
-const STATE_DIR = path.join(os.homedir(), '.enterpriseready', 'state');
+const STATE_DIR = path.join(os.homedir(), '.deployready', 'state');
 
 export class StateManager {
   private static fileFor(projectPath: string): string {

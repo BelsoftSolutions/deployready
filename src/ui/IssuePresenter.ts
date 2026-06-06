@@ -22,7 +22,7 @@ export class IssuePresenter {
   static display(report: ScanReport): void {
     const bar = '━'.repeat(48);
     console.log('\n' + bar);
-    console.log('  ' + chalk.bold('EnterpriseReady Scan Results'));
+    console.log('  ' + chalk.bold('DeployReady Scan Results'));
     console.log('  ' + chalk.bold(`Production Readiness Score: ${scoreColor(report.score)}/100`));
     console.log(`  Stack: ${report.stack.stack} (${report.stack.language})  ·  Files: ${report.graph.fileCount}  ·  Routes: ${report.graph.routes.length}`);
     console.log(bar + '\n');

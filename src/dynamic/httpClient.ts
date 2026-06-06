@@ -21,7 +21,7 @@ export function assertLoopback(rawUrl: string): URL {
   const isLoopback = LOOPBACK_HOSTS.has(host) || host.endsWith('.localhost');
   if (!isLoopback) {
     throw new Error(
-      `Refusing to test non-loopback host "${host}". EnterpriseReady only probes apps on your own machine.`,
+      `Refusing to test non-loopback host "${host}". DeployReady only probes apps on your own machine.`,
     );
   }
   return url;
@@ -37,7 +37,7 @@ export function createClient(baseUrl: string): AxiosInstance {
     validateStatus: () => true,
     // Cap response size so a huge body can't exhaust memory.
     maxContentLength: 5 * 1024 * 1024,
-    headers: { 'User-Agent': 'EnterpriseReady-Scanner/0.1' },
+    headers: { 'User-Agent': 'DeployReady-Scanner/0.1' },
   });
 }
 

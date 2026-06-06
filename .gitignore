@@ -10,10 +10,10 @@ logs/
 *.log
 npm-debug.log*
 
-# EnterpriseReady local state & generated reports
-.enterpriseready/
-enterpriseready-report.md
-enterpriseready-report.html
+# DeployReady local state & generated reports
+.deployready/
+deployready-report.md
+deployready-report.html
 
 # Environment & secrets — never commit
 .env
