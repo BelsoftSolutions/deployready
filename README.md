@@ -6,6 +6,8 @@
 deployready analyze ./my-app
 ```
 
+> 📋 **See [STATUS.md](STATUS.md)** for the full usage guide, step-by-step npm publishing instructions, and an honest, always-current breakdown of what works today vs. what's still to be built.
+
 ## Why
 
 Research in 2025–2026 found that **~91.5% of "vibe-coded" (AI-generated) apps ship with vulnerabilities**, only **~55%** of AI codegen tasks produce secure code, **86%** fail to defend against XSS, and AI-assisted commits leak secrets at roughly **2× the human baseline**. DeployReady catches those exact failure modes before you deploy.
