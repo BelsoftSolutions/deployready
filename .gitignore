@@ -15,6 +15,9 @@ npm-debug.log*
 deployready-report.md
 deployready-report.html
 
+# Backups created by the interactive fix flow
+*.bak.*
+
 # Environment & secrets — never commit
 .env
 .env.*
