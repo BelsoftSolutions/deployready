@@ -23,6 +23,7 @@ deployready-report.html
 .env.*
 *.pem
 *.key
+.npmrc
 
 # Editor / OS
 .DS_Store
