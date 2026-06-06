@@ -1,0 +1,9 @@
+{
+  "model": "claude",
+  "claudeApiKey": "sk-ant-... (optional — prefer the ANTHROPIC_API_KEY env var)",
+  "openaiApiKey": null,
+  "ollamaPort": 11434,
+  "ollamaModel": "llama3",
+  "warnBeforeExternalSend": true,
+  "defaultPorts": [3000, 5000, 8000, 8080, 4000]
+}
