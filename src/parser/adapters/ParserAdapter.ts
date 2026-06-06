@@ -12,10 +12,21 @@ export interface RouteHit {
   guarded: boolean;
 }
 
+/**
+ * A sub-router mount, e.g. `app.use('/api/auth', authRoutes)`. `source` is the
+ * module specifier the mounted router was imported from (e.g. './routes/auth'),
+ * resolved from the local binding. Used to compose full route paths across files.
+ */
+export interface MountHit {
+  prefix: string;
+  source: string;
+}
+
 export interface ParseResult {
   imports: string[];
   exports: string[];
   routes: RouteHit[];
+  mounts: MountHit[];
 }
 
 export interface ParserAdapter {
