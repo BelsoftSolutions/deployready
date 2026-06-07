@@ -28,9 +28,10 @@ import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
 import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
+import { getVersion } from '../utils/version';
 import type { AppConfig, CodeGraph, DynamicResults, Finding, ScanReport, Severity } from '../types';
 
-const VERSION = '0.1.0';
+const VERSION = getVersion();
 
 interface SessionState {
   target: string;

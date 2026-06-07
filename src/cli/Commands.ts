@@ -10,8 +10,9 @@ import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
 import { parseFailOn, shouldFail, toCiJson, EXIT } from '../core/CiGate';
 import { logger, setVerbose, setQuiet } from '../utils/logger';
+import { getVersion } from '../utils/version';
 
-const VERSION = '0.1.1';
+const VERSION = getVersion();
 
 export function buildProgram(): Command {
   const program = new Command();

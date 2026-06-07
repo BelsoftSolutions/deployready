@@ -1,6 +1,6 @@
 {
   "name": "deployready",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first, AI-optional production-readiness scanner for your app. Finds security, performance, and architecture issues before you deploy.",
   "license": "MIT",
   "author": "Belal · Belsoft Solutions",

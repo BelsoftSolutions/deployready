@@ -106,6 +106,7 @@ export class Banner {
   private static subtitle(version: string): void {
     if (!process.stdout.isTTY) console.log(chalk.gray('  ' + TAGLINE));
     console.log(chalk.gray(`  v${version} · local-first · AI-optional · your code never leaves unless you say so`));
+    console.log(chalk.gray(`  type ${chalk.cyan('help')} for all commands, or ${chalk.cyan('menu')} for the guided flow`));
     console.log('');
   }
 }

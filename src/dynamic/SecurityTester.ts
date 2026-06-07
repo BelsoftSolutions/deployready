@@ -5,7 +5,7 @@
  */
 import type { AxiosInstance } from 'axios';
 import { makeFinding } from '../utils/finding';
-import { containsSecret, redact } from '../utils/redact';
+import { detectSecret, redact } from '../utils/redact';
 import type { Finding, LiveEndpoint } from '../types';
 import type { ProbeTarget } from './EndpointMapper';
 
@@ -80,14 +80,19 @@ export class SecurityTester {
         );
       }
 
-      // 3. Secret leakage in response body.
+      // 3. Secret leakage in response body. A matched key shape is a critical;
+      // a merely secret-named value is a warning (could be a benign field name).
       const body = typeof res.data === 'string' ? res.data : safeStringify(res.data);
-      if (body && containsSecret(body)) {
+      const secret = body ? detectSecret(body) : null;
+      if (secret) {
+        const high = secret === 'high';
         findings.push(
           makeFinding({
             rule: 'secret-in-response',
-            title: 'API response contains a secret-like value',
-            severity: 'critical',
+            title: high
+              ? 'API response contains a hardcoded secret / credential'
+              : 'API response contains a secret-like value',
+            severity: high ? 'critical' : 'warning',
             category: 'security',
             source: 'dynamic',
             endpoint: t.path,

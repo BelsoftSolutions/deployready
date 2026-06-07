@@ -3,32 +3,32 @@
 > Local-first, AI-optional production-readiness scanner. It runs 30+ structured tests against your code **and** your running localhost app, gives you a 0–100 readiness score, and **optionally** sends only the structured findings report — never your source code — to an AI model for deeper analysis.
 
 ```bash
-deployready analyze ./my-app
+npx deployready analyze ./my-app
 ```
 
 ## Install
 
-**Global install** (recommended for repeated use):
+**Run without installing** (recommended — always works, nothing to set up):
+
+```bash
+npx deployready ./my-app
+```
+
+**Or install globally** if you use it often (lets you drop the `npx` prefix):
 
 ```bash
 npm install -g deployready
 deployready ./my-app
 ```
 
-**Or run without installing** (one-off / try it out):
-
-```bash
-npx deployready ./my-app
-```
-
-Requires Node.js >= 18.
+Requires Node.js >= 18. Every command below is shown with `npx`; if you installed globally, just drop the `npx`.
 
 ## Quick start
 
-Run `deployready` inside your project to open an interactive, guided session — no commands to memorize, just pick a number:
+Run it inside your project to open an interactive, guided session — no commands to memorize, just pick a number:
 
 ```bash
-deployready ./my-app     # or just: deployready
+npx deployready ./my-app     # or just: npx deployready
 ```
 
 ```
@@ -72,11 +72,11 @@ deployready › exit
 ## One-shot (CI / scripting)
 
 ```bash
-deployready init                              # first-time setup (pick model, store key)
-deployready analyze ./my-app                  # single non-interactive scan, prints results
-deployready analyze . --no-ai --no-dynamic    # static only, fully offline
-deployready report ./my-app                   # scan and export the markdown report
-deployready config                            # show the active config (secrets never printed)
+npx deployready init                              # first-time setup (pick model, store key)
+npx deployready analyze ./my-app                  # single non-interactive scan, prints results
+npx deployready analyze . --no-ai --no-dynamic    # static only, fully offline
+npx deployready report ./my-app                   # scan and export the markdown report
+npx deployready config                            # show the active config (secrets never printed)
 ```
 
 **Flags for `analyze`:**
@@ -96,7 +96,7 @@ deployready config                            # show the active config (secrets 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
 
 ```bash
-deployready analyze . --no-ai --no-dynamic --fail-on critical
+npx deployready analyze . --no-ai --no-dynamic --fail-on critical
 ```
 
 A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
@@ -120,7 +120,7 @@ Only the **structured findings JSON** is ever sent to an AI — and only after y
 
 ## AI models (optional)
 
-DeployReady works fully offline with no AI. To enable deeper analysis, configure one via `deployready init`:
+DeployReady works fully offline with no AI. To enable deeper analysis, configure one via `npx deployready init`:
 
 | Model | Notes |
 |---|---|

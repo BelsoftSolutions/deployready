@@ -30,14 +30,21 @@ describe('VulnerabilityDetector', () => {
 });
 
 describe('ScoreCalculator', () => {
-  it('applies the spec formula', () => {
-    const summary = { critical: 2, warning: 3, info: 4, total: 9 };
-    // 100 - 40 - 15 - 4 = 41
-    expect(ScoreCalculator.calculate(summary)).toBe(41);
+  it('is 100 only when fully clean', () => {
+    expect(ScoreCalculator.calculate({ critical: 0, warning: 0, info: 0, total: 0 })).toBe(100);
   });
 
-  it('never goes below 0', () => {
-    expect(ScoreCalculator.calculate({ critical: 10, warning: 0, info: 0, total: 10 })).toBe(0);
+  it('weighted decay: penalty 33 → ~48', () => {
+    const summary = { critical: 2, warning: 3, info: 4, total: 9 };
+    // penalty = 2*10 + 3*3 + 4*1 = 33 ; 100*30/(30+33) = 47.6 → 48
+    expect(ScoreCalculator.calculate(summary)).toBe(48);
+  });
+
+  it('stays positive under heavy load and rises as issues are resolved', () => {
+    const heavy = ScoreCalculator.calculate({ critical: 10, warning: 0, info: 0, total: 10 });
+    const lighter = ScoreCalculator.calculate({ critical: 3, warning: 0, info: 0, total: 3 });
+    expect(heavy).toBeGreaterThan(0); // never stuck at a flat 0
+    expect(lighter).toBeGreaterThan(heavy); // fixing issues moves the number up
   });
 });
 
