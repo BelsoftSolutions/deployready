@@ -1,10 +1,12 @@
 # DeployReady
 
-> Local-first, AI-optional production-readiness scanner. It runs 30+ structured tests against your code **and** your running localhost app, gives you a 0–100 readiness score, and **optionally** sends only the structured findings report — never your source code — to an AI model for deeper analysis.
+> **Ship with confidence.** Catch security and deploy-blocking issues before you ship — run 30+ structured tests across your code **and** your running app, get a 0–100 readiness score, and apply **AI-powered fixes**, all in one command.
 
 ```bash
 npx deployready@latest analyze ./my-app
 ```
+
+> _Privacy:_ scanning runs locally. Only a redacted findings report is ever sent to an AI — after you approve it, never your source code — and you can use a local model (Ollama) to keep everything 100% offline.
 
 ## Install
 
@@ -62,11 +64,11 @@ deployready › exit
 |---|---|
 | `scan` · `parse` · `dynamic` · `ai` | run the whole pipeline, or one step at a time |
 | `issues [crit\|warn\|info]` · `show <n>` | list findings (optionally filtered) · show one in detail |
-| `fix <n>` | auto-fix where safe; otherwise an AI-proposed diff you approve (creates a backup); otherwise guidance |
+| `fix <n>` | deterministic auto-fix where safe (weak hashes, disabled TLS verification, `yaml.load`, `verify=False`, Flask `debug=True`, gitignore `.env`); otherwise an AI-proposed diff you approve (creates a backup); otherwise guidance |
 | `verify <n>` | re-run the relevant checks to confirm a fix actually resolved the issue |
 | `done <n>` · `ignore <n>` | mark fixed / ignored — the score recomputes immediately |
 | `score` · `status` | show the current readiness score / session state |
-| `deploy [aws\|do]` | deployment walkthrough for your stack |
+| `deploy [platform]` | recommend a host for this project (no arg) or print a step-by-step guide for a chosen one (`aws`, `do`, `vercel`, `render`, `railway`, `fly`, `netlify`) |
 | `export` · `open` | write `deployready-report.md` · open the HTML dashboard |
 | `config` · `help` · `menu` · `clear` · `exit` | session utilities |
 
@@ -92,6 +94,11 @@ npx deployready@latest config                            # show the active confi
 | `--html` / `--open` | write an HTML dashboard / and open it in your browser |
 | `--json` | print a machine-readable JSON report (implies `--yes`) |
 | `--fail-on <severity>` | exit non-zero if findings at/above `critical \| warning \| info \| none` exist |
+| `--baseline <file>` | gate only on findings **not** in the baseline file (existing issues are grandfathered) |
+| `--write-baseline <file>` | write the current findings to a baseline file and exit `0` (accept current state) |
+| `--active` | run **active** authenticated authorization tests (needs `--token`; consented, loopback-only, GET-only) |
+| `--token <jwt>` | bearer JWT for the active scan (your logged-in test user) |
+| `--token-b <jwt>` | a second user's JWT — enables tenant / IDOR isolation tests |
 | `-v, --verbose` | verbose debug output |
 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
@@ -100,15 +107,42 @@ npx deployready@latest config                            # show the active confi
 npx deployready@latest analyze . --no-ai --no-dynamic --fail-on critical
 ```
 
+**Grandfather existing issues (baseline):** adopt the current findings once, then fail the
+build only on *new* ones — so you can turn the gate on for an existing codebase without
+drowning in pre-existing debt:
+
+```bash
+npx deployready@latest analyze . --no-ai --no-dynamic --write-baseline .deployready-baseline.json   # once
+npx deployready@latest analyze . --no-ai --no-dynamic --baseline .deployready-baseline.json --fail-on warning  # in CI
+```
+
 A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
+
+### Active (authenticated) testing — "try to hack it"
+
+With your app running locally, DeployReady can act as a logged-in user and try to break access control — the checks you'd otherwise do by hand in Burp/Postman:
+
+```bash
+npx deployready@latest analyze . --active --token "<your-JWT>" --token-b "<second-user-JWT>"
+```
+
+- **Broken object-level auth (IDOR/BOLA)** — swaps resource ids to reach another user's data.
+- **Broken tenant isolation** — swaps `org_id`/tenant to reach another tenant's data.
+- **Privilege escalation** — forges a `role: admin` claim and checks whether a forbidden route opens up.
+- **JWT not verified** — checks whether the server accepts a forged `alg:none` token.
+
+It is **opt-in and consented**, **loopback-only**, and **GET-only** (it never writes). Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
 
 ## What it checks
 
 - **Static analysis** — Babel-based AST parsing (pure JS, no native build) for JavaScript/TypeScript, plus Python. Dependency graph, route-mount resolution across files, and stack detection (Express, Next.js, Fastify, NestJS, Koa, FastAPI, Flask, Django, Laravel).
-- **Secrets & vulnerabilities** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
+- **Secrets & vulnerabilities** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, JWT `none` algorithm, insecure cookies, unsafe deserialization, insecure temp files, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
+- **Access control & transport** — Row-Level Security disabled or never enabled on a table, Supabase `service_role` key used in app code (RLS bypass), and insecure cleartext `http://` endpoints.
 - **Live dynamic testing** — detects your running localhost app and checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, and version/stack-trace leaks.
+- **Active authorization testing** (opt-in, `--active`) — acts as a logged-in user to find broken object-level auth (IDOR/BOLA), broken tenant isolation, privilege escalation (forged `role`), and unverified JWTs (`alg:none`).
 - **Readiness score (0–100)** with a critical / warning / info breakdown.
-- **Reports** — terminal output, markdown export, and an HTML dashboard.
+- **Deployment recommendation** — suggests where to host based on your stack, size, and whether you're frontend / backend / full-stack, flags when to split frontend and backend across platforms, and marks suitable free tiers.
+- **Reports** — terminal output, markdown export, and a branded HTML dashboard.
 
 ## How it works
 

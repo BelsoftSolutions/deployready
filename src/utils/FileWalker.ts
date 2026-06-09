@@ -24,7 +24,7 @@ const SKIP_DIRS = new Set([
   '.cache',
 ]);
 
-const SOURCE_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py', '.php']);
+const SOURCE_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py', '.php', '.sql']);
 
 /** Config-like files we want to inspect even though they aren't "source". */
 const EXTRA_FILES = new Set([

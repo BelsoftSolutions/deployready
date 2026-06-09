@@ -21,7 +21,8 @@ import { Verifier } from '../core/Verifier';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
 import { Banner } from '../ui/Banner';
-import { DeploymentGuide, type Platform } from '../ui/DeploymentGuide';
+import { DeploymentGuide, platformKeyFromName, platformFromArg, type Platform } from '../ui/DeploymentGuide';
+import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { ScoreTracker } from '../tracker/ScoreTracker';
 import { ChecklistManager } from '../tracker/ChecklistManager';
 import { FileEditor } from '../agent/FileEditor';
@@ -272,15 +273,23 @@ export class InteractiveShell {
 
     const editor = new FileEditor(this.state.target);
 
-    // 1. Safe deterministic auto-fix.
+    // 1. Safe deterministic auto-fix. Line-based fixers are optimistic, so if
+    //    the exact occurrence can't be safely rewritten we fall through to AI.
     if (FixManager.autoFixable(f)) {
       if (await this.confirm('Apply the automatic fix for this issue?', true)) {
-        const res = await FixManager.autoFix(f, editor);
-        logger.success(res.message);
-        if (res.backup) logger.info(`Backup: ${res.backup}`);
-        await this.verifyAndMark(f, true);
+        try {
+          const res = await FixManager.autoFix(f, editor);
+          logger.success(res.message);
+          if (res.backup) logger.info(`Backup: ${res.backup}`);
+          await this.verifyAndMark(f, true);
+          return;
+        } catch (err) {
+          logger.info(`Automatic fix didn't apply (${(err as Error).message}). Trying an AI-proposed fix…`);
+          // fall through to the AI path below
+        }
+      } else {
+        return;
       }
-      return;
     }
 
     // 2. AI-proposed fix (needs file+line and a configured model).
@@ -403,9 +412,41 @@ export class InteractiveShell {
 
   private deploy(arg?: string): void {
     if (!this.state.graph) return logger.warn('Run `parse` or `scan` first so I know your stack.');
-    const platform: Platform = arg === 'do' || arg === 'digitalocean' ? 'digitalocean' : 'aws';
-    const steps = DeploymentGuide.generate(this.state.graph.stack.stack, platform);
-    console.log('\n' + chalk.bold(`📦 Deployment guide — ${platform.toUpperCase()} (stack: ${this.state.graph.stack.stack})`));
+    const stack = this.state.graph.stack.stack;
+
+    // No platform given → recommend one based on the scanned project, then guide.
+    if (!arg) {
+      const rec = PlatformRecommender.recommend({ stack: this.state.graph.stack, graph: this.state.graph });
+      const kindLabel = rec.kind === 'unknown' ? 'app' : `${rec.kind} app`;
+      console.log('\n' + chalk.bold(`🚀 Recommended deployment — ${stack} (${rec.size} ${kindLabel})`));
+      console.log(`  ${chalk.green('▶')} ${fmtPick(rec.primary)}`);
+      if (rec.alternatives.length) {
+        console.log(chalk.gray('  alternatives:'));
+        rec.alternatives.forEach((a) => console.log('    • ' + fmtPick(a)));
+      }
+      if (rec.split.recommended) {
+        console.log('\n' + chalk.yellow('  ✂ Consider splitting frontend & backend:'));
+        console.log(chalk.gray(`    ${rec.split.reason}`));
+        if (rec.split.frontend) console.log('    frontend → ' + fmtPick(rec.split.frontend));
+        if (rec.split.backend) console.log('    backend  → ' + fmtPick(rec.split.backend));
+      }
+      rec.notes.forEach((n) => console.log(chalk.gray(`  note: ${n}`)));
+      const key = platformKeyFromName(rec.primary.name);
+      console.log(chalk.gray(`\n  Tip: \`deploy ${key}\` for step-by-step, or pick any platform (${PLATFORM_LIST}).`));
+      this.printGuide(stack, key);
+      return;
+    }
+
+    const platform = platformFromArg(arg);
+    if (!platform) {
+      return logger.warn(`Unknown platform "${arg}". Try: ${PLATFORM_LIST} (do) — or run \`deploy\` with no argument for a recommendation.`);
+    }
+    this.printGuide(stack, platform);
+  }
+
+  private printGuide(stack: import('../types').Stack, platform: Platform): void {
+    const steps = DeploymentGuide.generate(stack, platform);
+    console.log('\n' + chalk.bold(`📦 Deployment guide — ${platform.toUpperCase()} (stack: ${stack})`));
     steps.forEach((s, i) => {
       console.log(`  ${i + 1}. ${s.title}`);
       if (s.command) console.log(chalk.gray(`     $ ${s.command}`));
@@ -562,7 +603,7 @@ export class InteractiveShell {
       ['verify <n>', 're-run the check for a finding to confirm it is resolved'],
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],
-      ['deploy [aws|do]', 'print a deployment guide for the detected stack'],
+      ['deploy [platform]', 'recommend a host for this project (no arg) or guide a chosen one (aws|do|vercel|render|railway|fly|netlify)'],
       ['export [md|html|all]', 'save the report — markdown, HTML dashboard, or both'],
       ['open', 'save the HTML dashboard and open it in your browser'],
       ['config / clear / help', 'show config / clear screen / this help'],
@@ -689,4 +730,13 @@ export class InteractiveShell {
     console.log('');
     return this.menu();
   }
+}
+
+/** User-facing list of selectable platforms (kept in sync via DeploymentGuide). */
+const PLATFORM_LIST = 'aws, digitalocean, vercel, netlify, cloudflare, render, railway, fly';
+
+/** Format a platform pick for the terminal, marking free tiers as "(free)". */
+function fmtPick(p: PlatformPick): string {
+  const tag = p.free ? chalk.green(' (free)') : '';
+  return `${chalk.bold(p.name)}${tag} ${chalk.gray('— ' + p.reason)} ${chalk.gray(p.url)}`;
 }

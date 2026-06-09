@@ -17,9 +17,27 @@ describe('HtmlReporter', () => {
     const html = HtmlReporter.render(report());
     expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
     expect(html).toContain('>62<');
-    expect(html).toContain('<style>'); // inline CSS, no external resources
-    expect(html).not.toMatch(/https?:\/\//); // no CDN / network calls
+    expect(html).toContain('<style>'); // inline CSS
     expect(html).toContain('AI Summary');
+  });
+
+  it('loads no external resources (offline-safe), but may link out via anchors', () => {
+    const html = HtmlReporter.render(report());
+    expect(html).not.toMatch(/<script\s+src=/i); // no external scripts
+    expect(html).not.toMatch(/<link\b/i); // no external stylesheets/fonts
+    expect(html).not.toMatch(/@import/i); // no CSS imports
+    expect(html).not.toMatch(/src=["']https?:/i); // no remote images/iframes
+  });
+
+  it('is branded and links to the DeployReady website', () => {
+    const html = HtmlReporter.render(report());
+    expect(html).toContain('#00ff88'); // brand accent
+    expect(html).toContain('https://www.deployready.dev/');
+  });
+
+  it('includes a deployment recommendation derived from the stack', () => {
+    const html = HtmlReporter.render(report());
+    expect(html).toMatch(/Recommended deployment|Deploy/i);
   });
 
   it('HTML-escapes finding content so the report cannot become an XSS vector', () => {

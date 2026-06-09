@@ -33,9 +33,13 @@ deployready-report.html
 .vscode/
 *.swp
 
-# Internal-only (never publish) — local status doc & Claude workspace
+# Internal-only (never publish) — source-of-truth, session handoff & Claude workspace
 STATUS.md
+CLAUDE.md
 .claude/
+
+# Baseline file produced by the CI gate (project-specific, not ours to ship)
+.deployready-baseline.json
 
 # Test coverage
 coverage/

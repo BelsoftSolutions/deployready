@@ -131,6 +131,30 @@ const JS_RULES: LineRule[] = [
     recommendation:
       'Sanitize/encode user-controlled values before logging, or log structured fields so injected newlines cannot forge log entries.',
   },
+  {
+    rule: 'jwt-none-alg',
+    title: 'JWT configured with the "none" algorithm (signature bypass)',
+    severity: 'critical',
+    category: 'security',
+    re: /algorithms?\s*:\s*\[?\s*['"]none['"]/i,
+    exts: JS,
+    owasp: 'A02:2025',
+    cwe: 'CWE-347',
+    recommendation:
+      'Never accept the "none" JWT algorithm — it disables signature verification. Pin a strong algorithm (RS256/HS256) and verify signatures.',
+  },
+  {
+    rule: 'insecure-cookie',
+    title: 'Cookie set with httpOnly disabled',
+    severity: 'warning',
+    category: 'security',
+    re: /httpOnly\s*:\s*false/i,
+    exts: JS,
+    owasp: 'A05:2025',
+    cwe: 'CWE-1004',
+    recommendation:
+      'Set httpOnly:true on session/auth cookies so client-side JS cannot read them, plus secure:true and an appropriate sameSite.',
+  },
 ];
 
 /** Python rules. */
@@ -249,6 +273,28 @@ const PY_RULES: LineRule[] = [
     cwe: 'CWE-338',
     recommendation: 'Use the secrets module (secrets.token_hex / token_urlsafe) for tokens, salts, and nonces.',
   },
+  {
+    rule: 'py-mktemp',
+    title: 'Insecure temp file via tempfile.mktemp() (race condition)',
+    severity: 'warning',
+    category: 'security',
+    re: /\btempfile\.mktemp\s*\(/,
+    exts: PY,
+    owasp: 'A04:2025',
+    cwe: 'CWE-377',
+    recommendation: 'Use tempfile.mkstemp() or NamedTemporaryFile() — mktemp() is vulnerable to a TOCTOU race.',
+  },
+  {
+    rule: 'py-jwt-none',
+    title: 'JWT configured with the "none" algorithm (signature bypass)',
+    severity: 'critical',
+    category: 'security',
+    re: /algorithms?\s*=\s*\[?\s*['"]none['"]/i,
+    exts: PY,
+    owasp: 'A02:2025',
+    cwe: 'CWE-347',
+    recommendation: 'Reject the "none" algorithm; require a strong algorithm and verify signatures (PyJWT: algorithms=["RS256"]).',
+  },
 ];
 
 /** Language-agnostic rules (apply to every file). */
@@ -275,6 +321,41 @@ const GENERIC_RULES: LineRule[] = [
     cwe: 'CWE-489',
     recommendation:
       'Disable debug mode in production — it leaks stack traces and internal details to attackers.',
+  },
+  {
+    rule: 'rls-disabled',
+    title: 'Row-Level Security disabled (broken access control)',
+    severity: 'critical',
+    category: 'security',
+    re: /disable\s+row\s+level\s+security/i,
+    owasp: 'A01:2025',
+    cwe: 'CWE-285',
+    recommendation:
+      'Keep RLS enabled and define policies instead of disabling it — without RLS any authenticated user can read/write every row.',
+    evidence: true,
+  },
+  {
+    rule: 'supabase-service-role',
+    title: 'Supabase service_role key used in application code (bypasses RLS)',
+    severity: 'warning',
+    category: 'security',
+    re: /service_role/i,
+    owasp: 'A01:2025',
+    cwe: 'CWE-269',
+    recommendation:
+      'The service_role key bypasses Row-Level Security. Use it only in trusted server-side code (never in client/browser bundles), and prefer the anon key + RLS policies for user-facing access.',
+  },
+  {
+    rule: 'insecure-http-url',
+    title: 'Insecure http:// URL (cleartext transport)',
+    severity: 'info',
+    category: 'security',
+    re: /["'`]http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|www\.w3\.org|schemas?\.)[a-z0-9.-]+/i,
+    owasp: 'A02:2025',
+    cwe: 'CWE-319',
+    recommendation:
+      'Use https:// for any non-local endpoint so credentials and data are not sent in cleartext.',
+    evidence: true,
   },
 ];
 

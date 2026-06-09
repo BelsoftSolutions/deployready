@@ -48,4 +48,34 @@ describe('FixManager.autoFix', () => {
     expect(res.message).toMatch(/Added/);
     expect(fs.readFileSync(path.join(root, '.gitignore'), 'utf8')).toContain('.env');
   });
+
+  it('applies a deterministic line fix (weak-hash) to the finding line, with backup', async () => {
+    const root = tmpProject();
+    fs.writeFileSync(path.join(root, 'crypto.js'), "const a=1;\nconst h = createHash('md5');\nconst b=2;\n");
+    const finding = makeFinding({
+      rule: 'weak-hash', title: 't', severity: 'warning', category: 'security',
+      source: 'static', description: '', recommendation: '', file: 'crypto.js', line: 2,
+    });
+    expect(FixManager.autoFixable(finding)).toBe(true);
+    const res = await FixManager.autoFix(finding, new FileEditor(root));
+    expect(fs.readFileSync(path.join(root, 'crypto.js'), 'utf8')).toBe(
+      "const a=1;\nconst h = createHash('sha256');\nconst b=2;\n",
+    );
+    expect(res.backup).toBeTruthy();
+    expect(fs.existsSync(res.backup as string)).toBe(true);
+  });
+
+  it('throws (so the caller can fall back) when the line does not match the fixable shape', async () => {
+    const root = tmpProject();
+    fs.writeFileSync(path.join(root, 'tls.js'), "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';\n");
+    const finding = makeFinding({
+      rule: 'tls-verification-disabled', title: 't', severity: 'critical', category: 'security',
+      source: 'static', description: '', recommendation: '', file: 'tls.js', line: 1,
+    });
+    await expect(FixManager.autoFix(finding, new FileEditor(root))).rejects.toThrow();
+    // file left untouched
+    expect(fs.readFileSync(path.join(root, 'tls.js'), 'utf8')).toBe(
+      "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';\n",
+    );
+  });
 });

@@ -20,7 +20,12 @@ import { IssuePresenter } from '../ui/IssuePresenter';
 import { ExportManager } from '../ui/ExportManager';
 import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
-import type { DynamicResults, Finding, ScanReport } from '../types';
+import { getVersion } from '../utils/version';
+import { decodeJwt } from '../active/jwt';
+import { buildActiveRequests } from '../active/requestPlan';
+import { createActiveHttpAdapter } from '../active/httpAdapter';
+import { runActiveScan } from '../active/runner';
+import type { CodeGraph, DynamicResults, Finding, ScanReport } from '../types';
 
 export interface AnalyzeOptions {
   /** Auto-approve all consent prompts (CI / non-interactive). */
@@ -39,9 +44,13 @@ export interface AnalyzeOptions {
   open?: boolean;
   /** Suppress the pretty terminal report (caller emits machine-readable JSON). */
   json?: boolean;
+  /** Run the active (authenticated) authorization tests. Requires `token`. */
+  active?: boolean;
+  /** Bearer JWT for the primary test identity (active scan). */
+  token?: string;
+  /** Optional second-identity JWT — enables the cleanest tenant/IDOR proof. */
+  tokenB?: string;
 }
-
-const VERSION = '0.1.0';
 
 export class Orchestrator {
   static async analyze(target: string, opts: AnalyzeOptions = {}): Promise<ScanReport> {
@@ -64,15 +73,21 @@ export class Orchestrator {
     }
     const dynamicFindings = dynamic?.findings ?? [];
 
-    // ---- 3. Aggregate ----
-    let agg = IssueAggregator.process(staticFindings, dynamicFindings);
+    // ---- 2b. Active (authenticated) authorization testing, opt-in + consent ----
+    let activeFindings: Finding[] = [];
+    if (opts.active) {
+      activeFindings = await Orchestrator.runActive(graph, opts);
+    }
+
+    // ---- 3. Aggregate (active findings are dynamic-sourced) ----
+    let agg = IssueAggregator.process(staticFindings, [...dynamicFindings, ...activeFindings]);
 
     // ---- 4. Build report ----
     let report: ScanReport = {
       target: projectPath,
       startedAt,
       finishedAt: new Date().toISOString(),
-      version: VERSION,
+      version: getVersion(),
       stack: graph.stack,
       graph,
       dynamic,
@@ -154,6 +169,61 @@ export class Orchestrator {
     } catch (err) {
       spinner.fail(`Live testing failed: ${(err as Error).message}`);
       return undefined;
+    }
+  }
+
+  /**
+   * Active authorization testing: replays the user's own authenticated GET
+   * requests with a tampered identity to prove access control holds. Opt-in
+   * (`--active --token …`), consented, loopback-only, GET-only.
+   */
+  private static async runActive(graph: CodeGraph, opts: AnalyzeOptions): Promise<Finding[]> {
+    if (!opts.token) return []; // CLI shows token instructions; nothing to do here.
+    const claims = decodeJwt(opts.token)?.payload;
+    if (!claims) {
+      logger.warn('Active scan: --token is not a valid JWT — skipping.');
+      return [];
+    }
+
+    const config = await ConfigManager.load();
+    const detect = ora('Active scan: looking for a running app on localhost…').start();
+    const app = await LocalhostDetector.find(config.defaultPorts);
+    if (!app) {
+      detect.info('Active scan: no running app found — start your app, then re-run. Skipping.');
+      return [];
+    }
+    detect.succeed(`Active scan target: ${app.baseUrl}`);
+
+    if (!opts.yes) {
+      const { ok } = await inquirer.prompt<{ ok: boolean }>([
+        {
+          type: 'confirm',
+          name: 'ok',
+          message: `Run ACTIVE authenticated tests against ${app.baseUrl}? Sends real GET requests as your token, including identity-tampered variants (no writes).`,
+          default: false,
+        },
+      ]);
+      if (!ok) {
+        logger.info('Skipping active scan by your choice.');
+        return [];
+      }
+    }
+
+    const requests = buildActiveRequests(graph.routes, claims);
+    if (requests.length === 0) {
+      logger.info('Active scan: no testable GET routes resolved from your token — skipping.');
+      return [];
+    }
+
+    const adapter = createActiveHttpAdapter({ baseUrl: app.baseUrl });
+    const spinner = ora(`Active scan: probing ${requests.length} endpoint(s)…`).start();
+    try {
+      const findings = await runActiveScan({ token: opts.token, tokenB: opts.tokenB, requests }, adapter);
+      spinner.succeed(`Active scan done — ${findings.length} access-control finding(s).`);
+      return findings;
+    } catch (err) {
+      spinner.fail(`Active scan failed: ${(err as Error).message}`);
+      return [];
     }
   }
 

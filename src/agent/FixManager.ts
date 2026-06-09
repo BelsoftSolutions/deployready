@@ -8,6 +8,7 @@
  */
 import { FileEditor } from './FileEditor';
 import type { Snippet } from './FileEditor';
+import { LINE_FIXERS, fixLine } from './lineFixers';
 import type { ModelRouter, FixSuggestion } from '../ai/ModelRouter';
 import type { Finding } from '../types';
 
@@ -19,9 +20,15 @@ export interface AutoFixResult {
 const AUTO_FIXABLE = new Set(['env-not-ignored']);
 
 export class FixManager {
-  /** True if this finding has a safe, deterministic auto-fix. */
+  /**
+   * True if this finding has a safe, deterministic auto-fix candidate.
+   * Line-based fixers are optimistic: the exact line may still not match the
+   * fixable shape (e.g. an env-var TLS variant), in which case `autoFix` throws
+   * and the caller falls back to the AI diff path.
+   */
   static autoFixable(finding: Finding): boolean {
-    return AUTO_FIXABLE.has(finding.rule);
+    if (AUTO_FIXABLE.has(finding.rule)) return true;
+    return finding.rule in LINE_FIXERS && Boolean(finding.file && finding.line);
   }
 
   /** Apply a safe deterministic fix. Throws if the rule isn't auto-fixable. */
@@ -37,6 +44,22 @@ export class FixManager {
         backup,
       };
     }
+
+    if (finding.rule in LINE_FIXERS) {
+      if (!finding.file || !finding.line) {
+        throw new Error(`Rule "${finding.rule}" needs a file+line to auto-fix.`);
+      }
+      const lines = (await editor.read(finding.file)).split('\n');
+      const original = lines[finding.line - 1];
+      if (original === undefined) throw new Error(`Line ${finding.line} not found in ${finding.file}.`);
+      const fixed = fixLine(finding.rule, original);
+      if (fixed === null) {
+        throw new Error(`Could not safely auto-fix this occurrence of "${finding.rule}" — try \`fix\` for an AI diff.`);
+      }
+      const backup = await editor.replaceLines(finding.file, finding.line, finding.line, fixed);
+      return { message: `Applied a safe fix to ${finding.file}:${finding.line}.`, backup };
+    }
+
     throw new Error(`No automatic fix available for rule "${finding.rule}".`);
   }
 
