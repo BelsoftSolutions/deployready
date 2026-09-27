@@ -37,7 +37,10 @@ export class PythonAdapter implements ParserAdapter {
     // local name -> candidate module path fragments (submodule + module forms).
     const bindings = new Map<string, string[]>();
 
-    const lines = source.split('\n');
+    // Normalize CRLF/CR before splitting: FROM_IMPORT_RE anchors on `$`, and JS
+    // regex `.` does not match `\r` (a LineTerminator per spec), so a trailing
+    // `\r` left on the line from a naive split('\n') silently breaks the match.
+    const lines = source.split(/\r\n|\r|\n/);
     lines.forEach((line, idx) => {
       if (line.length > 2000) return;
 

@@ -22,6 +22,28 @@ def h(): return {}`;
     );
     expect(r.mounts.some((m) => m.source.includes('routers/auth'))).toBe(true);
   });
+
+  it('extracts routes and resolves include_router mounts on CRLF-line-ended source', () => {
+    // Regression test for BEL-23: FROM_IMPORT_RE anchored on `$`, and JS regex
+    // `.` doesn't match `\r`, so a naive split('\n') left a trailing `\r` on
+    // every line and silently dropped every from-import on CRLF files.
+    const src = [
+      'from fastapi import FastAPI',
+      'from .routers import auth',
+      'app = FastAPI()',
+      'app.include_router(auth.router, prefix="/api/auth")',
+      '@app.get("/health")',
+      'def h(): return {}',
+    ].join('\r\n');
+    const r = adapter.parse('main.py', src);
+    expect(r.imports).toContain('fastapi');
+    expect(r.imports).toContain('.routers');
+    expect(r.routes.find((x) => x.path === '/health')?.method).toBe('GET');
+    expect(r.mounts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ prefix: '/api/auth' })]),
+    );
+    expect(r.mounts.some((m) => m.source.includes('routers/auth'))).toBe(true);
+  });
 });
 
 describe('CodeParser on a FastAPI project', () => {
