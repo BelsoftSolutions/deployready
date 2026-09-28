@@ -1,10 +1,18 @@
 # DeployReady
 
-> **Ship with confidence.** Catch security and deploy-blocking issues before you ship — run 30+ structured tests across your code **and** your running app, get a 0–100 readiness score, and apply **AI-powered fixes**, all in one command.
+> **AI wrote it fast. DeployReady checks if it's safe to ship.**
+
+A pre-flight check for vibe-coded apps: run 30+ structured tests across your code **and** your running app, get a 0–100 readiness score, and apply **AI-powered fixes** — all in one command. Built for people shipping with Cursor, Copilot, Claude Code, v0, or bolt — not a lecture about them.
 
 ```bash
 npx deployready@latest analyze ./my-app
 ```
+
+<p align="center">
+  <img src="docs/scan-demo.svg" alt="Terminal recording of DeployReady scanning a small AI-generated Express app and finding a SQL injection, a hardcoded AWS key, eval() code injection, and an unprotected .env file — readiness score 39/100" width="720">
+</p>
+
+<p align="center"><sub>Unedited output from a real scan of a small AI-generated app — see <a href="tests/sample-app"><code>tests/sample-app</code></a>.</sub></p>
 
 > _Privacy:_ scanning runs locally. Only a redacted findings report is ever sent to an AI — after you approve it, never your source code — and you can use a local model (Ollama) to keep everything 100% offline.
 
