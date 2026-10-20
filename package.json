@@ -5,6 +5,13 @@
   "license": "MIT",
   "author": "Belal · Belsoft Solutions",
   "homepage": "https://deployready.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BelsoftSolutions/deployready.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BelsoftSolutions/deployready/issues"
+  },
   "type": "commonjs",
   "bin": {
     "deployready": "./bin/deployready.js"
