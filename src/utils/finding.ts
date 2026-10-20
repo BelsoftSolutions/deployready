@@ -10,3 +10,8 @@ export function makeFinding(f: Omit<Finding, 'id'>): Finding {
   const id = crypto.createHash('sha1').update(key).digest('hex').slice(0, 12);
   return { id, ...f };
 }
+
+/** Informational could-not-check note: severity info, never scored or gated. */
+export function makeNote(f: Omit<Finding, 'id' | 'severity' | 'note'>): Finding {
+  return makeFinding({ ...f, severity: 'info', note: true });
+}

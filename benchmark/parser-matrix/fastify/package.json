@@ -1,0 +1,6 @@
+{
+  "name": "matrix-fastify",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": { "fastify": "^4.28.0", "@fastify/jwt": "^8.0.0" }
+}

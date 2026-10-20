@@ -1,0 +1,10 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Dummy pets API", "version": "1.0.0" },
+  "paths": {
+    "/ping": { "get": { "summary": "liveness" } },
+    "/pets": { "post": { "summary": "create" } },
+    "/pets/{petId}": { "get": { "summary": "one pet" } },
+    "/admin/stats": { "get": { "security": [{ "bearerAuth": [] }] } }
+  }
+}

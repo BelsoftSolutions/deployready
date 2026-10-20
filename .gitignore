@@ -26,6 +26,8 @@ deployready-report.html
 .npmrc
 # ...except this fake .env test fixture (no real secrets) the test suite scans
 !tests/sample-app/.env
+# ...and the benchmark corpus fixtures (fake values only)
+!benchmark/corpus/**/.env*
 
 # Editor / OS
 .DS_Store

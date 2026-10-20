@@ -1,0 +1,4 @@
+{
+  "description": "hash.update() with a template literal is not SQL and must not be flagged",
+  "expected": [{ "rule": "sql-injection", "present": false }]
+}

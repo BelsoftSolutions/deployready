@@ -58,6 +58,9 @@ export class Verifier {
       return { status: 'unknown', detail: 'No running app in this session — start it and run `dynamic` to re-check.' };
     }
     const { baseUrl, routes } = ctx.dynamic;
+    if (routes.length === 0) {
+      return { status: 'unknown', detail: 'No routes were discovered in the code, so there is nothing to re-check (DeployReady does not guess routes).' };
+    }
     try {
       assertLoopback(baseUrl);
     } catch {
@@ -67,13 +70,16 @@ export class Verifier {
     const port = Number(new URL(baseUrl).port) || 80;
     const app = await LocalhostDetector.find([port]);
     if (!app) {
-      return { status: 'unknown', detail: 'The app is no longer reachable — restart it to verify dynamic fixes.' };
+      return { status: 'unknown', detail: 'No local server is listening on that port any more — restart it to verify dynamic fixes.' };
     }
 
     try {
       const results = await DynamicTester.run(baseUrl, routes, {
         aggressive: finding.rule === 'missing-rate-limit',
       });
+      if (results.probed.length === 0) {
+        return { status: 'unknown', detail: 'None of the discovered routes can be requested, so this could not be re-checked.' };
+      }
       const present = results.findings.some(
         (f) => f.rule === finding.rule && f.endpoint === finding.endpoint,
       );

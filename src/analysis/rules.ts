@@ -297,6 +297,23 @@ const PY_RULES: LineRule[] = [
   },
 ];
 
+// A real statement shape (second keyword required), never a bare SELECT/UPDATE word.
+const SQL_SHAPE =
+  '(?:select\\b(?=[^;\\n]{0,300}\\bfrom\\b)|insert\\s+into\\b|update\\b(?=[^;\\n]{0,300}\\bset\\b)|delete\\s+from\\b)';
+const SQL_SIGNAL = '(?:\\$\\{|["\'`]\\s*\\+)';
+const SQL_CALL = '(?:\\.(?:query|execute|raw)|\\$?(?:query|execute)RawUnsafe)\\s*(?:<[^>;\\n]{0,60}>)?\\s*\\(';
+const SQL_INJECTION_RE = new RegExp(
+  [
+    // string/template literal that STARTS with a statement, then interpolation/concatenation
+    `["'\`]\\s*${SQL_SHAPE}[^;\\n]{0,200}?${SQL_SIGNAL}`,
+    // DB call whose literal argument contains a statement anywhere
+    `${SQL_CALL}\\s*["'\`][^;\\n]{0,200}?\\b${SQL_SHAPE}[^;\\n]{0,200}?${SQL_SIGNAL}`,
+    // continuation line of a multi-line template literal
+    `^\\s*(?:select\\b(?=[^;\\n]{0,300}\\bfrom\\b)|insert\\s+into\\b|update\\s+[\\w."\`\\[\\]]+\\s+set\\b|delete\\s+from\\b)[^;\\n]{0,200}?\\$\\{`,
+  ].join('|'),
+  'i',
+);
+
 /** Language-agnostic rules (apply to every file). */
 const GENERIC_RULES: LineRule[] = [
   {
@@ -304,7 +321,7 @@ const GENERIC_RULES: LineRule[] = [
     title: 'SQL query built by string concatenation (SQL injection)',
     severity: 'critical',
     category: 'security',
-    re: /(?:SELECT|INSERT|UPDATE|DELETE)\b[^;\n]{0,200}(?:\$\{|"\s*\+|'\s*\+|`\s*\+)/i,
+    re: SQL_INJECTION_RE,
     owasp: 'A05:2025',
     cwe: 'CWE-89',
     recommendation:

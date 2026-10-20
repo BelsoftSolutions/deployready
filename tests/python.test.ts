@@ -24,7 +24,7 @@ def h(): return {}`;
   });
 
   it('extracts routes and resolves include_router mounts on CRLF-line-ended source', () => {
-    // Regression test for BEL-23: FROM_IMPORT_RE anchored on `$`, and JS regex
+    // Regression test: FROM_IMPORT_RE anchored on `$`, and JS regex
     // `.` doesn't match `\r`, so a naive split('\n') left a trailing `\r` on
     // every line and silently dropped every from-import on CRLF files.
     const src = [

@@ -34,6 +34,12 @@ export interface Finding {
   cwe?: string;
   /** Short redacted evidence snippet. MUST be passed through redact() before set. */
   evidence?: string;
+  /** True for model-suggested findings: never scored, never counted by the CI gate. */
+  unverified?: boolean;
+  /** Informational note, not a vulnerability: shown in reports, never scored, never counted by the CI gate or the baseline. */
+  note?: boolean;
+  /** Found by the opt-in common-path probe (a guessed path), so lower confidence than a discovered-route finding. */
+  guessed?: boolean;
 }
 
 /** A module/file node in the dependency graph. */
@@ -46,6 +52,9 @@ export interface ModuleNode {
   isRoute: boolean;
 }
 
+/** Where a route came from: parsed source code (default) or the project's own OpenAPI/Swagger file on disk. */
+export type RouteSource = 'code' | 'openapi';
+
 /** A discovered HTTP route from static analysis. */
 export interface Route {
   method: string;
@@ -54,6 +63,12 @@ export interface Route {
   line?: number;
   /** Heuristic: does this route appear to require auth (middleware detected)? */
   guarded: boolean;
+  /** Names of the guard middleware seen on the route, when the parser records them. */
+  guardNames?: string[];
+  /** Absent means 'code'. 'openapi' routes are declared in an OpenAPI/Swagger file on disk. */
+  source?: RouteSource;
+  /** OpenAPI/Swagger files (relative) that also declare this route; extra evidence on a code route. */
+  specFiles?: string[];
 }
 
 export type Stack =
@@ -84,6 +99,12 @@ export interface CodeGraph {
   routes: Route[];
   /** Files scanned, for reporting. */
   fileCount: number;
+  /** Files/directories not scanned because a .gitignore rule matched them. */
+  gitignoreSkipped?: number;
+  /** OpenAPI/Swagger files read from disk for route discovery (relative paths). */
+  specFiles?: string[];
+  /** Visible info lines from route discovery (e.g. a spec that was skipped and why). */
+  discoveryNotes?: string[];
 }
 
 /** A live endpoint discovered/confirmed during dynamic testing. */
@@ -94,12 +115,54 @@ export interface LiveEndpoint {
   responseTimeMs?: number;
 }
 
+/** A discovered route the dynamic scan requested, with the evidence for doing so. */
+export interface ProbedRoute {
+  method: string;
+  path: string;
+  why: string[];
+}
+
+/** A discovered route the scan did not request, and why. */
+export interface SkippedRoute {
+  method: string;
+  path: string;
+  reason: string;
+}
+
+/** Outcome of one path in the opt-in common-path probe. Everything except `found` is "probed, not found". */
+export type CommonPathOutcome = 'found' | 'not-found' | 'protected' | 'not-proven' | 'error';
+
+export interface CommonPathProbed {
+  path: string;
+  status?: number;
+  outcome: CommonPathOutcome;
+  reason: string;
+}
+
+/** What the opt-in common-path probe requested and what it concluded. */
+export interface CommonPathReport {
+  target: string;
+  /** Hard cap on requests, including the control. */
+  cap: number;
+  control: { path: string; status?: number };
+  probed: CommonPathProbed[];
+  /** Table paths not requested because the normal scan already covers them. */
+  covered?: string[];
+  aborted?: string;
+}
+
 export interface DynamicResults {
   baseUrl: string;
   reachable: boolean;
   endpoints: LiveEndpoint[];
+  /** Exactly the routes requested (all discovered by static analysis). */
+  probed: ProbedRoute[];
+  /** Discovered routes that were not requested, with reasons. */
+  skipped: SkippedRoute[];
   /** Findings produced by dynamic testers (already typed as Finding). */
   findings: Finding[];
+  /** Present only when the opt-in common-path probe ran. */
+  commonPaths?: CommonPathReport;
 }
 
 /** The complete scan result handed to UI, export, and the AI layer. */
@@ -117,13 +180,18 @@ export interface ScanReport {
     critical: number;
     warning: number;
     info: number;
+    /** Scored findings only (excludes unverified AI suggestions). */
     total: number;
+    /** AI suggestions: shown, but not scored and not counted above. */
+    unverified?: number;
+    /** Informational notes: shown, but not scored and not counted above. */
+    notes?: number;
   };
   /** Optional narrative analysis from the AI layer. */
   aiSummary?: string;
 }
 
-export type AiModel = 'claude' | 'openai' | 'ollama';
+export type AiModel = 'claude' | 'openai' | 'ollama' | 'claude-cli' | 'codex-cli';
 
 export interface AppConfig {
   model: AiModel;
@@ -132,8 +200,16 @@ export interface AppConfig {
   openaiApiKey: string | null;
   ollamaPort: number;
   ollamaModel: string;
+  /** Optional absolute path to the claude/codex executable for the CLI providers. User-level config only. */
+  cliCommand?: string | null;
+  /** Optional model name passed to the CLI providers (validated before use). */
+  cliModel?: string | null;
+  /** codex-cli is a normal provider; set to false to switch it off. User-level config only. */
+  codexEnabled?: boolean;
   warnBeforeExternalSend: boolean;
   defaultPorts: number[];
+  /** Opt-in common-path probe (see docs/COMMON-PATH-PROBE.md). Off by default; never written as true by init. */
+  probeCommonPaths: boolean;
 }
 
 /** A single tool result returned by an AI handler. */

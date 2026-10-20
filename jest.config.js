@@ -5,6 +5,8 @@ module.exports = {
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.ts'],
+  // Floor set below the measured numbers (see docs/COVERAGE.md) to catch regressions, not to chase a target.
+  coverageThreshold: { global: { statements: 78, branches: 69, functions: 82, lines: 80 } },
   // The sample-app is intentionally vulnerable fixture code, not a test target.
   testPathIgnorePatterns: ['/node_modules/', '/tests/sample-app/'],
   transform: {

@@ -1,0 +1,4 @@
+{
+  "description": "A SELECT assigned to a variable via concatenation (query executed elsewhere) must be flagged",
+  "expected": [{ "rule": "sql-injection", "present": true, "file": "app.js" }]
+}

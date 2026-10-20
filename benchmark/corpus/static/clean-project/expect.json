@@ -1,0 +1,21 @@
+{
+  "description": "A hardened Express app that follows every rule must produce no finding of any static rule (guards against rules that fire on everything)",
+  "expected": [
+    { "rule": "sql-injection", "present": false },
+    { "rule": "hardcoded-secret", "present": false },
+    { "rule": "possible-hardcoded-secret", "present": false },
+    { "rule": "env-not-ignored", "present": false },
+    { "rule": "eval-usage", "present": false },
+    { "rule": "command-injection", "present": false },
+    { "rule": "xss-sink", "present": false },
+    { "rule": "cors-wildcard", "present": false },
+    { "rule": "tls-verification-disabled", "present": false },
+    { "rule": "weak-hash", "present": false },
+    { "rule": "insecure-random", "present": false },
+    { "rule": "jwt-none-alg", "present": false },
+    { "rule": "insecure-cookie", "present": false },
+    { "rule": "debug-enabled", "present": false },
+    { "rule": "log-injection", "present": false },
+    { "rule": "insecure-http-url", "present": false }
+  ]
+}

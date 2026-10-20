@@ -75,6 +75,11 @@ export function buildProgram(): Command {
       '--write-baseline <file>',
       'write the current findings to a baseline file and exit 0 (accept current state)',
     )
+    .option(
+      '--probe-common-paths',
+      'opt in to the common-path probe: also request a fixed, printed list of well-known paths (/.env, /.git/config, ...) on your local app; see docs/COMMON-PATH-PROBE.md',
+    )
+    .option('--no-probe-common-paths', 'force the common-path probe off for this run, even if the config key enables it')
     .option('--active', 'run active (authenticated) authorization tests — needs --token', false)
     .option('--token <jwt>', 'bearer JWT for the active scan (your test user)')
     .option('--token-b <jwt>', 'second-identity JWT, for tenant/IDOR isolation tests')
@@ -99,6 +104,7 @@ export function buildProgram(): Command {
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
           aggressive: opts.aggressive,
+          probeCommonPaths: opts.probeCommonPaths as boolean | undefined, // undefined = not on the command line
           export: opts.export,
           html: opts.html,
           open: opts.open,
@@ -112,7 +118,7 @@ export function buildProgram(): Command {
         if (opts.writeBaseline) {
           const body = serializeBaseline(report.findings);
           fs.writeFileSync(opts.writeBaseline, body);
-          logger.success(`Wrote baseline with ${report.findings.length} finding(s) to ${opts.writeBaseline}.`);
+          logger.success(`Wrote baseline with ${report.summary.total} finding(s) to ${opts.writeBaseline}.`);
           return;
         }
 
@@ -125,8 +131,8 @@ export function buildProgram(): Command {
           const fresh = newFindings(report.findings, baseline);
           gateSummary = summarize(fresh);
           if (!opts.json) {
-            const suppressed = report.findings.length - fresh.length;
-            logger.info(`Baseline: ${suppressed} known finding(s) grandfathered; gating on ${fresh.length} new.`);
+            const suppressed = report.summary.total - gateSummary.total;
+            logger.info(`Baseline: ${suppressed} known finding(s) grandfathered; gating on ${gateSummary.total} new.`);
           }
         }
 
@@ -179,8 +185,12 @@ export function buildProgram(): Command {
               openaiApiKey: c.openaiApiKey ? '«set»' : null,
               ollamaPort: c.ollamaPort,
               ollamaModel: c.ollamaModel,
+              cliCommand: c.cliCommand ?? null,
+              cliModel: c.cliModel ?? null,
+              codexEnabled: c.codexEnabled !== false,
               warnBeforeExternalSend: c.warnBeforeExternalSend,
               defaultPorts: c.defaultPorts,
+              probeCommonPaths: c.probeCommonPaths,
             },
             null,
             2,

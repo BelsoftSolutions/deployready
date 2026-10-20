@@ -1,0 +1,9 @@
+name: CI
+on: [push]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+    steps:
+      - run: echo deploy

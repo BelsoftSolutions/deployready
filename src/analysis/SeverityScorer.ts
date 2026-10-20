@@ -4,12 +4,17 @@
  * secret is always critical regardless of where it came from).
  */
 import type { Finding, Severity } from '../types';
+import { isNote, isUnverified } from './ScoreCalculator';
 
 const ALWAYS_CRITICAL = new Set(['hardcoded-secret', 'env-not-ignored', 'sql-injection', 'command-injection']);
 
 export class SeverityScorer {
   static apply(findings: Finding[]): Finding[] {
     return findings.map((f) => {
+      if (isNote(f) && !isUnverified(f)) return f;
+      if (isUnverified(f)) {
+        return f.severity === 'info' && f.unverified === true ? f : { ...f, severity: 'info', unverified: true };
+      }
       const severity: Severity = ALWAYS_CRITICAL.has(f.rule) ? 'critical' : f.severity;
       return severity === f.severity ? f : { ...f, severity };
     });

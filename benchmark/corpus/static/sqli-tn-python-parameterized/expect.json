@@ -1,0 +1,7 @@
+{
+  "description": "Parameterized Python queries must not be flagged",
+  "expected": [
+    { "rule": "py-sql-fstring", "present": false },
+    { "rule": "sql-injection", "present": false }
+  ]
+}

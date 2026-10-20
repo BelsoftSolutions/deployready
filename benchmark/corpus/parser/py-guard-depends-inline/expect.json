@@ -1,0 +1,7 @@
+{
+  "description": "FastAPI route with Depends() in the decorator is guarded; a plain route is not",
+  "expected": [
+    { "route": { "method": "GET", "path": "/me" }, "guarded": true },
+    { "route": { "method": "GET", "path": "/health" }, "guarded": false }
+  ]
+}

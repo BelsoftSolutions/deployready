@@ -1,0 +1,4 @@
+{
+  "description": "A prefix-scoped app.use(requireAuth) does not guard routes outside that prefix",
+  "expected": [{ "route": { "method": "GET", "path": "/public" }, "guarded": false }]
+}

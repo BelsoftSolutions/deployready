@@ -1,0 +1,4 @@
+{
+  "description": "Code under a directory listed in .gitignore (generated output) must not be reported",
+  "expected": [{ "rule": "eval-usage", "present": false, "file": "generated/bundle.js" }]
+}

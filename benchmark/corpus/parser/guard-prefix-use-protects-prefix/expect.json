@@ -1,0 +1,4 @@
+{
+  "description": "app.use('/admin', requireAuth) guards the routes under /admin",
+  "expected": [{ "route": { "method": "GET", "path": "/admin/users" }, "guarded": true }]
+}

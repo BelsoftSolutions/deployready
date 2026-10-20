@@ -21,7 +21,7 @@ function fakeReport(findingCount = 3): ScanReport {
 
 const ollamaConfig: AppConfig = {
   model: 'ollama', claudeApiKey: null, openaiApiKey: null,
-  ollamaPort: 11434, ollamaModel: 'llama3', warnBeforeExternalSend: true, defaultPorts: [3000],
+  ollamaPort: 11434, ollamaModel: 'llama3', warnBeforeExternalSend: true, defaultPorts: [3000], probeCommonPaths: false,
 };
 
 describe('ModelRouter', () => {

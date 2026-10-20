@@ -5,7 +5,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { HtmlReporter } from './HtmlReporter';
+import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
 import type { Finding, ScanReport, Severity } from '../types';
+import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
 export class ExportManager {
   /** Write `deployready-report.md` to `outDir`; returns the path written. */
@@ -33,22 +35,74 @@ export class ExportManager {
     lines.push(
       `- **Findings:** ${report.summary.critical} critical · ${report.summary.warning} warning · ${report.summary.info} info`,
     );
+    const unverified = report.findings.filter(isUnverified).length;
+    if (unverified) lines.push(`- **AI suggestions:** ${unverified} (unverified, not scored)`);
+    const notes = report.findings.filter(isNote);
+    if (notes.length) lines.push(`- **Notes:** ${notes.length} (not scored)`);
     lines.push('');
 
     if (report.aiSummary) {
-      lines.push(`## AI Summary`);
+      lines.push(`## AI Summary (unverified)`);
       lines.push('');
       lines.push(report.aiSummary);
       lines.push('');
     }
 
     for (const sev of ['critical', 'warning', 'info'] as Severity[]) {
-      const group = report.findings.filter((f) => f.severity === sev);
+      const group = report.findings.filter((f) => f.severity === sev && !isNonScored(f) && !isGuessed(f));
       if (!group.length) continue;
       lines.push(`## ${sev.toUpperCase()} (${group.length})`);
       lines.push('');
       for (const f of group) lines.push(...ExportManager.findingMd(f));
       lines.push('');
+    }
+
+    const suggestions = report.findings.filter(isUnverified);
+    if (suggestions.length) {
+      lines.push(`## AI SUGGESTIONS — unverified, not scored (${suggestions.length})`);
+      lines.push('');
+      for (const f of suggestions) lines.push(...ExportManager.findingMd(f));
+      lines.push('');
+    }
+
+    if (notes.length) {
+      lines.push(`## NOTES (not scored) (${notes.length})`);
+      lines.push('');
+      for (const f of notes) lines.push(...ExportManager.findingMd(f));
+      lines.push('');
+    }
+
+    const cp = commonPathReport(report);
+    if (cp) {
+      const guessed = guessedFindings(report.findings);
+      lines.push(`## ${COMMON_PATH_TITLE}`);
+      lines.push('');
+      lines.push(`- **Target:** \`${cp.target}\``);
+      lines.push(`- **Control:** ${controlLine(cp)}`);
+      lines.push(`- **Cap:** ${capLine(cp)}`);
+      lines.push('- Guessed findings count in the summary and score at their capped severity.');
+      if (cp.aborted) lines.push(`- **Aborted:** ${cp.aborted}`);
+      lines.push('');
+      if (guessed.length) {
+        lines.push(`### Guessed findings (${guessed.length})`);
+        lines.push('');
+        for (const f of guessed) lines.push(...ExportManager.findingMd(f));
+      } else {
+        lines.push('No guessed path was proven exposed.');
+        lines.push('');
+      }
+      lines.push(`### Requested paths (${cp.probed.length})`);
+      lines.push('');
+      lines.push('| Path | Status | Outcome | Reason |');
+      lines.push('| --- | --- | --- | --- |');
+      for (const p of cp.probed) {
+        lines.push(`| \`${p.path}\` | ${p.status ?? '-'} | ${OUTCOME_LABEL[p.outcome]} | ${p.reason.replace(/\|/g, '\\|')} |`);
+      }
+      lines.push('');
+      if (cp.covered?.length) {
+        lines.push(`Covered by the normal scan, not requested again: ${cp.covered.map((c) => `\`${c}\``).join(', ')}`);
+        lines.push('');
+      }
     }
 
     lines.push('---');
@@ -58,7 +112,7 @@ export class ExportManager {
 
   private static findingMd(f: Finding): string[] {
     const loc = f.endpoint ?? (f.file ? `${f.file}${f.line ? `:${f.line}` : ''}` : '—');
-    const out = [`### ${f.title}`, '', `- **Where:** \`${loc}\``, `- **Source:** ${f.source}`];
+    const out = [`### ${f.title}`, '', `- **Where:** \`${loc}\``, `- **Source:** ${f.source}${isUnverified(f) ? ' (unverified)' : isNote(f) ? ' (note, not scored)' : ''}`];
     if (f.owasp) out.push(`- **OWASP:** ${f.owasp}`);
     if (f.cwe) out.push(`- **CWE:** ${f.cwe}`);
     if (f.evidence) out.push(`- **Evidence:** \`${f.evidence}\``);

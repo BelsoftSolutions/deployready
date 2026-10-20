@@ -6,16 +6,37 @@
  *
  * Safety: only ONE file is touched per approved fix; FileEditor always backs up.
  */
+import * as path from 'path';
+import { parse } from '@babel/parser';
+import type { ParserPlugin } from '@babel/parser';
 import { FileEditor } from './FileEditor';
 import type { Snippet } from './FileEditor';
 import { LINE_FIXERS, fixLine } from './lineFixers';
 import type { ModelRouter, FixSuggestion } from '../ai/ModelRouter';
+import { hasDangerousControl } from '../utils/sanitize';
 import type { Finding } from '../types';
 
 export interface AutoFixResult {
   message: string;
   backup: string | null;
 }
+
+export interface ApplyResult {
+  applied: boolean;
+  message: string;
+  backup: string | null;
+}
+
+const JS_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
+
+const PARSER_PLUGINS: ParserPlugin[] = [
+  'typescript',
+  'jsx',
+  'decorators-legacy',
+  'classProperties',
+  'topLevelAwait',
+  'importAssertions',
+];
 
 const AUTO_FIXABLE = new Set(['env-not-ignored']);
 
@@ -49,7 +70,7 @@ export class FixManager {
       if (!finding.file || !finding.line) {
         throw new Error(`Rule "${finding.rule}" needs a file+line to auto-fix.`);
       }
-      const lines = (await editor.read(finding.file)).split('\n');
+      const lines = (await editor.read(finding.file)).replace(/^\uFEFF/, '').split(/\r?\n/);
       const original = lines[finding.line - 1];
       if (original === undefined) throw new Error(`Line ${finding.line} not found in ${finding.file}.`);
       const fixed = fixLine(finding.rule, original);
@@ -79,14 +100,65 @@ export class FixManager {
     return router.suggestFix(finding, snippet.text);
   }
 
-  /** Apply an approved suggestion to disk (backs up first). Returns backup path. */
+  /**
+   * Apply an approved suggestion to disk (backs up first). Nothing is written, and
+   * no backup is left behind, if the range is invalid, the replacement is empty, or
+   * a JS/TS result no longer parses.
+   */
   static async applySuggestion(
     finding: Finding,
     snippet: Snippet,
     newCode: string,
     editor: FileEditor,
-  ): Promise<string> {
+  ): Promise<ApplyResult> {
     if (!finding.file) throw new Error('This finding has no file to write.');
-    return editor.replaceLines(finding.file, snippet.startLine, snippet.endLine, newCode);
+    const reject = (message: string): ApplyResult => ({ applied: false, message: `Fix not applied: ${message}`, backup: null });
+
+    if (hasDangerousControl(newCode)) {
+      return reject('the proposed code contains control or terminal escape characters.');
+    }
+
+    let preview;
+    try {
+      preview = await editor.previewReplaceLines(finding.file, snippet.startLine, snippet.endLine, newCode);
+    } catch (err) {
+      return reject((err as Error).message);
+    }
+
+    if (!newCode.trim() && preview.replaced.trim()) {
+      return reject('the proposed replacement is empty, which would delete code.');
+    }
+
+    const ext = path.extname(finding.file).toLowerCase();
+    let note: string;
+    if (JS_EXTENSIONS.has(ext)) {
+      if (!parses(preview.original)) {
+        note = 'Not syntax-checked: the original file already has syntax errors.';
+      } else {
+        const error = parseError(preview.updated);
+        if (error) {
+          return reject(`the change would introduce a syntax error in ${finding.file} (${error}). The file is unchanged.`);
+        }
+        note = 'Syntax check passed.';
+      }
+    } else {
+      note = `Not syntax-checked: no parser is available for ${ext || 'this'} files, review the change yourself.`;
+    }
+
+    const backup = await editor.replaceLines(finding.file, snippet.startLine, snippet.endLine, newCode);
+    return { applied: true, message: `Applied. ${note}`, backup };
   }
+}
+
+function parseError(source: string): string | null {
+  try {
+    parse(source.replace(/^\uFEFF/, ''), { sourceType: 'unambiguous', plugins: PARSER_PLUGINS });
+    return null;
+  } catch (err) {
+    return (err as Error).message;
+  }
+}
+
+function parses(source: string): boolean {
+  return parseError(source) === null;
 }

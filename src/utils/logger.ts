@@ -26,6 +26,10 @@ export const logger = {
   info(...args: unknown[]): void {
     (quiet ? console.error : console.log)(...clean(args));
   },
+  /** Always stderr, for notices that must never reach stdout (e.g. while a JSON report is the stdout payload). */
+  stderr(msg: string): void {
+    console.error(redact(msg));
+  },
   success(msg: string): void {
     (quiet ? console.error : console.log)(chalk.green(`✓ ${redact(msg)}`));
   },

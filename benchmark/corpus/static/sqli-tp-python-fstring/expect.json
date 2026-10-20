@@ -1,0 +1,4 @@
+{
+  "description": "Python cursor.execute with an f-string SELECT must be flagged (py-sql-fstring)",
+  "expected": [{ "rule": "py-sql-fstring", "present": true, "file": "app.py" }]
+}

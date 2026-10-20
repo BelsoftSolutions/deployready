@@ -141,12 +141,22 @@ npx deployready@latest analyze . --active --token "<your-JWT>" --token-b "<secon
 
 It is **opt-in and consented**, **loopback-only**, and **GET-only** (it never writes). Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
 
+### Route discovery (on by default, nothing guessed)
+
+**OpenAPI/Swagger from disk.** DeployReady reads `openapi.*` / `swagger.*` (JSON or block-style YAML) files in your project and treats their paths as routes, with the spec's `security` as the guard evidence. No request is needed to read them, and it works for stacks without a code parser.
+
+**Advertised links.** From pages it already fetched from those routes, DeployReady also follows up to 25 same-origin GET links your running app advertises (`<a>`, `<link>`, `Link:` headers, and a `robots.txt`/`sitemap.xml`/OpenAPI document only if your project or a response points at it), one level deep, never logout/delete-style links. Details: [`docs/ROUTE-DISCOVERY.md`](docs/ROUTE-DISCOVERY.md).
+
+### Common-path probe (opt-in)
+
+By default the live tests never guess paths. With `--probe-common-paths` (or `"probeCommonPaths": true` in your config, interactive runs only) DeployReady also requests a fixed list of 16 well-known paths such as `/.env` and `/.git/config` from your local app, at most 20 GET requests, after showing you the list and asking first. A path is reported only when its content proves it (a `200` alone is never enough), and findings are labelled as guessed, lower confidence, in their own report section. In `--yes`, `--json` and CI only the explicit flag enables it. Details: [`docs/COMMON-PATH-PROBE.md`](docs/COMMON-PATH-PROBE.md).
+
 ## What it checks
 
 - **Static analysis** — Babel-based AST parsing (pure JS, no native build) for JavaScript/TypeScript, plus Python. Dependency graph, route-mount resolution across files, and stack detection (Express, Next.js, Fastify, NestJS, Koa, FastAPI, Flask, Django, Laravel).
 - **Secrets & vulnerabilities** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, JWT `none` algorithm, insecure cookies, unsafe deserialization, insecure temp files, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
 - **Access control & transport** — Row-Level Security disabled or never enabled on a table, Supabase `service_role` key used in app code (RLS bypass), and insecure cleartext `http://` endpoints.
-- **Live dynamic testing** — detects your running localhost app and checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, and version/stack-trace leaks.
+- **Live dynamic testing** — finds a local server listening on a common port and, for the routes your code defines (never guessed paths), checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, and version/stack-trace leaks.
 - **Active authorization testing** (opt-in, `--active`) — acts as a logged-in user to find broken object-level auth (IDOR/BOLA), broken tenant isolation, privilege escalation (forged `role`), and unverified JWTs (`alg:none`).
 - **Readiness score (0–100)** with a critical / warning / info breakdown.
 - **Deployment recommendation** — suggests where to host based on your stack, size, and whether you're frontend / backend / full-stack, flags when to split frontend and backend across platforms, and marks suitable free tiers.
@@ -167,9 +177,23 @@ DeployReady works fully offline with no AI. To enable deeper analysis, configure
 
 | Model | Notes |
 |---|---|
-| Claude (Anthropic) | Set `ANTHROPIC_API_KEY` or store via `init`. Default: `claude-sonnet-4-6`. |
-| OpenAI | Set `OPENAI_API_KEY` or store via `init`. |
+| Claude API (Anthropic) | Set `ANTHROPIC_API_KEY` or store via `init`. Default: `claude-sonnet-4-6`. |
+| OpenAI API | Set `OPENAI_API_KEY` or store via `init`. |
 | Ollama (local) | Fully offline, no key — nothing leaves your machine. |
+| Claude (CLI login) | Uses your own installed `claude` CLI and **your own Claude plan** — no API key. See below. |
+| Codex (CLI login) | Uses your own installed `codex` CLI and **your own ChatGPT/OpenAI plan** — no API key. See below. |
+
+### CLI-login providers (Claude / Codex)
+
+Choose these in `init` (or in the interactive menu under "Set up or change the AI model") if you already use the `claude` or `codex` command-line tool and prefer that login to an API key.
+
+- **Login status** is read from the CLI itself (`claude auth status`, `codex login status`). If the CLI is installed but not logged in, DeployReady offers to run the CLI's own login command (`claude auth login` / `codex login`) in your terminal. You sign in inside that tool: DeployReady never sees, reads, copies or stores your token or the CLI's auth files.
+- **Your plan's rules apply, not the API terms.** Data is handled under the data policy of your own plan and counts against your plan's usage allowance. The consent prompt says so before anything is sent.
+- **Same data as the API providers:** only the redacted structured findings report (or, for `fix`, one redacted snippet you confirm first). Never your source files.
+- **Text in, text out.** The CLI is started with its tools disabled, from an empty temporary folder, with a minimal environment, and its answer is treated as untrusted text. It is never asked to edit your files. When you accept a fix, DeployReady applies it with its own editor: a backup (`<file>.bak.<timestamp>`) is written first, the path is confined to your project and the result is syntax-checked.
+- AI findings stay marked unverified and never change your score or the CI gate.
+- **Codex can be switched off.** To disable the Codex provider, set `"codexEnabled": false` in `~/.deployready/config.json`; it then refuses to run and sends nothing. The Claude provider has no such switch.
+- These providers are meant for interactive, local use. Each call uses your own plan allowance.
 
 ## Security & privacy
 
@@ -177,7 +201,7 @@ DeployReady reads your code, probes your ports, and holds your keys — so it's 
 
 - API keys are read from environment variables first and **never logged**; the on-disk config is written with `0600` permissions.
 - All terminal output and any AI payload pass through a central **secret redactor**.
-- Dynamic testing is **loopback-only** and **GET-only** by default; aggressive tests require explicit consent.
+- Dynamic testing is **loopback-only** and **GET-only** by default; aggressive tests require explicit consent. It only requests routes your code (or your OpenAPI/Swagger file) defines, plus up to 25 same-origin paths your running app itself advertises in pages it already served (links, `Link:` headers, and a `robots.txt`/`sitemap.xml`/OpenAPI document only if your project or one of those responses points at it; one level deep, never logout/delete-style links) — it never guesses paths like `/admin` or `/.env`, and never invents ids for routes with path parameters (those are listed as "could not check"). Use `--verbose` to see every request decision.
 - File scanning is confined to the project root, with symlink/traversal protection and size caps.
 
 ## Configuration

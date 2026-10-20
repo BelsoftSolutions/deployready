@@ -14,6 +14,13 @@ export interface HttpRequestSpec {
   headers?: Record<string, string>;
   /** Parsed JSON body (object) when present. */
   body?: unknown;
+  /** Path segments (index in `path.split('/')`) that were filled from route params. */
+  pathParams?: PathParam[];
+}
+
+export interface PathParam {
+  index: number;
+  name: string;
 }
 
 export type InjectionCategory = 'object-id' | 'tenant-id';

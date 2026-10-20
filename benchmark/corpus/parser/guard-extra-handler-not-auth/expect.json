@@ -1,0 +1,4 @@
+{
+  "description": "A second handler that only prepares data (no authentication) does not make the route guarded",
+  "expected": [{ "route": { "method": "GET", "path": "/b" }, "guarded": false }]
+}

@@ -1,0 +1,4 @@
+{
+  "description": "An unrelated update() method call with arithmetic must not be flagged",
+  "expected": [{ "rule": "sql-injection", "present": false }]
+}

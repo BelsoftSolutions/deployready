@@ -1,0 +1,7 @@
+{
+  "description": "router.use(authenticate) before the routes guards every route registered after it (router mounted at /api, so the real paths are /api/orders)",
+  "expected": [
+    { "route": { "method": "GET", "path": "/api/orders" }, "guarded": true },
+    { "route": { "method": "POST", "path": "/api/orders" }, "guarded": true }
+  ]
+}

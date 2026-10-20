@@ -12,6 +12,10 @@
 import { ClaudeHandler } from './ClaudeHandler';
 import { OpenAIHandler } from './OpenAIHandler';
 import { OllamaHandler } from './OllamaHandler';
+import { CliHandler } from './CliHandler';
+import { CLI_PROVIDERS, isCliModel } from './cli/providers';
+import { checkCliReady, cliInstalled } from './cli/ready';
+import type { CliContext, CliReadiness } from './cli/ready';
 import { PromptBuilder } from './PromptBuilder';
 import { ContextChunker } from './ContextChunker';
 import { ConfigManager } from '../config/ConfigManager';
@@ -27,7 +31,15 @@ interface Handler {
 export type { FixSuggestion } from './parseFix';
 
 export class ModelRouter {
-  constructor(private readonly config: AppConfig) {}
+  constructor(
+    private readonly config: AppConfig,
+    /** Test/advanced hook for the CLI providers (environment, temp root). */
+    private readonly cliContext: CliContext = {},
+  ) {}
+
+  private get cliCtx(): CliContext {
+    return { ...this.cliContext, cliCommand: this.config.cliCommand ?? null, codexEnabled: this.config.codexEnabled !== false };
+  }
 
   /** True if data will leave the machine for this model (i.e. not Ollama). */
   get sendsExternally(): boolean {
@@ -37,7 +49,33 @@ export class ModelRouter {
   /** Whether a usable handler can be constructed (key present, etc.). */
   isConfigured(): boolean {
     if (this.config.model === 'ollama') return true;
+    if (isCliModel(this.config.model)) return cliInstalled(this.config.model, this.cliCtx);
     return Boolean(ConfigManager.resolveKey(this.config));
+  }
+
+  /**
+   * Async readiness. API providers: same as isConfigured(). CLI providers: also asks the CLI's own
+   * status command whether it is logged in (no model call, no token read).
+   */
+  async checkReady(): Promise<CliReadiness | { state: 'ready' | 'missing'; message: string }> {
+    if (isCliModel(this.config.model)) return checkCliReady(this.config.model, this.cliCtx);
+    const ok = this.isConfigured();
+    return { state: ok ? 'ready' : 'missing', message: ok ? 'Configured.' : 'No API key configured.' };
+  }
+
+  /** Where data goes, for the consent prompt. CLI providers run under the user's own plan, not API terms. */
+  consentNotice(kind: 'report' | 'snippet'): string {
+    const what =
+      kind === 'report'
+        ? 'a STRUCTURED findings report (no source code, secrets redacted)'
+        : 'the relevant snippet (secrets redacted)';
+    if (isCliModel(this.config.model)) {
+      const spec = CLI_PROVIDERS[this.config.model];
+      return `This will send ${what} through ${spec.route}. It is handled under that plan's data policy (not API terms) and counts against your plan limit.`;
+    }
+    return kind === 'report'
+      ? `This will send ${what} to the ${this.config.model} API.`
+      : 'To fix code, the relevant snippet (secrets redacted) is sent to the AI model.';
   }
 
   /** Exactly what would be sent externally, for the consent prompt. */
@@ -77,6 +115,12 @@ export class ModelRouter {
         if (!key) throw new Error('No OpenAI API key configured. Run `deployready init` or set OPENAI_API_KEY.');
         return { handler: new OpenAIHandler(key), contextTokens: OpenAIHandler.contextTokens };
       }
+      case 'claude-cli':
+      case 'codex-cli':
+        return {
+          handler: new CliHandler(this.config.model, { ...this.cliCtx, model: this.config.cliModel }),
+          contextTokens: CliHandler.contextTokens,
+        };
       case 'ollama':
         return {
           handler: new OllamaHandler(this.config.ollamaPort, this.config.ollamaModel),
