@@ -119,7 +119,9 @@ describe('credential safety: DeployReady never opens, lists or stores a CLI logi
 
     // positive control: the spy sees accesses made from inside src/ too (resolve.ts stats the path it is given)
     try {
-      resolveCli(CLI_PROVIDERS['claude-cli'], { cliCommand: path.join(home, '.claude', 'claude.exe') });
+      // the file name must be accepted on this platform ('claude.exe' on Windows, 'claude' elsewhere), otherwise the
+      // resolver rejects it before it touches the disk and the control would prove nothing
+      resolveCli(CLI_PROVIDERS['claude-cli'], { cliCommand: path.join(home, '.claude', WIN ? 'claude.exe' : 'claude') });
     } catch {
       /* expected: wrong file */
     }
