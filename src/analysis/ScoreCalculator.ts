@@ -20,20 +20,43 @@ export interface ScoreSummary {
   critical: number;
   warning: number;
   info: number;
+  /** Scored findings only; unverified AI suggestions and notes are excluded. */
   total: number;
+  /** Unverified AI suggestions: displayed, never scored or gated on. */
+  unverified?: number;
+  /** Informational notes: displayed, never scored or gated on. */
+  notes?: number;
+}
+
+/** Model output is never trusted: any AI-sourced finding is unverified. */
+export function isUnverified(f: Pick<Finding, 'source' | 'unverified'>): boolean {
+  return f.unverified === true || f.source === 'ai';
+}
+
+export function isNote(f: Pick<Finding, 'note'>): boolean {
+  return f.note === true;
+}
+
+/** Findings that are displayed but never scored, gated on, or baselined. */
+export function isNonScored(f: Pick<Finding, 'source' | 'unverified' | 'note'>): boolean {
+  return isUnverified(f) || isNote(f);
 }
 
 export class ScoreCalculator {
-  static summarize(findings: Finding[]): ScoreSummary {
+  static summarize(findings: Finding[]): ScoreSummary & { unverified: number; notes: number } {
     let critical = 0;
     let warning = 0;
     let info = 0;
+    let unverified = 0;
+    let notes = 0;
     for (const f of findings) {
-      if (f.severity === 'critical') critical++;
+      if (isUnverified(f)) unverified++;
+      else if (isNote(f)) notes++;
+      else if (f.severity === 'critical') critical++;
       else if (f.severity === 'warning') warning++;
       else info++;
     }
-    return { critical, warning, info, total: findings.length };
+    return { critical, warning, info, total: critical + warning + info, unverified, notes };
   }
 
   static calculate(summary: ScoreSummary): number {

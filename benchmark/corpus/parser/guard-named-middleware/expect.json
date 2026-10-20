@@ -1,0 +1,8 @@
+{
+  "description": "Routes with an auth middleware (named or passport.authenticate) are guarded; a plain route is not",
+  "expected": [
+    { "route": { "method": "GET", "path": "/profile" }, "guarded": true },
+    { "route": { "method": "GET", "path": "/account" }, "guarded": true },
+    { "route": { "method": "GET", "path": "/health" }, "guarded": false }
+  ]
+}

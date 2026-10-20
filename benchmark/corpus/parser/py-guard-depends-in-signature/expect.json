@@ -1,0 +1,5 @@
+{
+  "description": "FastAPI route authenticated through Depends() in the function signature (the usual style) is guarded",
+  "knownGap": "audit item P1-6",
+  "expected": [{ "route": { "method": "GET", "path": "/profile" }, "guarded": true }]
+}

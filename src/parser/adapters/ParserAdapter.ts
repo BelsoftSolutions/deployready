@@ -10,6 +10,12 @@ export interface RouteHit {
   line?: number;
   /** Heuristic: extra middleware args present between path and handler. */
   guarded: boolean;
+  /** Names of the guard middleware seen protecting this route (evidence only). */
+  guardNames?: string[];
+  /** The path already contains a Flask Blueprint `url_prefix` that a registration with its own `url_prefix` would replace. */
+  ownPrefix?: boolean;
+  /** Declared by a NestJS controller: dropped when the project changes every controller path globally (setGlobalPrefix, RouterModule, versioning). */
+  nest?: boolean;
 }
 
 /**
@@ -20,6 +26,14 @@ export interface RouteHit {
 export interface MountHit {
   prefix: string;
   source: string;
+  /** True if auth middleware is applied to this mount, so every route of the mounted router is guarded. */
+  guarded?: boolean;
+  /** Names of the guard middleware applied to this mount (evidence only). */
+  guardNames?: string[];
+  /** The prefix is not a string literal or same-file constant: routes reachable only through this mount are skipped, never guessed. */
+  unresolved?: boolean;
+  /** Flask `register_blueprint(bp, url_prefix=...)`: replaces the blueprint's own `url_prefix` instead of adding to it. */
+  overridesPrefix?: boolean;
 }
 
 export interface ParseResult {
@@ -27,6 +41,8 @@ export interface ParseResult {
   exports: string[];
   routes: RouteHit[];
   mounts: MountHit[];
+  /** NestJS calls seen in this file that change the final path of every controller (`setGlobalPrefix`, `RouterModule`, `enableVersioning`). */
+  nestGlobalConfig?: string[];
 }
 
 export interface ParserAdapter {

@@ -1,0 +1,4 @@
+{
+  "description": "A secret literal in .github/workflows/ci.yml must be flagged; the walker skips .github and .yml files",
+  "expected": [{ "rule": "hardcoded-secret", "present": true, "file": ".github/workflows/ci.yml" }]
+}

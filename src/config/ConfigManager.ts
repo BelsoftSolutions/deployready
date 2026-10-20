@@ -26,8 +26,12 @@ const DEFAULTS: AppConfig = {
   openaiApiKey: null,
   ollamaPort: 11434,
   ollamaModel: 'llama3',
+  cliCommand: null,
+  cliModel: null,
+  codexEnabled: true,
   warnBeforeExternalSend: true,
   defaultPorts: [3000, 5000, 8000, 8080, 4000],
+  probeCommonPaths: false,
 };
 
 export class ConfigManager {
@@ -51,6 +55,12 @@ export class ConfigManager {
     }
 
     const merged: AppConfig = { ...DEFAULTS, ...fromFile };
+
+    // Only plain strings may reach the CLI providers; anything else is dropped. (Further validation
+    // of the command path and model name happens where they are used.)
+    if (typeof merged.cliCommand !== 'string' || !merged.cliCommand.trim()) merged.cliCommand = null;
+    if (typeof merged.cliModel !== 'string' || !merged.cliModel.trim()) merged.cliModel = null;
+    merged.codexEnabled = !(merged.codexEnabled === false || (merged.codexEnabled as unknown) === 'false');
 
     // Environment variables win and are never persisted.
     if (process.env.ANTHROPIC_API_KEY) merged.claudeApiKey = process.env.ANTHROPIC_API_KEY;

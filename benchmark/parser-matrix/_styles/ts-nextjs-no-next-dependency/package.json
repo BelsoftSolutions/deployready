@@ -1,0 +1,7 @@
+{
+  "name": "not-next",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.0"
+  }
+}

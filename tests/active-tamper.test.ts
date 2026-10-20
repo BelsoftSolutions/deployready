@@ -55,3 +55,43 @@ describe('active/tamper — applying an injection', () => {
     expect((spec.body as any).nested.tenantId).toBe('T1'); // original untouched
   });
 });
+
+describe('active/tamper — route-param-aware path points', () => {
+  it('treats a param-derived string id as an injection point', () => {
+    const spec: HttpRequestSpec = { method: 'GET', path: '/users/u1', pathParams: [{ index: 2, name: 'id' }] };
+    const p = findInjectionPoints(spec).find((x) => x.location === 'path');
+    expect(p).toMatchObject({ category: 'object-id', field: '2', value: 'u1' });
+    expect(applyInjection(spec, p!, 'u2').path).toBe('/users/u2');
+  });
+
+  it('categorises a tenant-named path param as tenant-id', () => {
+    for (const name of ['orgId', 'org_id', 'organization', 'tenantId', 'teamId', 'company', 'workspaceId']) {
+      const spec: HttpRequestSpec = { method: 'GET', path: '/x/orgA/y', pathParams: [{ index: 2, name }] };
+      const p = findInjectionPoints(spec).find((x) => x.location === 'path');
+      expect(p?.category).toBe('tenant-id');
+    }
+  });
+
+  it('categorises other param names as object-id', () => {
+    const spec: HttpRequestSpec = { method: 'GET', path: '/posts/p9', pathParams: [{ index: 2, name: 'postId' }] };
+    expect(findInjectionPoints(spec).find((x) => x.location === 'path')?.category).toBe('object-id');
+  });
+
+  it('does not treat arbitrary literal words as ids', () => {
+    const spec: HttpRequestSpec = { method: 'GET', path: '/users/u1/orgA/profile' };
+    expect(findInjectionPoints(spec)).toHaveLength(0);
+  });
+
+  it('still treats literal numeric/UUID segments without param info as object ids', () => {
+    const uuid = '123e4567-e89b-12d3-a456-426614174000';
+    const pts = findInjectionPoints({ method: 'GET', path: `/users/123/files/${uuid}` });
+    expect(pts.map((p) => [p.category, p.value])).toEqual([['object-id', '123'], ['object-id', uuid]]);
+  });
+
+  it('does not duplicate a param segment that also looks numeric', () => {
+    const spec: HttpRequestSpec = { method: 'GET', path: '/orgs/5', pathParams: [{ index: 2, name: 'orgId' }] };
+    const pts = findInjectionPoints(spec);
+    expect(pts).toHaveLength(1);
+    expect(pts[0]!.category).toBe('tenant-id');
+  });
+});

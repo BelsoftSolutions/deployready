@@ -34,10 +34,21 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 export function findInjectionPoints(spec: HttpRequestSpec): InjectionPoint[] {
   const points: InjectionPoint[] = [];
 
-  // Path: any segment that looks like a bare id is an object id.
-  const parts = spec.path.split('/');
-  parts.forEach((seg, i) => {
-    if (seg && looksLikeId(seg)) {
+  // Path: a segment filled from a route param is an id of any shape, categorised
+  // by the param name; any other segment only counts if it is a bare number/UUID.
+  const paramAt = new Map((spec.pathParams ?? []).map((p) => [p.index, p.name]));
+  spec.path.split('/').forEach((seg, i) => {
+    if (!seg) return;
+    const name = paramAt.get(i);
+    if (name !== undefined) {
+      points.push({
+        location: 'path',
+        category: TENANT_KEY_RE.test(name) ? 'tenant-id' : 'object-id',
+        field: String(i),
+        value: seg,
+        label: `path param "${name}"`,
+      });
+    } else if (looksLikeId(seg)) {
       points.push({ location: 'path', category: 'object-id', field: String(i), value: seg, label: `path segment "${seg}"` });
     }
   });

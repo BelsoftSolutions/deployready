@@ -1,0 +1,5 @@
+{
+  "description": "Python cursor.execute with a str.format() SELECT must be flagged; the py-sql-fstring rule title claims 'f-string / format' but its regex only matches f-strings",
+  "knownGap": "py-sql-fstring claims format (extra to audit item P1-4)",
+  "expected": [{ "rule": "py-sql-fstring", "present": true, "file": "app.py" }]
+}

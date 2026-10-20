@@ -4,10 +4,12 @@
  * passes { aggressive: true } (gated behind explicit user consent upstream).
  */
 import type { AxiosInstance } from 'axios';
-import { makeFinding } from '../utils/finding';
-import { detectSecret, redact } from '../utils/redact';
-import type { Finding, LiveEndpoint } from '../types';
+import { makeFinding, makeNote } from '../utils/finding';
+import { detectSecret } from '../utils/redact';
+import type { Finding, LiveEndpoint, SkippedRoute } from '../types';
 import type { ProbeTarget } from './EndpointMapper';
+import { isCatchAll, probeCatchAll, type Fingerprint } from './catchAll';
+import type { Resp } from './httpClient';
 
 const SECURITY_HEADERS = [
   'x-content-type-options',
@@ -15,6 +17,8 @@ const SECURITY_HEADERS = [
   'strict-transport-security',
   'content-security-policy',
 ];
+
+const AUTH_LIKE = /login|auth|signin/i;
 
 export interface SecurityRunResult {
   findings: Finding[];
@@ -25,7 +29,7 @@ export class SecurityTester {
   static async run(
     client: AxiosInstance,
     targets: ProbeTarget[],
-    opts: { aggressive: boolean } = { aggressive: false },
+    opts: { aggressive: boolean; skipped?: SkippedRoute[]; prefetched?: Map<string, Resp | null> } = { aggressive: false },
   ): Promise<SecurityRunResult> {
     const findings: Finding[] = [];
     const endpoints: LiveEndpoint[] = [];
@@ -33,19 +37,35 @@ export class SecurityTester {
     // CORS and security headers are server-wide config — report them once, not
     // once per endpoint, to keep the report signal high.
     let corsFlagged = false;
+    let baseline: Promise<Fingerprint | null> | undefined;
+    // Sent at most once, and only when a critical would otherwise be raised.
+    const isCatchAllPage = async (t: ProbeTarget, res: { status: number; data: unknown }): Promise<boolean> => {
+      baseline ??= probeCatchAll(client, `GET ${t.path} returned ${res.status} and would otherwise be reported`);
+      return isCatchAll(await baseline, res);
+    };
+    const contentTypes = new Map<string, string>();
 
     for (const t of targets) {
       if (t.method !== 'GET') continue; // safety: never mutate
       let res;
-      try {
-        res = await client.get(t.path);
-      } catch {
-        continue; // unreachable path — ignore
+      if (opts.prefetched?.has(t.path)) {
+        res = opts.prefetched.get(t.path);
+        if (!res) continue; // the earlier fetch got no response
+      } else {
+        try {
+          res = await client.get(t.path);
+        } catch {
+          continue; // unreachable path — ignore
+        }
       }
       endpoints.push({ method: 'GET', path: t.path, status: res.status });
+      contentTypes.set(t.path, String(res.headers['content-type'] ?? ''));
+
+      const reportable =
+        (t.guarded || t.sensitive) && res.status >= 200 && res.status < 300 && !(await isCatchAllPage(t, res));
 
       // 1. Auth bypass: a guarded route that returns 2xx without credentials.
-      if (t.guarded && res.status >= 200 && res.status < 300) {
+      if (t.guarded && reportable) {
         findings.push(
           makeFinding({
             rule: 'auth-bypass',
@@ -63,7 +83,7 @@ export class SecurityTester {
       }
 
       // 2. Exposed sensitive/admin route.
-      if (t.sensitive && res.status >= 200 && res.status < 400) {
+      if (t.sensitive && reportable) {
         findings.push(
           makeFinding({
             rule: 'exposed-admin-route',
@@ -148,14 +168,42 @@ export class SecurityTester {
 
     // 6. Rate limiting (aggressive — burst a likely-auth endpoint).
     if (opts.aggressive) {
-      const loginTarget = targets.find((t) => /login|auth|signin/i.test(t.path));
+      // A login PAGE (HTML) says nothing about the login API's throttling, so only
+      // non-HTML auth-like GET endpoints are burst.
+      const isBurstable = (t: ProbeTarget) =>
+        t.method === 'GET' && AUTH_LIKE.test(t.path) && contentTypes.has(t.path) && !/text\/html/i.test(contentTypes.get(t.path)!);
+      const loginTarget = targets.find(isBurstable);
+      const burstPaths = new Set(targets.filter(isBurstable).map((t) => t.path));
       if (loginTarget) {
         const f = await SecurityTester.probeRateLimit(client, loginTarget.path);
         if (f) findings.push(f);
       }
+      // Auth-like routes we cannot test (non-GET, or only an HTML page): never go
+      // silent, but never claim a limiter is missing either.
+      const noted = new Set<string>();
+      const nonGetSkipped = (opts.skipped ?? []).filter((s) => s.method !== 'GET');
+      for (const t of [...targets, ...nonGetSkipped]) {
+        if (!AUTH_LIKE.test(t.path) || burstPaths.has(t.path) || noted.has(t.path)) continue;
+        noted.add(t.path);
+        findings.push(SecurityTester.unverifiedRateLimitNote(t.path));
+      }
     }
 
     return { findings, endpoints };
+  }
+
+  private static unverifiedRateLimitNote(path: string): Finding {
+    return makeNote({
+      rule: 'missing-rate-limit',
+      title: `Rate limiting on ${path} could not be verified`,
+      category: 'security',
+      source: 'dynamic',
+      endpoint: path,
+      owasp: 'A07:2025',
+      cwe: 'CWE-307',
+      description: `${path} looks like an authentication route, but the scanner only sends GET requests, so this route was not tested for rate limiting. This does not mean a limiter is missing.`,
+      recommendation: `Check that a rate limiter (e.g. express-rate-limit) is configured on ${path}.`,
+    });
   }
 
   /** Send a small burst; if nothing ever returns 429, flag missing rate limiting. */
@@ -177,13 +225,13 @@ export class SecurityTester {
     return makeFinding({
       rule: 'missing-rate-limit',
       title: 'No rate limiting detected on sensitive endpoint',
-      severity: 'critical',
+      severity: 'warning',
       category: 'security',
       source: 'dynamic',
       endpoint: path,
       owasp: 'A07:2025',
       cwe: 'CWE-307',
-      description: `Sent ${BURST} rapid requests to ${path} with no 429 throttling response.`,
+      description: `Sent ${BURST} rapid GET requests to ${path} with no 429 throttling response. Low confidence: measured with GET requests only; the login POST route itself is not probed.`,
       recommendation: 'Add rate limiting (e.g. express-rate-limit) to auth and other abuse-prone endpoints.',
     });
   }
@@ -191,7 +239,7 @@ export class SecurityTester {
 
 function safeStringify(data: unknown): string {
   try {
-    return redact(JSON.stringify(data)).slice(0, 100_000);
+    return (JSON.stringify(data) ?? '').slice(0, 100_000);
   } catch {
     return '';
   }

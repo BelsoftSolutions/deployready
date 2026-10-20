@@ -1,0 +1,7 @@
+{
+  "description": "Validation and logging middleware are not authentication: the routes stay unguarded",
+  "expected": [
+    { "route": { "method": "POST", "path": "/c" }, "guarded": false },
+    { "route": { "method": "GET", "path": "/d" }, "guarded": false }
+  ]
+}

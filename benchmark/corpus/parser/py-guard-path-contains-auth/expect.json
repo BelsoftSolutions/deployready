@@ -1,0 +1,8 @@
+{
+  "description": "A public route whose path merely contains the text 'auth' (/authors, /oauth/callback) is not guarded",
+  "knownGap": "audit item P1-6",
+  "expected": [
+    { "route": { "method": "GET", "path": "/authors" }, "guarded": false },
+    { "route": { "method": "GET", "path": "/oauth/callback" }, "guarded": false }
+  ]
+}

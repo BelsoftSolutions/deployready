@@ -1,0 +1,8 @@
+{
+  "description": "Routes with only their own handler and no middleware are unguarded",
+  "expected": [
+    { "route": { "method": "GET", "path": "/" }, "guarded": false },
+    { "route": { "method": "GET", "path": "/pricing" }, "guarded": false },
+    { "route": { "method": "POST", "path": "/newsletter" }, "guarded": false }
+  ]
+}

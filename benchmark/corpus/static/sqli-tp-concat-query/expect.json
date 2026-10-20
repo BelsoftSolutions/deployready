@@ -1,0 +1,4 @@
+{
+  "description": "db.query with a SELECT built by string concatenation must be flagged",
+  "expected": [{ "rule": "sql-injection", "present": true, "file": "app.js" }]
+}

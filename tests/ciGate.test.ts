@@ -105,7 +105,7 @@ describe('baseline', () => {
 
   it('summarize recomputes a severity breakdown for a finding subset', () => {
     const s = summarize([f({ severity: 'critical', file: 'a.js' }), f({ severity: 'warning', file: 'b.js' })]);
-    expect(s).toEqual({ critical: 1, warning: 1, info: 0, total: 2 });
+    expect(s).toEqual({ critical: 1, warning: 1, info: 0, total: 2, unverified: 0, notes: 0 });
   });
 
   it('readBaseline tolerates an empty/garbage file by returning an empty set', () => {

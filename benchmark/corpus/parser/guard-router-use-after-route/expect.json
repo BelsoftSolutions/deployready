@@ -1,0 +1,4 @@
+{
+  "description": "app.use(authenticate) registered AFTER a route does not guard that earlier route",
+  "expected": [{ "route": { "method": "GET", "path": "/open" }, "guarded": false }]
+}

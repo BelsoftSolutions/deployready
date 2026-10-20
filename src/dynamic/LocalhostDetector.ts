@@ -1,13 +1,13 @@
 /**
- * Detect a running app on common local ports by attempting a TCP connection,
- * then confirming an HTTP server responds.
+ * Detect a local server listening on common ports by attempting a TCP
+ * connection. Liveness is a connect only: no HTTP request is ever sent, because
+ * every URL path (even "/") would be one the scan has no evidence exists.
  *
  * Interface contract:
  *   const found = await LocalhostDetector.find([3000, 5000, ...]);
  *   // -> { port, baseUrl } | null
  */
 import * as net from 'net';
-import { createClient } from './httpClient';
 
 export interface DetectedApp {
   port: number;
@@ -17,25 +17,22 @@ export interface DetectedApp {
 export class LocalhostDetector {
   static async find(ports: number[]): Promise<DetectedApp | null> {
     for (const port of ports) {
-      if (await LocalhostDetector.isPortOpen(port)) {
-        const baseUrl = `http://localhost:${port}`;
-        if (await LocalhostDetector.isHttp(baseUrl)) {
-          return { port, baseUrl };
-        }
-      }
+      if (await LocalhostDetector.isPortOpen(port)) return LocalhostDetector.app(port);
     }
     return null;
   }
 
-  /** All open ports from the candidate list (for reporting multiple apps). */
+  /** All ports from the candidate list that accept a TCP connection. */
   static async findAll(ports: number[]): Promise<DetectedApp[]> {
     const apps: DetectedApp[] = [];
     for (const port of ports) {
-      if ((await LocalhostDetector.isPortOpen(port)) && (await LocalhostDetector.isHttp(`http://localhost:${port}`))) {
-        apps.push({ port, baseUrl: `http://localhost:${port}` });
-      }
+      if (await LocalhostDetector.isPortOpen(port)) apps.push(LocalhostDetector.app(port));
     }
     return apps;
+  }
+
+  private static app(port: number): DetectedApp {
+    return { port, baseUrl: `http://localhost:${port}` };
   }
 
   private static isPortOpen(port: number, timeoutMs = 400): Promise<boolean> {
@@ -51,15 +48,5 @@ export class LocalhostDetector {
       socket.once('error', () => done(false));
       socket.connect(port, '127.0.0.1');
     });
-  }
-
-  private static async isHttp(baseUrl: string): Promise<boolean> {
-    try {
-      const client = createClient(baseUrl);
-      const res = await client.get('/');
-      return typeof res.status === 'number';
-    } catch {
-      return false;
-    }
   }
 }

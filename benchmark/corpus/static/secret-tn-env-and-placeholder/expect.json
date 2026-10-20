@@ -1,0 +1,7 @@
+{
+  "description": "Reading secrets from the environment, and an obvious placeholder value, must not be flagged as hardcoded secrets",
+  "expected": [
+    { "rule": "hardcoded-secret", "present": false },
+    { "rule": "possible-hardcoded-secret", "present": false }
+  ]
+}

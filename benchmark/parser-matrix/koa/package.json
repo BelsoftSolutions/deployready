@@ -1,0 +1,6 @@
+{
+  "name": "matrix-koa",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": { "koa": "^2.15.3", "@koa/router": "^12.0.1" }
+}

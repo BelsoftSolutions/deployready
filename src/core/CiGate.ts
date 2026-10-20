@@ -7,8 +7,9 @@
  *   1  runtime error (the CLI threw)
  *   2  gate exceeded — findings at/above the threshold
  */
-import { ScoreCalculator } from '../analysis/ScoreCalculator';
+import { ScoreCalculator, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
 import type { Finding, ScanReport } from '../types';
+import { COMMON_PATH_TITLE, guessedFindings, normalFindings } from '../ui/commonPathSection';
 
 export type FailOn = 'critical' | 'warning' | 'info' | 'none';
 
@@ -52,7 +53,7 @@ export function fingerprint(f: Pick<Finding, 'rule' | 'file' | 'endpoint'>): str
 
 /** Serialize the current findings into a baseline file body (JSON). */
 export function serializeBaseline(findings: Finding[]): string {
-  const fingerprints = Array.from(new Set(findings.map(fingerprint))).sort();
+  const fingerprints = Array.from(new Set(findings.filter((f) => !isNonScored(f)).map(fingerprint))).sort();
   return JSON.stringify({ format: BASELINE_FORMAT, fingerprints }, null, 2) + '\n';
 }
 
@@ -69,9 +70,9 @@ export function readBaseline(text: string): Set<string> {
   return new Set();
 }
 
-/** Findings whose fingerprint is not present in the baseline. */
+/** Findings whose fingerprint is not present in the baseline. Non-scored findings (AI suggestions, notes) are always listed and never "known". */
 export function newFindings(findings: Finding[], baseline: Set<string>): Finding[] {
-  return findings.filter((f) => !baseline.has(fingerprint(f)));
+  return findings.filter((f) => isNonScored(f) || !baseline.has(fingerprint(f)));
 }
 
 /** Recompute a severity breakdown for an arbitrary finding subset. */
@@ -81,7 +82,8 @@ export function summarize(findings: Finding[]): ScanReport['summary'] {
 
 /** Compact, CI-friendly JSON view of a report. Evidence is already redacted. */
 export function toCiJson(report: ScanReport, failOn: FailOn): Record<string, unknown> {
-  return {
+  const cp = report.dynamic?.commonPaths;
+  const out: Record<string, unknown> = {
     tool: 'deployready',
     version: report.version,
     target: report.target,
@@ -90,17 +92,33 @@ export function toCiJson(report: ScanReport, failOn: FailOn): Record<string, unk
     summary: report.summary,
     failOn,
     passed: !shouldFail(report.summary, failOn),
-    findings: report.findings.map((f) => ({
-      rule: f.rule,
-      title: f.title,
-      severity: f.severity,
-      category: f.category,
-      source: f.source,
-      file: f.file,
-      line: f.line,
-      endpoint: f.endpoint,
-      owasp: f.owasp,
-      cwe: f.cwe,
-    })),
+    findings: normalFindings(report.findings).map(ciFinding),
+  };
+  // Only when the opt-in probe ran: guessed findings live here, not in `findings`; they are counted in `summary`.
+  if (cp) {
+    out.commonPathProbe = {
+      title: COMMON_PATH_TITLE,
+      countedInSummary: true,
+      ...cp,
+      findings: guessedFindings(report.findings).map((f) => ({ ...ciFinding(f), guessed: true, evidence: f.evidence })),
+    };
+  }
+  return out;
+}
+
+function ciFinding(f: Finding): Record<string, unknown> {
+  return {
+    rule: f.rule,
+    title: f.title,
+    severity: f.severity,
+    category: f.category,
+    source: f.source,
+    unverified: isUnverified(f),
+    note: f.note === true,
+    file: f.file,
+    line: f.line,
+    endpoint: f.endpoint,
+    owasp: f.owasp,
+    cwe: f.cwe,
   };
 }

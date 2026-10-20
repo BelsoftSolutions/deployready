@@ -6,6 +6,8 @@ import inquirer from 'inquirer';
 import axios from 'axios';
 import { ConfigManager } from '../config/ConfigManager';
 import { logger } from '../utils/logger';
+import { setupCliProvider } from './cliSetup';
+import { isCliModel } from '../ai/cli/providers';
 import type { AiModel, AppConfig } from '../types';
 
 export class Onboarding {
@@ -20,6 +22,8 @@ export class Onboarding {
         choices: [
           { name: 'Claude (Anthropic API key)', value: 'claude' },
           { name: 'OpenAI (API key)', value: 'openai' },
+          { name: 'Claude CLI (log in with your own Claude plan; needs the `claude` CLI)', value: 'claude-cli' },
+          { name: 'Codex CLI (log in with your own ChatGPT/OpenAI plan; needs the `codex` CLI)', value: 'codex-cli' },
           { name: 'Ollama (local, fully offline, no key)', value: 'ollama' },
         ],
       },
@@ -31,11 +35,19 @@ export class Onboarding {
       openaiApiKey: null,
       ollamaPort: 11434,
       ollamaModel: 'llama3',
+      cliCommand: null,
+      cliModel: null,
       warnBeforeExternalSend: true,
       defaultPorts: [3000, 5000, 8000, 8080, 4000],
+      probeCommonPaths: false,
     };
 
-    if (model === 'claude' || model === 'openai') {
+    if (isCliModel(model)) {
+      await setupCliProvider(model, {
+        confirm: async (message, def) =>
+          (await inquirer.prompt<{ ok: boolean }>([{ type: 'confirm', name: 'ok', message, default: def }])).ok,
+      });
+    } else if (model === 'claude' || model === 'openai') {
       const envName = model === 'claude' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
       if (process.env[envName]) {
         logger.info(`Detected ${envName} in your environment — I'll use that and won't store a key on disk.`);

@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: Dummy pets API
+  version: 1.0.0
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /ping:
+    get:
+      summary: liveness
+      security: []
+  /pets/{petId}:
+    get:
+      summary: one pet
+  /admin/stats:
+    get:
+      summary: stats

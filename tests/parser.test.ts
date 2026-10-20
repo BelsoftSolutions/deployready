@@ -21,7 +21,7 @@ describe('BabelAdapter', () => {
     const profile = r.routes.find((x) => x.path === '/profile');
     expect(login?.method).toBe('POST');
     expect(login?.guarded).toBe(false);
-    expect(profile?.guarded).toBe(true); // 3 args => middleware present
+    expect(profile?.guarded).toBe(true); // recognised auth middleware between path and handler
   });
 
   it('never throws on broken source', () => {

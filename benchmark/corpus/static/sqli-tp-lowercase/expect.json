@@ -1,0 +1,4 @@
+{
+  "description": "Lower-case SQL keywords built by concatenation must be flagged",
+  "expected": [{ "rule": "sql-injection", "present": true, "file": "app.js" }]
+}

@@ -32,3 +32,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Benchmark (FP/FN corpus)
+        run: npm run benchmark
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high

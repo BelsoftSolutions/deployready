@@ -1,0 +1,4 @@
+{
+  "description": "ORM-style Model.update(values, options) is parameterized and must not be flagged",
+  "expected": [{ "rule": "sql-injection", "present": false }]
+}

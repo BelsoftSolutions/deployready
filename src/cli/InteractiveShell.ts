@@ -15,8 +15,12 @@ import { CodeParser } from '../parser/CodeParser';
 import { VulnerabilityDetector } from '../analysis/VulnerabilityDetector';
 import { IssueAggregator } from '../analysis/IssueAggregator';
 import { LocalhostDetector } from '../dynamic/LocalhostDetector';
-import { DynamicTester } from '../dynamic/DynamicTester';
+import { DynamicTester, skippedScanNote } from '../dynamic/DynamicTester';
 import { ModelRouter } from '../ai/ModelRouter';
+import { sanitizeLine, sanitizeText } from '../utils/sanitize';
+import { setupCliProvider } from './cliSetup';
+import { verifyAiFindings, droppedNote } from '../ai/verifyAiFindings';
+import { ScoreCalculator, isNote, isUnverified } from '../analysis/ScoreCalculator';
 import { Verifier } from '../core/Verifier';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
@@ -164,17 +168,31 @@ export class InteractiveShell {
     spinner.succeed(
       `Parsed ${this.state.graph.fileCount} files, ${this.state.graph.routes.length} routes — ${this.state.staticFindings.length} static findings.`,
     );
+    if (this.state.graph.gitignoreSkipped) {
+      logger.info(`Skipped ${this.state.graph.gitignoreSkipped} path(s) listed in .gitignore.`);
+    }
+    if (this.state.graph.specFiles?.length) {
+      logger.info(`Read routes from OpenAPI/Swagger file(s) on disk: ${this.state.graph.specFiles.join(', ')}.`);
+    }
+    for (const note of this.state.graph.discoveryNotes ?? []) logger.info(note);
     this.printScore();
   }
 
   private async dynamic(): Promise<void> {
-    const detect = ora('Looking for a running app on localhost…').start();
-    const app = await LocalhostDetector.find(this.config.defaultPorts);
-    if (!app) {
-      detect.info('No running app found on common ports. Start your app, then run `dynamic` again.');
+    const routes = this.state.graph?.routes ?? [];
+    if (this.state.graph && routes.length === 0) {
+      logger.info('No routes discovered; dynamic checks skipped.');
+      this.state.dynamic = { baseUrl: '', reachable: false, endpoints: [], probed: [], skipped: [], findings: [skippedScanNote('dynamic-skipped', 0, [])] };
+      this.recompute();
       return;
     }
-    detect.succeed(`Found a running app at ${app.baseUrl}.`);
+    const detect = ora('Looking for a local server on localhost…').start();
+    const app = await LocalhostDetector.find(this.config.defaultPorts);
+    if (!app) {
+      detect.info('No local server found listening on common ports. Start your app, then run `dynamic` again.');
+      return;
+    }
+    detect.succeed(`Found a local server listening on port ${app.port} (${app.baseUrl}).`);
 
     if (!(await this.confirm(`Run live security/performance tests against ${app.baseUrl}? (GET only)`, true))) {
       logger.info('Skipped live tests.');
@@ -183,7 +201,6 @@ export class InteractiveShell {
     const aggressive = await this.confirm('Also run aggressive tests (small burst to probe rate limiting)?', false);
 
     const spinner = ora('Running live tests…').start();
-    const routes = this.state.graph?.routes ?? [];
     this.state.dynamic = await DynamicTester.run(app.baseUrl, routes, { aggressive });
     this.recompute();
     spinner.succeed(`Live tests done — ${this.state.dynamic.findings.length} runtime findings.`);
@@ -195,20 +212,24 @@ export class InteractiveShell {
 
     const router = new ModelRouter(this.config);
     if (!router.isConfigured()) {
-      return logger.warn('No AI model configured. Run `deployready init` (or set an API key) first.');
+      return logger.warn('No AI model configured. Run `deployready init` (or set an API key, or install and log in to the claude/codex CLI) first.');
     }
+    const ready = await router.checkReady();
+    if (ready.state !== 'ready') return logger.warn(`AI provider not ready: ${ready.message}`);
     if (router.sendsExternally && this.config.warnBeforeExternalSend) {
-      logger.warn(`This sends a STRUCTURED findings report (no source code, secrets redacted) to the ${this.config.model} API.`);
+      logger.warn(router.consentNotice('report'));
       if (!(await this.confirm('Continue with AI analysis?', true))) return logger.info('Skipped AI analysis.');
     }
 
     const spinner = ora(`Analyzing with ${this.config.model}…`).start();
     try {
       const analysis = await router.analyze(this.buildReport());
-      this.state.aiFindings = analysis.findings;
+      const verified = await verifyAiFindings(analysis.findings, this.state.target);
+      this.state.aiFindings = verified.findings;
       this.state.aiSummary = analysis.summary || undefined;
       this.recompute();
       spinner.succeed('AI analysis complete.');
+      if (verified.dropped > 0) logger.warn(droppedNote(verified.dropped));
       if (this.state.aiSummary) console.log('\n' + chalk.cyan('🤖 ') + this.state.aiSummary + '\n');
       this.printScore();
     } catch (err) {
@@ -232,8 +253,8 @@ export class InteractiveShell {
     const sev = this.parseSeverity(filter);
     let shown = 0;
     this.ordered.forEach((f, i) => {
-      if (sev && f.severity !== sev) return;
-      console.log(`  ${chalk.gray(String(i + 1).padStart(2))}. ${this.statusMark(f)} ${this.sevBadge(f.severity)} ${f.title}${this.locText(f)}`);
+      if (sev && (f.severity !== sev || isNote(f))) return;
+      console.log(`  ${chalk.gray(String(i + 1).padStart(2))}. ${this.statusMark(f)} ${this.findingBadge(f)} ${f.title}${this.locText(f)}`);
       shown++;
     });
     if (!shown) logger.info('No findings match that filter.');
@@ -246,7 +267,7 @@ export class InteractiveShell {
     if (!f) return;
     const refs = [f.owasp, f.cwe].filter(Boolean).join('  ');
     console.log('\n' + chalk.bold(f.title));
-    console.log(`  ${this.sevBadge(f.severity)}  ${chalk.gray(`[${f.source}]`)}  ${chalk.gray(refs)}`);
+    console.log(`  ${this.findingBadge(f)}  ${chalk.gray(`[${f.source}]`)}  ${chalk.gray(refs)}`);
     if (f.file || f.endpoint) console.log(`  ${chalk.gray('where:')} ${f.endpoint ?? `${f.file}:${f.line ?? '?'}`}`);
     if (f.evidence) console.log(`  ${chalk.gray('evidence:')} ${f.evidence}`);
     console.log(`  ${chalk.gray('what:')} ${f.description}`);
@@ -257,7 +278,7 @@ export class InteractiveShell {
     console.log('');
     console.log(`  target:  ${this.state.target}`);
     console.log(`  parsed:  ${this.state.graph ? `yes (${this.state.graph.stack.stack})` : chalk.gray('no')}`);
-    console.log(`  dynamic: ${this.state.dynamic ? `yes (${this.state.dynamic.baseUrl})` : chalk.gray('no')}`);
+    console.log(`  dynamic: ${this.state.dynamic ? `yes (${this.state.dynamic.baseUrl || 'skipped: no routes'})` : chalk.gray('no')}`);
     console.log(`  ai:      ${this.state.aiFindings.length ? 'yes' : chalk.gray('no')}`);
     console.log(`  model:   ${this.config.model}`);
     console.log('');
@@ -299,7 +320,7 @@ export class InteractiveShell {
         return this.offerManualMark(f);
       }
       if (router.sendsExternally) {
-        logger.warn('To fix code, the relevant snippet (secrets redacted) is sent to the AI model.');
+        logger.warn(router.consentNotice('snippet'));
         if (!(await this.confirm('Send the snippet and get a proposed fix?', true))) return this.offerManualMark(f);
       }
       await this.aiFixFlow(f, editor, router);
@@ -312,6 +333,11 @@ export class InteractiveShell {
   }
 
   private async aiFixFlow(f: Finding, editor: FileEditor, router: ModelRouter): Promise<void> {
+    const ready = await router.checkReady();
+    if (ready.state !== 'ready') {
+      logger.warn(`AI provider not ready: ${ready.message}`);
+      return this.offerManualMark(f);
+    }
     const spinner = ora('Asking the model for a fix…').start();
     let snippet, suggestion;
     try {
@@ -324,11 +350,15 @@ export class InteractiveShell {
     }
 
     this.printDiff(f.file!, snippet.startLine, snippet.endLine, snippet.text, suggestion.newCode);
-    if (suggestion.explanation) console.log(chalk.gray(`  why: ${suggestion.explanation}\n`));
+    if (suggestion.explanation) console.log(chalk.gray(`  why: ${sanitizeLine(suggestion.explanation)}\n`));
 
     if (await this.confirm('Apply this fix to the file? (a backup is created first)', false)) {
-      const backup = await FixManager.applySuggestion(f, snippet, suggestion.newCode, editor);
-      logger.success(`Applied. Backup saved to ${backup}`);
+      const res = await FixManager.applySuggestion(f, snippet, suggestion.newCode, editor);
+      if (!res.applied) {
+        logger.warn(res.message);
+        return this.offerManualMark(f);
+      }
+      logger.success(`${res.message} Backup saved to ${res.backup}`);
       await this.verifyAndMark(f, true);
     } else {
       logger.info('Fix not applied.');
@@ -389,8 +419,8 @@ export class InteractiveShell {
 
   private printDiff(file: string, start: number, end: number, oldText: string, newText: string): void {
     console.log(chalk.gray(`  ── ${file}:${start}-${end} ──`));
-    for (const l of oldText.split('\n')) console.log(chalk.red(`  - ${l}`));
-    for (const l of newText.split('\n')) console.log(chalk.green(`  + ${l}`));
+    for (const l of sanitizeText(oldText).split('\n')) console.log(chalk.red(`  - ${l}`));
+    for (const l of sanitizeText(newText).split('\n')) console.log(chalk.green(`  + ${l}`));
     console.log('');
   }
 
@@ -488,6 +518,7 @@ export class InteractiveShell {
           ollamaModel: c.ollamaModel,
           warnBeforeExternalSend: c.warnBeforeExternalSend,
           defaultPorts: c.defaultPorts,
+          probeCommonPaths: c.probeCommonPaths,
         },
         null,
         2,
@@ -534,14 +565,14 @@ export class InteractiveShell {
   private printScore(): void {
     if (!this.hasFindings()) return;
     const open = this.checklist?.openFindings() ?? this.ordered;
-    const crit = open.filter((f) => f.severity === 'critical').length;
-    const warn = open.filter((f) => f.severity === 'warning').length;
-    const info = open.filter((f) => f.severity === 'info').length;
+    const { critical: crit, warning: warn, info, unverified, notes } = ScoreCalculator.summarize(open);
     const score = this.currentScore();
     const colored = score >= 80 ? chalk.green : score >= 50 ? chalk.yellow : chalk.red;
     console.log(
       `  ${chalk.bold('Score')} ${colored.bold(`${score}/100`)}  ${chalk.gray('· open:')} ${chalk.red(crit + ' crit')} ${chalk.yellow(warn + ' warn')} ${chalk.blue(info + ' info')}`,
     );
+    if (unverified > 0) console.log(chalk.gray(`  ${unverified} AI suggestion(s) (unverified, not scored)`));
+    if (notes > 0) console.log(chalk.gray(`  ${notes} note(s) (not scored)`));
   }
 
   private hasFindings(): boolean {
@@ -569,6 +600,10 @@ export class InteractiveShell {
     if (st === 'fixed') return chalk.green('✓');
     if (st === 'ignored') return chalk.gray('−');
     return chalk.red('✗');
+  }
+
+  private findingBadge(f: Finding): string {
+    return isUnverified(f) ? chalk.magenta.bold('UNVERIFIED') : isNote(f) ? chalk.gray.bold('NOTE') : this.sevBadge(f.severity);
   }
 
   private sevBadge(s: Severity): string {
@@ -700,8 +735,10 @@ export class InteractiveShell {
     console.log(`   ${chalk.cyan('1')}  Claude (Anthropic)`);
     console.log(`   ${chalk.cyan('2')}  OpenAI`);
     console.log(`   ${chalk.cyan('3')}  Ollama (local, fully offline)`);
-    console.log(`   ${chalk.cyan('4')}  Skip for now`);
-    const pick = (await this.ask(chalk.cyan('  Pick 1–4 › ')))?.trim();
+    console.log(`   ${chalk.cyan('4')}  Claude CLI (log in with your own Claude plan)`);
+    console.log(`   ${chalk.cyan('5')}  Codex CLI (your own ChatGPT/OpenAI plan; new, not yet tried with a live account)`);
+    console.log(`   ${chalk.cyan('6')}  Skip for now`);
+    const pick = (await this.ask(chalk.cyan('  Pick 1–6 › ')))?.trim();
 
     if (pick === '1' || pick === '2') {
       const isClaude = pick === '1';
@@ -724,6 +761,14 @@ export class InteractiveShell {
       this.config.model = 'ollama';
       await ConfigManager.save(this.config);
       logger.success(`Set to Ollama (local). Make sure it's running: \`ollama serve\` on port ${this.config.ollamaPort}.`);
+    } else if (pick === '4' || pick === '5') {
+      const provider = pick === '4' ? 'claude-cli' : 'codex-cli';
+      this.config.model = provider;
+      await ConfigManager.save(this.config);
+      await setupCliProvider(provider, {
+        confirm: (message, def) => this.confirm(message, def),
+        ctx: { cliCommand: this.config.cliCommand ?? null, codexEnabled: this.config.codexEnabled !== false },
+      });
     } else {
       logger.info('Skipped AI setup.');
     }

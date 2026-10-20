@@ -1,0 +1,4 @@
+{
+  "description": "The same eval() in a normal tracked source file must still be reported (control for walker-gitignored-dir)",
+  "expected": [{ "rule": "eval-usage", "present": true, "file": "src/handler.js" }]
+}

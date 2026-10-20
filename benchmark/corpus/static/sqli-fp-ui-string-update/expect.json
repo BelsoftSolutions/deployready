@@ -1,0 +1,4 @@
+{
+  "description": "A UI string that contains the English word 'update' must not be flagged as SQL",
+  "expected": [{ "rule": "sql-injection", "present": false }]
+}

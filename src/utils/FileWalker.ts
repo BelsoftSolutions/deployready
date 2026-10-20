@@ -8,6 +8,7 @@
  */
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { isIgnored, parseGitignore, type IgnoreRule, type IgnoreScope } from './GitIgnore';
 
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -24,13 +25,12 @@ const SKIP_DIRS = new Set([
   '.cache',
 ]);
 
+const WORKFLOW_EXTS = new Set(['.yml', '.yaml']);
+
 const SOURCE_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py', '.php', '.sql']);
 
 /** Config-like files we want to inspect even though they aren't "source". */
 const EXTRA_FILES = new Set([
-  '.env',
-  '.env.local',
-  '.env.production',
   '.gitignore', // needed so the env-not-ignored check can see ignore rules
   'package.json',
   'requirements.txt',
@@ -39,6 +39,18 @@ const EXTRA_FILES = new Set([
   'next.config.js',
   'next.config.mjs',
 ]);
+
+const ENV_TEMPLATES = new Set(['.env.example', '.env.sample', '.env.template']);
+
+/** `.env` or any `.env.<suffix>` (staging, development, local, ...). */
+export function isEnvFile(name: string): boolean {
+  return name === '.env' || name.startsWith('.env.');
+}
+
+/** Committed-by-design placeholder env files; not secrets, never reported as committed. */
+export function isEnvTemplate(name: string): boolean {
+  return ENV_TEMPLATES.has(name);
+}
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB — skip larger (generated/minified) files
 const MAX_FILES = 20000; // cap for very large monorepos; keeps the scan bounded
@@ -51,28 +63,68 @@ export interface WalkedFile {
   size: number;
 }
 
+const SPEC_FILE = /^(openapi|swagger)\.(json|ya?ml)$/i;
+
+/** `openapi.{json,yaml,yml}` / `swagger.{json,yaml,yml}`: the project's own API description. */
+export function isSpecFileName(name: string): boolean {
+  return SPEC_FILE.test(name);
+}
+
+export interface WalkResult {
+  files: WalkedFile[];
+  /** OpenAPI/Swagger files (kept apart from `files` so source scanners never see them). */
+  specFiles: WalkedFile[];
+  /** Spec files seen but not readable (e.g. over the size cap), with the reason. */
+  skippedSpecs: { relPath: string; reason: string }[];
+  /** Files and directories skipped because a .gitignore rule matched them. */
+  ignoredCount: number;
+}
+
 export class FileWalker {
   /**
    * Walk `root` and return source + relevant config files.
    * @throws if the path does not exist or is not a directory.
    */
   static async walk(root: string): Promise<WalkedFile[]> {
-    const realRoot = await fs.realpath(path.resolve(root));
-    const stat = await fs.stat(realRoot);
-    if (!stat.isDirectory()) {
-      throw new Error(`Not a directory: ${realRoot}`);
-    }
+    return (await FileWalker.walkWithStats(root)).files;
+  }
 
-    const results: WalkedFile[] = [];
-    await FileWalker.walkDir(realRoot, realRoot, results);
-    return results;
+  /** Like `walk`, also reporting how many paths were skipped because of .gitignore rules. */
+  static async walkWithStats(root: string): Promise<WalkResult> {
+    const realRoot = await FileWalker.resolveRoot(root);
+    const result: WalkResult = { files: [], specFiles: [], skippedSpecs: [], ignoredCount: 0 };
+    await FileWalker.walkDir(realRoot, '', realRoot, result, []);
+    return result;
+  }
+
+  /** Resolve `root` to its real directory path, with one-line errors fit to print as-is. */
+  static async resolveRoot(root: string): Promise<string> {
+    let realRoot: string;
+    try {
+      realRoot = await fs.realpath(path.resolve(root));
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') throw new Error(`Path not found: ${root}`);
+      throw new Error(`Cannot access path: ${root}${code ? ` (${code})` : ''}`);
+    }
+    let isDir = false;
+    try {
+      isDir = (await fs.stat(realRoot)).isDirectory();
+    } catch {
+      throw new Error(`Cannot access path: ${root}`);
+    }
+    if (!isDir) throw new Error(`Not a directory: ${root}`);
+    return realRoot;
   }
 
   private static async walkDir(
     dir: string,
+    relDir: string,
     realRoot: string,
-    out: WalkedFile[],
+    result: WalkResult,
+    parentScopes: IgnoreScope[],
   ): Promise<void> {
+    const out = result.files;
     if (out.length >= MAX_FILES) return;
 
     let entries: import('fs').Dirent[];
@@ -82,22 +134,53 @@ export class FileWalker {
       return; // Unreadable dir (permissions) — skip silently.
     }
 
+    let scopes = parentScopes;
+    if (entries.some((e) => e.name === '.gitignore' && e.isFile())) {
+      const rules = await FileWalker.readIgnoreRules(path.join(dir, '.gitignore'));
+      if (rules.length > 0) scopes = [...parentScopes, { base: relDir, rules }];
+    }
+
     for (const entry of entries) {
       if (out.length >= MAX_FILES) return;
       const abs = path.join(dir, entry.name);
+      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
 
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.git')) continue;
-        await FileWalker.walkDir(abs, realRoot, out);
+        if (SKIP_DIRS.has(entry.name)) continue;
+        if (entry.name.startsWith('.git') && relPath !== '.github') continue;
+        if (relDir === '.github' && entry.name !== 'workflows') continue;
+        if (relDir === '.github/workflows') continue;
+        if (relPath !== '.github' && relPath !== '.github/workflows' && isIgnored(scopes, relPath, true)) {
+          result.ignoredCount++;
+          continue;
+        }
+        await FileWalker.walkDir(abs, relPath, realRoot, result, scopes);
         continue;
       }
 
       if (!entry.isFile()) continue; // skip sockets, devices, etc.
 
+      if (relDir === '.github') continue;
       const ext = path.extname(entry.name).toLowerCase();
-      const isSource = SOURCE_EXTS.has(ext);
-      const isExtra = EXTRA_FILES.has(entry.name);
-      if (!isSource && !isExtra) continue;
+      const inWorkflows = relDir === '.github/workflows';
+      if (!inWorkflows && isSpecFileName(entry.name)) {
+        await FileWalker.collectSpec(abs, relPath, realRoot, scopes, result);
+        continue;
+      }
+      let protectedFromIgnore = inWorkflows;
+      if (inWorkflows) {
+        if (!WORKFLOW_EXTS.has(ext)) continue;
+      } else {
+        const isSource = SOURCE_EXTS.has(ext);
+        const isExtra = EXTRA_FILES.has(entry.name) || isEnvFile(entry.name);
+        if (!isSource && !isExtra) continue;
+        protectedFromIgnore = isExtra;
+      }
+
+      if (!protectedFromIgnore && isIgnored(scopes, relPath, false)) {
+        result.ignoredCount++;
+        continue;
+      }
 
       try {
         // Confinement check: ensure the resolved real path stays under root.
@@ -112,6 +195,43 @@ export class FileWalker {
       } catch {
         continue;
       }
+    }
+  }
+
+  private static async collectSpec(
+    abs: string,
+    relPath: string,
+    realRoot: string,
+    scopes: IgnoreScope[],
+    result: WalkResult,
+  ): Promise<void> {
+    if (isIgnored(scopes, relPath, false)) {
+      result.ignoredCount++;
+      return;
+    }
+    try {
+      const real = await fs.realpath(abs);
+      const rel = path.relative(realRoot, real);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) return;
+      const size = (await fs.stat(real)).size;
+      const relOut = rel.split(path.sep).join('/');
+      if (size > MAX_FILE_BYTES) {
+        result.skippedSpecs.push({ relPath: relOut, reason: 'larger than 2 MB' });
+        return;
+      }
+      result.specFiles.push({ absPath: real, relPath: relOut, size });
+    } catch {
+      return;
+    }
+  }
+
+  private static async readIgnoreRules(file: string): Promise<IgnoreRule[]> {
+    try {
+      const st = await fs.stat(file);
+      if (st.size > MAX_FILE_BYTES) return [];
+      return parseGitignore(await fs.readFile(file, 'utf8'));
+    } catch {
+      return [];
     }
   }
 

@@ -1,0 +1,4 @@
+{
+  "description": "A committed .env.production with no .gitignore entry must be flagged (control: the walker already reads this name)",
+  "expected": [{ "rule": "env-not-ignored", "present": true, "file": ".env.production" }]
+}

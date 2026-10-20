@@ -18,7 +18,7 @@
 import { makeFinding } from '../utils/finding';
 import { decodeJwt, forgeNoneAlg, tamperClaimsKeepSig } from './jwt';
 import { findInjectionPoints, applyInjection } from './tamper';
-import { classifyAuthzResult } from './accessControl';
+import { bodiesEqual, classifyAuthzResult } from './accessControl';
 import type { HttpRequestSpec } from './types';
 import type { Finding } from '../types';
 
@@ -115,8 +115,14 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
     return http({ method: req.method, path: req.path, query: req.query, body: req.body, headers: bearer(token) });
   };
 
+  const sendAnonymous = (req: HttpRequestSpec): Promise<ActiveResponse> => {
+    used++;
+    return http({ method: req.method, path: req.path, query: req.query, body: req.body, headers: {} });
+  };
+
   const bClaims = config.tokenB ? decodeJwt(config.tokenB)?.payload ?? null : null;
   let jwtReported = false;
+  const ownerCache = new Map<string, ActiveResponse>();
 
   for (const req of config.requests) {
     if (used >= budget) break;
@@ -135,26 +141,31 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
     if (!is2xx(baseline.status)) continue;
 
     // --- JWT verification: does the server accept a forged alg:none token? ---
+    // Only meaningful on an endpoint that actually requires auth, so first send
+    // the same request with no credentials: a public route (2xx) proves nothing.
     if (!jwtReported && used < budget) {
       const forged = forgeNoneAlg(config.token);
       if (forged) {
-        const r = await send(req, forged);
-        if (is2xx(r.status)) {
-          findings.push(
-            makeFinding({
-              rule: 'jwt-not-verified',
-              title: 'JWT signature not verified (alg:none accepted)',
-              severity: 'critical',
-              category: 'security',
-              source: 'dynamic',
-              endpoint: req.path,
-              owasp: 'A02:2025',
-              cwe: 'CWE-347',
-              description: `${req.path} accepted a forged "alg:none" token — the server does not verify JWT signatures, so anyone can mint a valid-looking token.`,
-              recommendation: 'Verify the JWT signature server-side and reject the "none" algorithm; pin the allowed algorithms (e.g. RS256/HS256).',
-            }),
-          );
-          jwtReported = true;
+        const control = await sendAnonymous(req);
+        if ((control.status === 401 || control.status === 403) && used < budget) {
+          const r = await send(req, forged);
+          if (is2xx(r.status)) {
+            findings.push(
+              makeFinding({
+                rule: 'jwt-not-verified',
+                title: 'JWT signature not verified (alg:none accepted)',
+                severity: 'critical',
+                category: 'security',
+                source: 'dynamic',
+                endpoint: req.path,
+                owasp: 'A02:2025',
+                cwe: 'CWE-347',
+                description: `${req.path} rejected the request without a token but accepted a forged "alg:none" token — the server does not verify JWT signatures, so anyone can mint a valid-looking token.`,
+                recommendation: 'Verify the JWT signature server-side and reject the "none" algorithm; pin the allowed algorithms (e.g. RS256/HS256).',
+              }),
+            );
+            jwtReported = true;
+          }
         }
       }
     }
@@ -168,8 +179,26 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
 
         const tampered = applyInjection(req, point, foreign);
         const r = await send(tampered, config.token);
-        const gotForeignData = r.bodyText.includes(String(foreign));
-        const { verdict } = classifyAuthzResult({ status: r.status, gotForeignData });
+
+        // Judge against the owner's baseline: the same resource fetched as B.
+        // Only fetched when the verdict could still depend on it.
+        let ownerBaseline: ActiveResponse | null = null;
+        if (is2xx(r.status) && !bodiesEqual(r.bodyText, baseline.bodyText) && config.tokenB) {
+          const key = JSON.stringify([tampered.method, tampered.path, tampered.query, tampered.body]);
+          ownerBaseline = ownerCache.get(key) ?? null;
+          if (!ownerBaseline && used < budget) {
+            ownerBaseline = await send(tampered, config.tokenB);
+            ownerCache.set(key, ownerBaseline);
+          }
+        }
+
+        const { verdict, proof } = classifyAuthzResult({
+          status: r.status,
+          bodyText: r.bodyText,
+          ownBaselineBody: baseline.bodyText,
+          ownerBaseline,
+          foreignValue: foreign,
+        });
         if (verdict !== 'broken') continue;
 
         const isTenant = point.category === 'tenant-id';
@@ -185,7 +214,11 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
             endpoint: req.path,
             owasp: 'A01:2025',
             cwe: 'CWE-639',
-            description: `Setting ${point.label}=${foreign} (another identity's value) and calling ${req.path} as the test user returned HTTP ${r.status} containing that identity's data.`,
+            description: `Setting ${point.label}=${foreign} (another identity's value) and calling ${req.path} as the test user returned HTTP ${r.status} ${
+              proof === 'owner-baseline'
+                ? 'with exactly what that identity itself receives for the same resource'
+                : "containing that identity's value (no owner baseline was available to confirm)"
+            }.`,
             recommendation: isTenant
               ? 'Scope every query by the authenticated tenant derived from the session — never trust a tenant id supplied in the request.'
               : 'Enforce per-object ownership checks server-side; never authorize access based on an id supplied by the client.',

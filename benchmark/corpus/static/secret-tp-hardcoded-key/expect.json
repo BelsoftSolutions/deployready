@@ -1,0 +1,4 @@
+{
+  "description": "A literal AWS access key (documented example key) in source must be flagged as a hardcoded secret",
+  "expected": [{ "rule": "hardcoded-secret", "present": true, "file": "config.js" }]
+}
