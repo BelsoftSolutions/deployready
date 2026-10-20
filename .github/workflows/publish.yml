@@ -24,13 +24,18 @@ jobs:
       # token and fails with 404 instead of using the trusted-publisher handshake.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      # Trusted publishing (OIDC) requires npm >= 11.5.1; Node 20 ships npm 10.
+      # Trusted publishing (OIDC) requires npm >= 11.5.1. Node 24 ships a recent npm; try to upgrade, but do not
+      # fail the release if the self-upgrade itself fails, then verify the version that will actually publish.
       - name: Upgrade npm
         run: |
-          npm install -g npm@latest
+          npm install -g npm@latest || echo "npm self-upgrade failed; continuing with the bundled npm"
           npm --version
+
+      - name: Check npm supports trusted publishing (>= 11.5.1)
+        run: |
+          node -e "const [a,b,c]=require('child_process').execSync('npm --version').toString().trim().split('.').map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" || { echo "::error::npm >= 11.5.1 is required for trusted publishing"; exit 1; }
 
       # Fail early if package.json does not match the release tag (v0.3.0 or 0.3.0).
       - name: Check version matches release tag
