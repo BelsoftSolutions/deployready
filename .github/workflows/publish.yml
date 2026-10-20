@@ -2,7 +2,7 @@ name: Publish to npm
 
 # Publishes when you create a GitHub Release.
 # Auth is via npm "trusted publishing" (OIDC) — no token/secret is stored anywhere.
-# Make sure package.json "version" matches the release tag before you publish the release.
+# package.json "version" must match the release tag (checked below). Pre-releases publish under the "beta" tag.
 
 on:
   release:
@@ -32,6 +32,17 @@ jobs:
           npm install -g npm@latest
           npm --version
 
+      # Fail early if package.json does not match the release tag (v0.3.0-beta.1 or 0.3.0-beta.1).
+      - name: Check version matches release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "${RELEASE_TAG#v}" != "$PKG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match release tag ($RELEASE_TAG)"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
@@ -44,5 +55,19 @@ jobs:
       # No NODE_AUTH_TOKEN needed: npm detects the OIDC environment and
       # publishes via the trusted publisher you configure on npmjs.com.
       # Provenance attestation is generated automatically.
+      # Pre-releases (GitHub "pre-release" checkbox) and any version with a hyphen
+      # (0.3.0-beta.1) go out under the "beta" dist-tag so they can never become "latest".
       - name: Publish
-        run: npm publish
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          case "$PKG_VERSION" in
+            *-*) HAS_HYPHEN=true ;;
+            *) HAS_HYPHEN=false ;;
+          esac
+          if [ "$IS_PRERELEASE" = "true" ] || [ "$HAS_HYPHEN" = "true" ]; then
+            npm publish --tag beta
+          else
+            npm publish
+          fi
