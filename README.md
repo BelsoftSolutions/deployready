@@ -181,7 +181,7 @@ DeployReady works fully offline with no AI. To enable deeper analysis, configure
 | OpenAI API | Set `OPENAI_API_KEY` or store via `init`. |
 | Ollama (local) | Fully offline, no key — nothing leaves your machine. |
 | Claude (CLI login) | Uses your own installed `claude` CLI and **your own Claude plan** — no API key. See below. |
-| Codex (CLI login) | Uses your own installed `codex` CLI and **your own ChatGPT/OpenAI plan** — no API key. New: verified with fakes only, not yet with a live account. See below. |
+| Codex (CLI login) | Uses your own installed `codex` CLI and **your own ChatGPT/OpenAI plan** — no API key. See below. |
 
 ### CLI-login providers (Claude / Codex)
 

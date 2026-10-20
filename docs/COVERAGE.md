@@ -1,6 +1,6 @@
 # Unit-test coverage
 
-Measured for 0.3.0-beta.1 with Jest (ts-jest, `collectCoverageFrom: src/**/*.ts`): 64 suites, 1096 tests, all passing.
+Measured for 0.3.0 with Jest (ts-jest, `collectCoverageFrom: src/**/*.ts`): 64 suites, 1096 tests, all passing.
 
 ```
 npm run coverage

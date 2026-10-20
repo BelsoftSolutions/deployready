@@ -736,7 +736,7 @@ export class InteractiveShell {
     console.log(`   ${chalk.cyan('2')}  OpenAI`);
     console.log(`   ${chalk.cyan('3')}  Ollama (local, fully offline)`);
     console.log(`   ${chalk.cyan('4')}  Claude CLI (log in with your own Claude plan)`);
-    console.log(`   ${chalk.cyan('5')}  Codex CLI (your own ChatGPT/OpenAI plan; new, not yet tried with a live account)`);
+    console.log(`   ${chalk.cyan('5')}  Codex CLI (log in with your own ChatGPT/OpenAI plan)`);
     console.log(`   ${chalk.cyan('6')}  Skip for now`);
     const pick = (await this.ask(chalk.cyan('  Pick 1–6 › ')))?.trim();
 

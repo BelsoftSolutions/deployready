@@ -67,10 +67,9 @@ const loggedIn = JSON.stringify({ loggedIn: true, authMethod: 'claude.ai' });
 const loggedOut = JSON.stringify({ loggedIn: false });
 
 describe('in-session AI setup with the CLI providers', () => {
-  it('lists all providers, with the Codex one marked as new and not yet tried live', async () => {
+  it('lists all providers including the CLI-login ones', async () => {
     const out = await runSession(['setup', '6', 'exit']);
     for (const label of ['Claude (Anthropic)', 'OpenAI', 'Ollama', 'Claude CLI', 'Codex CLI']) expect(out).toContain(label);
-    expect(out).toMatch(/Codex CLI.*not yet tried with a live account/);
     expect(saved).toHaveLength(0);
   });
 
