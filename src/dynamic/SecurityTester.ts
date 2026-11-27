@@ -10,6 +10,7 @@ import type { Finding, LiveEndpoint, SkippedRoute } from '../types';
 import type { ProbeTarget } from './EndpointMapper';
 import { isCatchAll, probeCatchAll, type Fingerprint } from './catchAll';
 import type { Resp } from './httpClient';
+import { absoluteUrl, buildProof } from './proof';
 
 const SECURITY_HEADERS = [
   'x-content-type-options',
@@ -44,6 +45,7 @@ export class SecurityTester {
       return isCatchAll(await baseline, res);
     };
     const contentTypes = new Map<string, string>();
+    const baseUrl = client.defaults?.baseURL;
 
     for (const t of targets) {
       if (t.method !== 'GET') continue; // safety: never mutate
@@ -63,6 +65,17 @@ export class SecurityTester {
 
       const reportable =
         (t.guarded || t.sensitive) && res.status >= 200 && res.status < 300 && !(await isCatchAllPage(t, res));
+      const body = typeof res.data === 'string' ? res.data : safeStringify(res.data);
+      const request = { method: 'GET', url: absoluteUrl(baseUrl, t.path) };
+      // Unauthenticated 2xx on a guarded/sensitive route: the control is the random
+      // non-existent path sent by isCatchAllPage, which did not return this page.
+      const unauthProof = () =>
+        buildProof({
+          request,
+          status: res.status,
+          response: body,
+          control: 'Sent with no credentials. A request to a random non-existent path did not return this response, so it is the route\'s own content, not a catch-all page.',
+        });
 
       // 1. Auth bypass: a guarded route that returns 2xx without credentials.
       if (t.guarded && reportable) {
@@ -78,6 +91,7 @@ export class SecurityTester {
             cwe: 'CWE-306',
             description: `${t.path} appeared auth-guarded in code but returned ${res.status} with no token.`,
             recommendation: 'Enforce authentication middleware on this route and verify it returns 401/403 when unauthenticated.',
+            proof: unauthProof(),
           }),
         );
       }
@@ -96,13 +110,13 @@ export class SecurityTester {
             cwe: 'CWE-284',
             description: `${t.path} returned ${res.status} without authentication.`,
             recommendation: 'Restrict admin/debug routes behind authentication and authorization, or remove them from production.',
+            proof: unauthProof(),
           }),
         );
       }
 
       // 3. Secret leakage in response body. A matched key shape is a critical;
       // a merely secret-named value is a warning (could be a benign field name).
-      const body = typeof res.data === 'string' ? res.data : safeStringify(res.data);
       const secret = body ? detectSecret(body) : null;
       if (secret) {
         const high = secret === 'high';
@@ -120,6 +134,7 @@ export class SecurityTester {
             cwe: 'CWE-200',
             description: `Response from ${t.path} contained a value matching a secret pattern.`,
             recommendation: 'Remove credentials/tokens from API responses. Return only the minimum data the client needs.',
+            proof: buildProof({ request, status: res.status, response: body }),
           }),
         );
       }
@@ -139,6 +154,7 @@ export class SecurityTester {
             cwe: 'CWE-942',
             description: `The server responds with a wildcard CORS origin (first seen at ${t.path}).`,
             recommendation: 'Restrict CORS to specific trusted origins; never combine "*" with credentialed requests.',
+            proof: buildProof({ request, status: res.status, response: `Access-Control-Allow-Origin: ${acao}` }),
           }),
         );
       }
@@ -160,6 +176,7 @@ export class SecurityTester {
               cwe: 'CWE-693',
               description: `Response is missing: ${missing.join(', ')}.`,
               recommendation: 'Add a security-headers middleware (e.g. helmet) to set CSP, HSTS, X-Frame-Options, and X-Content-Type-Options.',
+              proof: buildProof({ request, status: res.status, response: `Response headers lack: ${missing.join(', ')}` }),
             }),
           );
         }
@@ -210,9 +227,11 @@ export class SecurityTester {
   private static async probeRateLimit(client: AxiosInstance, path: string): Promise<Finding | null> {
     const BURST = 20;
     let throttled = false;
+    const statuses: number[] = [];
     for (let i = 0; i < BURST; i++) {
       try {
         const res = await client.get(path);
+        statuses.push(res.status);
         if (res.status === 429) {
           throttled = true;
           break;
@@ -222,6 +241,20 @@ export class SecurityTester {
       }
     }
     if (throttled) return null;
+    // A burst cut short by a failed request proves nothing about throttling.
+    if (statuses.length < BURST) {
+      return makeNote({
+        rule: 'missing-rate-limit',
+        title: `Rate limiting on ${path} could not be verified`,
+        category: 'security',
+        source: 'dynamic',
+        endpoint: path,
+        owasp: 'A07:2025',
+        cwe: 'CWE-307',
+        description: `The burst to ${path} stopped after ${statuses.length} of ${BURST} requests because a request failed (no response), so throttling could not be measured. This does not mean a limiter is missing or present.`,
+        recommendation: `Check that a rate limiter (e.g. express-rate-limit) is configured on ${path}.`,
+      });
+    }
     return makeFinding({
       rule: 'missing-rate-limit',
       title: 'No rate limiting detected on sensitive endpoint',
@@ -233,8 +266,20 @@ export class SecurityTester {
       cwe: 'CWE-307',
       description: `Sent ${BURST} rapid GET requests to ${path} with no 429 throttling response. Low confidence: measured with GET requests only; the login POST route itself is not probed.`,
       recommendation: 'Add rate limiting (e.g. express-rate-limit) to auth and other abuse-prone endpoints.',
+      proof: buildProof({
+        request: { method: 'GET', url: absoluteUrl(client.defaults?.baseURL, path) },
+        status: statuses[statuses.length - 1],
+        response: `${BURST} rapid requests, statuses: ${summarizeStatuses(statuses)}; none was 429.`,
+      }),
     });
   }
+}
+
+/** "200 x19, 500 x1" — status counts in first-seen order. */
+function summarizeStatuses(statuses: number[]): string {
+  const counts = new Map<number, number>();
+  for (const s of statuses) counts.set(s, (counts.get(s) ?? 0) + 1);
+  return [...counts].map(([s, n]) => `${s} x${n}`).join(', ');
 }
 
 function safeStringify(data: unknown): string {
