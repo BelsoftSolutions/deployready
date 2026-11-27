@@ -73,6 +73,7 @@ deployready › exit
 | `scan` · `parse` · `dynamic` · `ai` | run the whole pipeline, or one step at a time |
 | `issues [crit\|warn\|info]` · `show <n>` | list findings (optionally filtered) · show one in detail |
 | `fix <n>` | deterministic auto-fix where safe (weak hashes, disabled TLS verification, `yaml.load`, `verify=False`, Flask `debug=True`, gitignore `.env`); otherwise an AI-proposed diff you approve (creates a backup); otherwise guidance |
+| `fix --all` | apply every safe deterministic fix above in one go: one confirmation, a backup per change, each one re-verified. AI-proposed fixes are never run in bulk |
 | `verify <n>` | re-run the relevant checks to confirm a fix actually resolved the issue |
 | `done <n>` · `ignore <n>` | mark fixed / ignored — the score recomputes immediately |
 | `score` · `status` | show the current readiness score / session state |

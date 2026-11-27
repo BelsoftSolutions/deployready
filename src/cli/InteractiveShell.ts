@@ -288,6 +288,7 @@ export class InteractiveShell {
   // ---------------------------------------------------------------- fix flow
 
   private async fix(arg?: string): Promise<void> {
+    if (arg === '--all' || arg === 'all') return this.fixAll();
     const f = this.findingAt(arg);
     if (!f) return;
     this.show(arg);
@@ -330,6 +331,49 @@ export class InteractiveShell {
     // 3. No automated path — show guidance and let the user mark it.
     logger.info('No automated fix available for this issue. Apply the recommendation above manually.');
     await this.offerManualMark(f);
+  }
+
+  /**
+   * `fix --all` — apply every safe, deterministic fix at once (one confirmation, a backup per
+   * edit), then re-verify each. AI-proposed fixes are never run in bulk: they still need `fix <n>`.
+   */
+  private async fixAll(): Promise<void> {
+    if (!this.hasFindings()) return logger.warn('No findings yet. Run `scan` or `parse`.');
+    const open = this.checklist?.openFindings() ?? this.ordered;
+    const fixable = open.filter((f) => FixManager.autoFixable(f));
+    if (fixable.length === 0) {
+      return logger.info('Nothing to fix automatically. Use `fix <n>` for AI-proposed fixes.');
+    }
+
+    console.log('\n' + chalk.bold(`  ${fixable.length} safe automatic fix${fixable.length === 1 ? '' : 'es'}:`));
+    for (const f of fixable) {
+      console.log(`  ${this.findingBadge(f)} ${f.title}  ${chalk.gray(f.endpoint ?? `${f.file}:${f.line ?? '?'}`)}`);
+    }
+    console.log('');
+    if (!(await this.confirm('Apply all of these? (a backup is created for each change)', true))) {
+      return logger.info('No changes made.');
+    }
+
+    const results = await FixManager.autoFixAll(fixable, new FileEditor(this.state.target));
+    let verified = 0;
+    for (const r of results) {
+      if (!r.applied) {
+        console.log(`  ${chalk.yellow('–')} skipped  ${r.finding.title}  ${chalk.gray(sanitizeLine(r.message))}`);
+        continue;
+      }
+      const ctx = { target: this.state.target };
+      const v = await Verifier.verify(r.finding, ctx).catch(() => ({ status: 'unknown' as const }));
+      if (v.status === 'still-present') {
+        console.log(`  ${chalk.yellow('!')} applied but still detected  ${r.finding.title}`);
+        continue;
+      }
+      this.markFinding(r.finding, 'fixed');
+      verified++;
+      console.log(`  ${chalk.green('✓')} fixed  ${r.finding.title}  ${chalk.gray(r.finding.file ?? '')}`);
+    }
+    const skipped = results.filter((r) => !r.applied).length;
+    logger.success(`Fixed ${verified} of ${fixable.length}${skipped ? ` (${skipped} skipped: use \`fix <n>\` for an AI diff)` : ''}.`);
+    this.printScore();
   }
 
   private async aiFixFlow(f: Finding, editor: FileEditor, router: ModelRouter): Promise<void> {
@@ -635,6 +679,7 @@ export class InteractiveShell {
       ['issues [crit|warn|info]', 'list findings (optionally filter by severity)'],
       ['show <n>', 'full detail of finding n'],
       ['fix <n>', 'interactive fix: auto-fix, AI-proposed diff, or guidance (auto-verifies)'],
+      ['fix --all', 'apply every safe automatic fix in one go (backups made, each one re-verified)'],
       ['verify <n>', 're-run the check for a finding to confirm it is resolved'],
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],

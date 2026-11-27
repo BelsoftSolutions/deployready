@@ -21,6 +21,13 @@ export interface AutoFixResult {
   backup: string | null;
 }
 
+export interface AutoFixAllResult {
+  finding: Finding;
+  applied: boolean;
+  message: string;
+  backup: string | null;
+}
+
 export interface ApplyResult {
   applied: boolean;
   message: string;
@@ -82,6 +89,25 @@ export class FixManager {
     }
 
     throw new Error(`No automatic fix available for rule "${finding.rule}".`);
+  }
+
+  /**
+   * Apply every deterministic fix in `findings` in one pass. Each edit is independent: a fixer
+   * that can't safely rewrite its line is reported as skipped and never aborts the others.
+   * Line fixers replace exactly one line with one line, so line numbers stay valid across edits.
+   */
+  static async autoFixAll(findings: Finding[], editor: FileEditor): Promise<AutoFixAllResult[]> {
+    const results: AutoFixAllResult[] = [];
+    for (const finding of findings) {
+      if (!FixManager.autoFixable(finding)) continue;
+      try {
+        const res = await FixManager.autoFix(finding, editor);
+        results.push({ finding, applied: true, message: res.message, backup: res.backup });
+      } catch (err) {
+        results.push({ finding, applied: false, message: (err as Error).message, backup: null });
+      }
+    }
+    return results;
   }
 
   /** True if we can attempt an AI fix (finding points at a concrete file+line). */
