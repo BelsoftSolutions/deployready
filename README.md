@@ -42,6 +42,7 @@ Run `npx deployready@latest` with no arguments to open the guided interactive se
 - Access control patterns: routes without an auth check, Supabase tables without Row-Level Security, `service_role` keys in client code.
 - Live checks against your app on localhost: auth bypass, exposed admin routes, secrets in responses, CORS, security headers, rate limiting.
 - Opt-in active (authenticated) tests and Supabase checks, described below.
+- Firebase security rules (static only): open or test-mode Firestore/Storage/Realtime Database rules, sign-in-only rules on user-owned paths, and committed service account keys. See [`docs/FIREBASE.md`](docs/FIREBASE.md).
 
 **Does not**
 
@@ -50,6 +51,7 @@ Run `npx deployready@latest` with no arguments to open the guided interactive se
 - Live tests only cover routes your code or OpenAPI file defines, plus links your running app advertises. Paths are not guessed unless you opt in to the common-path probe.
 - AI-generated findings are marked unverified and never change the score or the CI gate.
 - Supabase checks are read-only, so write exposure (INSERT/UPDATE/DELETE policies) is not tested.
+- Firebase checks read the rules files in your repo only. They do not connect to Firebase, so deployed rules and Auth settings are not verified. The public web config `apiKey` is not flagged.
 
 Test coverage numbers are in [`docs/COVERAGE.md`](docs/COVERAGE.md).
 

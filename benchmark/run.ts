@@ -14,6 +14,7 @@ import { UNSUPPORTED_PREFIX, type BenchCase, type Check } from './core';
 import { corpusCases } from './corpusCases';
 import { dynamicCases } from './dynamicCases';
 import { activeCases } from './activeCases';
+import { firebaseCases } from './firebaseCases';
 
 type Status = 'pass' | 'fail' | 'known-gap' | 'fixed' | 'error';
 
@@ -97,7 +98,7 @@ async function main(): Promise<number> {
   const jsonArg = jsonIdx >= 0 ? process.argv[jsonIdx + 1] : undefined;
   const jsonFile = jsonArg !== undefined && !jsonArg.startsWith('--') ? jsonArg : undefined;
   const json = jsonIdx >= 0 && jsonFile === undefined;
-  const cases = [...corpusCases(), ...dynamicCases(), ...activeCases()];
+  const cases = [...corpusCases(), ...dynamicCases(), ...activeCases(), ...firebaseCases()];
   const ids = new Set<string>();
   for (const c of cases) {
     if (ids.has(c.id)) throw new Error(`duplicate case id: ${c.id}`);

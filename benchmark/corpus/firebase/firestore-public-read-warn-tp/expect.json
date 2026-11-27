@@ -1,0 +1,1 @@
+{"description":"Public catalogue read is a warning, not a critical open rule; writes are admin-only","expected":[{"rule":"firebase-rules-open-read","present":true,"severity":"warning"},{"rule":"firebase-rules-open","present":false}]}

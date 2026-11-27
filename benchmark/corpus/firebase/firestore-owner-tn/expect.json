@@ -1,0 +1,1 @@
+{"description":"Safe twin: ownership checked via helper function and owner field","strict":true,"expected":[{"rule":"firebase-rules-auth-only","present":false},{"rule":"firebase-rules-open","present":false}]}

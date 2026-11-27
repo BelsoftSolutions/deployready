@@ -1,0 +1,7 @@
+{
+  // anyone can do anything
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}

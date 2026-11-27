@@ -1,0 +1,1 @@
+{"description":"Firestore allow read, write: if true","expected":[{"rule":"firebase-rules-open","present":true,"file":"firestore.rules"}]}
