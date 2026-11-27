@@ -3,12 +3,17 @@
  * machine-readable JSON summary. Used by `deployready analyze --fail-on <sev>`.
  *
  * Exit codes (so CI can tell a policy failure from a tool crash):
- *   0  clean — no findings at/above the threshold
+ *   0  clean — no findings at/above the threshold (and, with --fail-on-release-state, the release
+ *      state is better than the threshold)
  *   1  runtime error (the CLI threw)
- *   2  gate exceeded — findings at/above the threshold
+ *   2  gate exceeded — findings at/above the threshold, or the release state is at/worse than
+ *      the --fail-on-release-state threshold
+ *   3  insufficient evidence — only with --fail-on-release-state: a mandatory check area errored
+ *      or did not run, so the scan cannot say the release is safe (scanner failure is never a pass)
  */
 import { ScoreCalculator, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
-import type { Finding, ScanReport } from '../types';
+import type { Finding, ReleaseAssessment, ReleaseState, ScanReport } from '../types';
+import { SCORE_DISCLAIMER, releaseAtOrWorse } from './releaseState';
 import { buildFixPrompt } from '../agent/fixPrompt';
 import { fingerprintAll, normalizePath } from './baselineFingerprint';
 import { COMMON_PATH_TITLE, guessedFindings, normalFindings } from '../ui/commonPathSection';
@@ -17,7 +22,17 @@ export type FailOn = 'critical' | 'warning' | 'info' | 'none';
 
 export const FAIL_ON_VALUES: FailOn[] = ['critical', 'warning', 'info', 'none'];
 
-export const EXIT = { OK: 0, ERROR: 1, GATE: 2 } as const;
+export const EXIT = { OK: 0, ERROR: 1, GATE: 2, INSUFFICIENT_EVIDENCE: 3 } as const;
+
+/**
+ * Exit code for --fail-on-release-state. `undefined` threshold = flag not given = never gates.
+ * 3 only when the state is insufficient-evidence; 2 for any other state at/worse than the threshold.
+ */
+export function releaseExitCode(release: ReleaseAssessment | undefined, threshold: ReleaseState | undefined): number {
+  if (!threshold || !release) return EXIT.OK;
+  if (!releaseAtOrWorse(release.state, threshold)) return EXIT.OK;
+  return release.state === 'insufficient-evidence' ? EXIT.INSUFFICIENT_EVIDENCE : EXIT.GATE;
+}
 
 /** Validate a --fail-on value, throwing a helpful error otherwise. */
 export function parseFailOn(value: string): FailOn {
@@ -258,7 +273,12 @@ export function summarize(findings: Finding[]): ScanReport['summary'] {
 }
 
 /** Compact, CI-friendly JSON view of a report. Evidence is already redacted. */
-export function toCiJson(report: ScanReport, failOn: FailOn, cmp?: BaselineComparison): Record<string, unknown> {
+export function toCiJson(
+  report: ScanReport,
+  failOn: FailOn,
+  cmp?: BaselineComparison,
+  opts: { failOnReleaseState?: ReleaseState } = {},
+): Record<string, unknown> {
   const cp = report.dynamic?.commonPaths;
   const out: Record<string, unknown> = {
     tool: 'deployready',
@@ -266,9 +286,18 @@ export function toCiJson(report: ScanReport, failOn: FailOn, cmp?: BaselineCompa
     target: report.target,
     stack: report.stack.stack,
     score: report.score,
+    scoreNote: SCORE_DISCLAIMER,
     summary: report.summary,
     failOn,
     passed: !shouldFail(cmp ? summarize(gatedFindings(cmp)) : report.summary, failOn),
+    ...(report.release ? { release: report.release } : {}),
+    ...(report.coverage ? { coverage: report.coverage } : {}),
+    ...(opts.failOnReleaseState
+      ? {
+          failOnReleaseState: opts.failOnReleaseState,
+          releaseGatePassed: releaseExitCode(report.release, opts.failOnReleaseState) === EXIT.OK,
+        }
+      : {}),
     findings: normalFindings(report.findings).map(ciFinding),
   };
   if (cmp) {
@@ -303,6 +332,7 @@ function ciFinding(f: Finding): Record<string, unknown> {
     category: f.category,
     source: f.source,
     unverified: isUnverified(f),
+    ...(isUnverified(f) && f.suggestedSeverity ? { suggestedSeverity: f.suggestedSeverity } : {}),
     note: f.note === true,
     file: f.file,
     line: f.line,

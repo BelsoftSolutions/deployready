@@ -20,8 +20,10 @@ import {
   gatedFindings,
   describeComparison,
   summarize,
+  releaseExitCode,
   type BaselineComparison,
 } from '../core/CiGate';
+import { parseReleasePolicy, parseReleaseStateThreshold, withRelease } from '../core/releaseState';
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
 import { renderTokenHelp } from '../active/tokenHelp';
@@ -77,6 +79,10 @@ export function buildProgram(): Command {
       'none',
     )
     .option(
+      '--fail-on-release-state <state>',
+      'exit 2 if the release state is at/worse than this (ready-with-accepted-risks | review-required | not-ready | insufficient-evidence); exit 3 when it is insufficient-evidence',
+    )
+    .option(
       '--baseline <file>',
       'gate only on findings NOT in this baseline file (existing issues are grandfathered)',
     )
@@ -109,6 +115,7 @@ export function buildProgram(): Command {
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
+        const releaseThreshold = opts.failOnReleaseState ? parseReleaseStateThreshold(opts.failOnReleaseState) : undefined;
         if (opts.json) setQuiet(true); // keep stdout clean for JSON consumers
 
         // Active scan needs a token; if asked for without one, show how to get it.
@@ -145,10 +152,18 @@ export function buildProgram(): Command {
           },
           activeUrl: opts.activeUrl as string | undefined,
           ownedHosts: opts.iOwnThisTarget as string[],
+          activeRequested: Boolean(opts.active),
         };
         let report = await Orchestrator.analyze(path, analyzeOpts);
         const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;
         if (fixOutcome) report = fixOutcome.report;
+        const releaseCtx = {
+          policy: report.release?.policy ?? parseReleasePolicy(undefined).policy,
+          policyWarnings: report.release?.policyWarnings,
+          verification: report.release?.verification
+            ? { fixedVerified: report.release.verification.fixedVerified, fixedUnverified: report.release.verification.fixedUnverified }
+            : undefined,
+        };
 
         // Accept the current findings as the baseline, then stop (no gating).
         if (opts.writeBaseline) {
@@ -175,14 +190,18 @@ export function buildProgram(): Command {
             : { version: 2, entries: [], warnings: [] };
           cmp = compareToBaseline(report.findings, baseline, { root: report.target });
           gateSummary = summarize(gatedFindings(cmp));
+          // Grandfathered findings are accepted risks: they do not block, but the release state says so.
+          const before = report.release?.state;
+          report = withRelease(report, { ...releaseCtx, accepted: cmp.known });
           if (!opts.json) {
             for (const w of cmp.warnings) logger.warn(w);
             logger.info(`Baseline: ${cmp.known.length} known finding(s) grandfathered.\n${describeComparison(cmp).join('\n')}`);
+            if (report.release && report.release.state !== before) logger.info(report.release.line);
           }
         }
 
         if (opts.json) {
-          const body = toCiJson(report, failOn, cmp);
+          const body = toCiJson(report, failOn, cmp, { failOnReleaseState: releaseThreshold });
           if (fixOutcome) body.fix = fixOutcome.fix;
           process.stdout.write(JSON.stringify(body, null, 2) + '\n');
         }
@@ -196,6 +215,12 @@ export function buildProgram(): Command {
         } else if (opts.strictBaseline && cmp && cmp.stale.length > 0) {
           logger.error(`Gate failed: ${cmp.stale.length} stale baseline suppression(s) (--strict-baseline). Re-run with --write-baseline.`);
           process.exitCode = EXIT.GATE;
+        } else if (releaseExitCode(report.release, releaseThreshold) !== EXIT.OK) {
+          const code = releaseExitCode(report.release, releaseThreshold);
+          logger.error(
+            `Gate failed: release state "${report.release?.state}" is at or worse than "${releaseThreshold}" (--fail-on-release-state). ${report.release?.line ?? ''}`,
+          );
+          process.exitCode = code;
         }
       });
     });

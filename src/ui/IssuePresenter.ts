@@ -5,7 +5,9 @@
  */
 import chalk from 'chalk';
 import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
-import type { Finding, Proof, ScanReport, Severity } from '../types';
+import type { Finding, Proof, ReleaseState, ScanReport, Severity } from '../types';
+import { SCORE_DISCLAIMER } from '../core/releaseState';
+import { coverageSymbol } from '../core/coverage';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
 const BADGE: Record<Severity, string> = {
@@ -26,6 +28,8 @@ export class IssuePresenter {
     console.log('\n' + bar);
     console.log('  ' + chalk.bold('DeployReady Scan Results'));
     console.log('  ' + chalk.bold(`Production Readiness Score: ${scoreColor(report.score)}/100`));
+    console.log(chalk.gray(`  ${SCORE_DISCLAIMER}`));
+    if (report.release) console.log('  ' + RELEASE_COLOR[report.release.state](report.release.line));
     console.log(`  Stack: ${report.stack.stack} (${report.stack.language})  ·  Files: ${report.graph.fileCount}  ·  Routes: ${report.graph.routes.length}`);
     console.log(bar + '\n');
 
@@ -57,9 +61,10 @@ export class IssuePresenter {
     }
 
     IssuePresenter.printCommonPaths(report);
+    IssuePresenter.printCoverage(report);
 
     if (report.summary.total === 0 && suggestions.length === 0 && notes.length === 0) {
-      console.log(chalk.green('✓ No issues detected. Nice work — but keep validating in CI.\n'));
+      console.log(chalk.green('✓ No issues detected in the areas tested. Keep validating in CI.\n'));
     } else {
       console.log(
         chalk.bold(
@@ -71,6 +76,21 @@ export class IssuePresenter {
       }
       if (notes.length) console.log(chalk.gray(`${notes.length} notes (not scored)\n`));
     }
+  }
+
+  /** Areas that did not pass, with the reason: a skipped or crashed check is never shown as clean. */
+  private static printCoverage(report: ScanReport): void {
+    // Optional areas that simply did not run are already in the release line; list what matters.
+    const gaps = (report.coverage ?? []).filter(
+      (a) => a.state === 'failed' || a.state === 'inconclusive' || (a.state === 'untested' && (a.mandatory || a.requested)),
+    );
+    if (!gaps.length) return;
+    console.log(chalk.bold('Coverage gaps (errored, required but not run, or not conclusive):'));
+    for (const a of gaps) {
+      const paint = a.state === 'failed' ? chalk.red : a.mandatory ? chalk.yellow : chalk.gray;
+      console.log(paint(`  ${a.label} ${coverageSymbol(a.state)}${a.mandatory ? ' (required)' : ''}: ${a.reason}`));
+    }
+    console.log('');
   }
 
   private static printCommonPaths(report: ScanReport): void {
@@ -117,6 +137,14 @@ export class IssuePresenter {
     return out;
   }
 }
+
+const RELEASE_COLOR: Record<ReleaseState, (s: string) => string> = {
+  ready: (s) => chalk.green.bold(s),
+  'ready-with-accepted-risks': (s) => chalk.green(s),
+  'review-required': (s) => chalk.yellow.bold(s),
+  'not-ready': (s) => chalk.red.bold(s),
+  'insufficient-evidence': (s) => chalk.red.bold(s),
+};
 
 function icon(sev: Severity): string {
   return sev === 'critical' ? '🔴' : sev === 'warning' ? '🟡' : '🔵';

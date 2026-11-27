@@ -14,7 +14,8 @@ import { applySafeFixes } from './fixes';
 import type { SafeFixResult } from './fixes';
 import { assess } from './readiness';
 import type { Readiness } from './readiness';
-import type { Finding, Proof, ScanReport } from '../types';
+import type { CoverageArea, Finding, Proof, ReleaseAssessment, ScanReport } from '../types';
+import { SCORE_DISCLAIMER, withRelease } from '../core/releaseState';
 
 const EVIDENCE_MAX = 200;
 const FILE_MAX_BYTES = 256 * 1024;
@@ -25,6 +26,8 @@ interface CachedScan {
   report: ScanReport;
   /** Every finding seen for this path this session, so ids stay resolvable after a re-scan. */
   known: Map<string, Finding>;
+  /** Latest verify() status per finding id this session. */
+  verified: Map<string, string>;
 }
 
 export interface FindingSummary {
@@ -70,7 +73,8 @@ export class DeployReadyTools {
     });
     const known = this.cache.get(target)?.known ?? new Map<string, Finding>();
     for (const f of report.findings) known.set(f.id, f);
-    const entry: CachedScan = { target, dynamic, report, known };
+    const verified = this.cache.get(target)?.verified ?? new Map<string, string>();
+    const entry: CachedScan = { target, dynamic, report, known, verified };
     this.cache.set(target, entry);
     return entry;
   }
@@ -147,16 +151,45 @@ export class DeployReadyTools {
     const active = activeContextFromEnv(entry.report.dynamic?.baseUrl, entry.report.graph.routes);
     if (active) ctx.active = active;
     const res = await Verifier.verify(finding, ctx);
+    entry.verified.set(finding.id, res.status);
     return { id: finding.id, status: res.status, detail: res.detail, ...(res.proof ? { proof: res.proof } : {}) };
   }
 
-  async score(args: { path?: string } = {}): Promise<Readiness & { target: string; openCritical: FindingSummary[] }> {
+  async score(args: { path?: string } = {}): Promise<
+    Readiness & {
+      target: string;
+      openCritical: FindingSummary[];
+      release?: ReleaseAssessment;
+      releaseLine?: string;
+      coverage?: CoverageArea[];
+      scoreNote: string;
+    }
+  > {
     const target = this.resolve(args.path);
     const entry = await this.runScan(target, this.cache.get(target)?.dynamic ?? false);
+    // Verification: a finding seen earlier this session and gone now is fixed; "verified" only if verify() proved it.
+    const present = new Set(entry.report.findings.map((f) => f.id));
+    let fixedVerified = 0;
+    let fixedUnverified = 0;
+    for (const [id, f] of entry.known) {
+      if (present.has(id) || isNonScored(f)) continue;
+      if (entry.verified.get(id) === 'fixed') fixedVerified++;
+      else fixedUnverified++;
+    }
+    const report = entry.report.release
+      ? withRelease(entry.report, {
+          policy: entry.report.release.policy,
+          policyWarnings: entry.report.release.policyWarnings,
+          verification: { fixedVerified, fixedUnverified },
+        })
+      : entry.report;
     return {
       target,
-      ...assess(entry.report.findings),
-      openCritical: entry.report.findings.filter((f) => !isNonScored(f) && f.severity === 'critical').map(summarize),
+      ...assess(report.findings),
+      openCritical: report.findings.filter((f) => !isNonScored(f) && f.severity === 'critical').map(summarize),
+      ...(report.release ? { release: report.release, releaseLine: report.release.line } : {}),
+      ...(report.coverage ? { coverage: report.coverage } : {}),
+      scoreNote: SCORE_DISCLAIMER,
     };
   }
 }

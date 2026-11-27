@@ -73,7 +73,7 @@ export function buildMcpServer(tools: DeployReadyTools, projectPath = '.'): McpS
   server.registerTool(
     'score',
     {
-      description: `Re-scan and return the production-readiness score (0-100) and a ready/not-ready verdict (ready = no open critical findings). Call it last to confirm the loop is done. ${LOOP}`,
+      description: `Re-scan and return the production-readiness score (0-100) a ready/not-ready verdict (ready = no open critical findings), plus the policy-driven release state (release, releaseLine) and per-area coverage (what was tested; a score of 100 means no confirmed findings in the areas tested, not that the app is secure). Call it last to confirm the loop is done. ${LOOP}`,
       inputSchema: { path: pathArg },
     },
     wrap(tools.score.bind(tools)),

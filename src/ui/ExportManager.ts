@@ -6,6 +6,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { HtmlReporter } from './HtmlReporter';
 import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
+import { SCORE_DISCLAIMER } from '../core/releaseState';
 import type { Finding, ScanReport, Severity } from '../types';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
@@ -30,6 +31,8 @@ export class ExportManager {
     lines.push('');
     lines.push(`- **Target:** \`${report.target}\``);
     lines.push(`- **Score:** ${report.score}/100`);
+    if (report.release) lines.push(`- **${report.release.line.replace(/^Release: /, 'Release:** ')}`);
+    lines.push(`- _${SCORE_DISCLAIMER}_`);
     lines.push(`- **Stack:** ${report.stack.stack} (${report.stack.language})`);
     lines.push(`- **Scanned:** ${report.startedAt}`);
     lines.push(
@@ -40,6 +43,14 @@ export class ExportManager {
     const notes = report.findings.filter(isNote);
     if (notes.length) lines.push(`- **Notes:** ${notes.length} (not scored)`);
     lines.push('');
+    if (report.coverage?.length) {
+      lines.push('## Coverage', '', '| Area | State | Why |', '| --- | --- | --- |');
+      for (const a of report.coverage) {
+        const cell = (x: string): string => x.replace(/[\r\n]+/g, ' ').replace(/\|/g, '\\|');
+        lines.push(`| ${cell(a.label)}${a.mandatory ? ' (required)' : ''} | ${a.state} | ${cell(a.reason)} |`);
+      }
+      lines.push('');
+    }
 
     if (report.aiSummary) {
       lines.push(`## AI Summary (unverified)`);

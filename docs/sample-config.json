@@ -6,5 +6,10 @@
   "ollamaModel": "llama3",
   "warnBeforeExternalSend": true,
   "defaultPorts": [3000, 5000, 8000, 8080, 4000],
-  "probeCommonPaths": false
+  "probeCommonPaths": false,
+  "releasePolicy": {
+    "blockOn": ["critical"],
+    "requireAreas": ["static", "secrets"],
+    "treatUnverifiedCriticalAs": "review-required"
+  }
 }
