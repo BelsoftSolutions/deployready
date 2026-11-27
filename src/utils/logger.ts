@@ -4,7 +4,7 @@
  * we cannot accidentally print an API key or a secret found in user code.
  */
 import chalk from 'chalk';
-import { redact } from './redact';
+import { redact, redactDeep } from './redact';
 
 let verbose = false;
 let quiet = false;
@@ -18,8 +18,9 @@ export function setQuiet(v: boolean): void {
   quiet = v;
 }
 
+/** Strings, objects (deep) and Errors (message only, never the stack) are all redacted. */
 function clean(args: unknown[]): unknown[] {
-  return args.map((a) => (typeof a === 'string' ? redact(a) : a));
+  return args.map((a) => (typeof a === 'string' ? redact(a) : a && typeof a === 'object' ? redactDeep(a) : a));
 }
 
 export const logger = {
@@ -28,17 +29,17 @@ export const logger = {
   },
   /** Always stderr, for notices that must never reach stdout (e.g. while a JSON report is the stdout payload). */
   stderr(msg: string): void {
-    console.error(redact(msg));
+    console.error(redact(String(msg)));
   },
   success(msg: string): void {
-    (quiet ? console.error : console.log)(chalk.green(`✓ ${redact(msg)}`));
+    (quiet ? console.error : console.log)(chalk.green(`✓ ${redact(String(msg))}`));
   },
   warn(msg: string): void {
-    console.warn(chalk.yellow(`⚠ ${redact(msg)}`));
+    console.warn(chalk.yellow(`⚠ ${redact(String(msg))}`));
   },
   /** Human-readable, actionable errors only — never raw stack traces to users. */
   error(msg: string): void {
-    console.error(chalk.red(`✗ ${redact(msg)}`));
+    console.error(chalk.red(`✗ ${redact(String(msg))}`));
   },
   debug(...args: unknown[]): void {
     if (verbose) console.error(chalk.gray('[debug]'), ...clean(args));

@@ -23,6 +23,7 @@ import { assertRunCompleted, runCli } from './cli/runCli';
 import { parseAiResponse } from './parseAiResponse';
 import type { BuiltPrompt } from './PromptBuilder';
 import type { AiAnalysis } from '../types';
+import { redact } from '../utils/redact';
 
 export interface CliHandlerOptions extends CliContext {
   model?: string | null;
@@ -36,7 +37,9 @@ const NO_TOOLS = 'You are running as a plain text function: you have no tools, c
 
 /** The exact bytes written to the CLI's stdin. `prompt.user` appears in it verbatim (consent parity). */
 export function formatCliStdin(prompt: BuiltPrompt): string {
-  return `${prompt.system}\n\n${NO_TOOLS}\n\n${DATA_OPEN}\n${prompt.user}\n${DATA_CLOSE}\n`;
+  // prompt.user is already redacted by PromptBuilder; redact() is idempotent, so the stdin still
+  // contains exactly the consent preview, and nothing unredacted can reach the child process.
+  return `${redact(prompt.system)}\n\n${NO_TOOLS}\n\n${DATA_OPEN}\n${redact(prompt.user)}\n${DATA_CLOSE}\n`;
 }
 
 export class CliHandler {

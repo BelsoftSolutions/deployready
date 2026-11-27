@@ -8,18 +8,20 @@ import { DeployReadyTools } from './tools';
 import { supabaseCheck } from './supabase';
 import { setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
+import { redact, redactDeep } from '../utils/redact';
 
 const LOOP =
   'Intended loop: scan -> apply_safe_fixes -> fix the remaining findings yourself (edit the code, using get_finding for context) -> verify each finding id -> score.';
 
 type Handler<A> = (args: A) => Promise<unknown>;
 
-function wrap<A>(fn: Handler<A>): (args: A) => Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }> {
+/** Tool handler -> MCP result. Every response and error message is redacted on the way out. */
+export function wrap<A>(fn: Handler<A>): (args: A) => Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }> {
   return async (args) => {
     try {
-      return { content: [{ type: 'text', text: JSON.stringify(await fn(args), null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(redactDeep(await fn(args)), null, 2) }] };
     } catch (err) {
-      return { content: [{ type: 'text', text: (err as Error).message || 'Unexpected error.' }], isError: true };
+      return { content: [{ type: 'text', text: redact((err as Error).message || 'Unexpected error.') }], isError: true };
     }
   };
 }
