@@ -1,0 +1,1 @@
+{ "name": "vite-supabase-app", "private": true, "scripts": { "dev": "vite" } }

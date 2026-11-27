@@ -1,0 +1,10 @@
+{
+  "description": "Vite + Supabase app with a .env file and no .gitignore at all",
+  "expected": [
+    {
+      "rule": "env-not-ignored",
+      "present": true,
+      "file": ".env"
+    }
+  ]
+}

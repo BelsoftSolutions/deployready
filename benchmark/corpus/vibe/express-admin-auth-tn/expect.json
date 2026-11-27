@@ -1,0 +1,25 @@
+{
+  "description": "Hard negative: same admin routes behind requireAuth + requireAdmin, JWT secret from env",
+  "knownGap": "possible-hardcoded-secret fires on a token-named variable assigned from a header expression",
+  "strict": true,
+  "expected": [
+    {
+      "route": {
+        "method": "GET",
+        "path": "/api/admin/users"
+      },
+      "guarded": true
+    },
+    {
+      "route": {
+        "method": "DELETE",
+        "path": "/api/admin/users/:id"
+      },
+      "guarded": true
+    },
+    {
+      "rule": "possible-hardcoded-secret",
+      "present": false
+    }
+  ]
+}

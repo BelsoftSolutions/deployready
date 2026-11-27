@@ -1,0 +1,15 @@
+{
+  "description": "RLS is enabled but every policy is using (true) / with check (true), so access is effectively unrestricted",
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    },
+    {
+      "unsupported": "permissive-rls-policy",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "note": "policy with using (true) grants all rows to every role"
+    }
+  ]
+}

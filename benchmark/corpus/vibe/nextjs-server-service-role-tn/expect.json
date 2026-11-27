@@ -1,0 +1,11 @@
+{
+  "description": "Hard negative: service_role key used only in a server-only module, anon key in the browser. Safe usage, so no finding is expected.",
+  "knownGap": "supabase-service-role matches the bare name even in a server-only module",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "supabase-service-role",
+      "present": false
+    }
+  ]
+}

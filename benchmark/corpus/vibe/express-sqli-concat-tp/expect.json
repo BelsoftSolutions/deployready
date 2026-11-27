@@ -1,0 +1,10 @@
+{
+  "description": "Raw SQL built by concatenation and template interpolation from request input",
+  "expected": [
+    {
+      "rule": "sql-injection",
+      "present": true,
+      "file": "server.js"
+    }
+  ]
+}
