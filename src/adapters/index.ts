@@ -11,6 +11,7 @@ import { pipAuditAdapter } from './pipAudit';
 import { semgrepAdapter } from './semgrep';
 import { advisoryKeys } from './common';
 import { DEFAULT_TIMEOUT_MS } from './exec';
+import { logger } from '../utils/logger';
 
 export * from './types';
 
@@ -63,6 +64,10 @@ export async function runEngines(projectRoot: string, o: EngineStepOptions = {},
         if (named.has(a.id)) skip(`${a.id} is not installed`, 'error');
         else skip(`${a.id} not installed (optional; see docs/ENGINES.md)`);
         continue;
+      }
+      if (a.networked) {
+        // Local-first promise: say so every time something leaves the machine.
+        logger.info(`${a.id}: sending dependency names and versions (no source code) to its advisory database. Use --offline to skip.`);
       }
       const r = await a.run(root, opts);
       findings.push(...r.findings);
