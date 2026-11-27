@@ -180,6 +180,14 @@ The loop: `scan` -> `apply_safe_fixes` -> fix the rest with the agent's own edit
 claude mcp add deployready -- npx -y deployready@latest mcp
 ```
 
+**Live and active findings need test tokens.** `scan(dynamic: true)` and `verify` for live findings (including the token-based IDOR / JWT / escalation checks) read the test identities from the MCP server's environment: `DEPLOYREADY_TOKEN` (and `DEPLOYREADY_TOKEN_B` for the second identity). The tools accept no secrets as arguments, and tokens are never logged or echoed (proofs show `$TOKEN` placeholders). Without them, active findings stay `inconclusive`.
+
+```bash
+claude mcp add deployready -e DEPLOYREADY_TOKEN=<test-user-jwt> -e DEPLOYREADY_TOKEN_B=<second-user-jwt> -- npx -y deployready@latest mcp
+```
+
+The interactive shell's `verify` reads the same two variables.
+
 A ready-made Claude Code skill that teaches the loop is in [`skills/deployready/SKILL.md`](skills/deployready/SKILL.md) (copy it to `.claude/skills/deployready/`).
 
 **Cursor** (`.cursor/mcp.json`)

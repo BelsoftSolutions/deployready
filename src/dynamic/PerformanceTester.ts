@@ -5,6 +5,7 @@ import type { AxiosInstance } from 'axios';
 import { makeFinding } from '../utils/finding';
 import type { Finding } from '../types';
 import type { ProbeTarget } from './EndpointMapper';
+import { absoluteUrl, buildProof } from './proof';
 
 const SLOW_MS = 1000;
 
@@ -12,6 +13,7 @@ export class PerformanceTester {
   static async run(client: AxiosInstance, targets: ProbeTarget[]): Promise<Finding[]> {
     const findings: Finding[] = [];
     // Test a bounded sample of reachable GET endpoints.
+    const baseUrl = client.defaults?.baseURL;
     const sample = targets.filter((t) => t.method === 'GET').slice(0, 25);
 
     for (const t of sample) {
@@ -30,6 +32,11 @@ export class PerformanceTester {
             endpoint: t.path,
             description: `${t.path} took ${first.ms}ms to respond (threshold ${SLOW_MS}ms).`,
             recommendation: 'Profile the handler, add caching, and check for N+1 database queries.',
+            proof: buildProof({
+              request: { method: 'GET', url: absoluteUrl(baseUrl, t.path) },
+              status: first.status,
+              response: `Responded in ${first.ms}ms (threshold ${SLOW_MS}ms).`,
+            }),
           }),
         );
       }
@@ -46,6 +53,11 @@ export class PerformanceTester {
             endpoint: t.path,
             description: `${t.path} returned no Cache-Control header.`,
             recommendation: 'Set appropriate Cache-Control headers (or ETag) on cacheable responses to reduce load and latency.',
+            proof: buildProof({
+              request: { method: 'GET', url: absoluteUrl(baseUrl, t.path) },
+              status: first.status,
+              response: 'Response headers lack: cache-control, etag',
+            }),
           }),
         );
       }

@@ -56,6 +56,29 @@ export interface VerifyContext {
   };
 }
 
+/**
+ * Test identities for re-checking active findings come from the environment only
+ * (DEPLOYREADY_TOKEN, DEPLOYREADY_TOKEN_B), never from tool arguments, so a token
+ * is never typed into a chat or logged. Returns undefined when no token is set.
+ */
+export function tokensFromEnv(env: NodeJS.ProcessEnv = process.env): { token: string; tokenB?: string } | undefined {
+  const token = env.DEPLOYREADY_TOKEN?.trim();
+  if (!token) return undefined;
+  const tokenB = env.DEPLOYREADY_TOKEN_B?.trim();
+  return { token, ...(tokenB ? { tokenB } : {}) };
+}
+
+/** The `active` part of a VerifyContext, built from env tokens (undefined without a token or base URL). */
+export function activeContextFromEnv(
+  baseUrl: string | undefined,
+  routes: Route[],
+  env: NodeJS.ProcessEnv = process.env,
+): VerifyContext['active'] | undefined {
+  const tokens = tokensFromEnv(env);
+  if (!tokens || !baseUrl) return undefined;
+  return { baseUrl, routes, ...tokens };
+}
+
 const inconclusive = (detail: string): VerifyResult => ({ status: 'inconclusive', detail });
 
 function is2xx(status: number | undefined): boolean {
@@ -173,7 +196,7 @@ export class Verifier {
     const active = ctx.active;
     if (!active) {
       return inconclusive(
-        'This is an active (token-based) finding and this session has no test token — re-run `deployready analyze --active --token … --token-b …` to re-check it.',
+        'This is an active (token-based) finding and this session has no test token — set DEPLOYREADY_TOKEN (and DEPLOYREADY_TOKEN_B) in the environment, or re-run `deployready analyze --active --token … --token-b …`.',
       );
     }
     if (!finding.endpoint) return inconclusive('The finding has no endpoint to re-check.');
@@ -182,7 +205,7 @@ export class Verifier {
     const needsOwner = finding.rule === 'bola-idor' || finding.rule === 'tenant-isolation-broken';
     if (needsOwner && !active.tokenB) {
       return inconclusive(
-        "Proving this fixed needs a control request from the resource's owner — pass the second identity's token (--token-b).",
+        "Proving this fixed needs a control request from the resource's owner — set the second identity's token (DEPLOYREADY_TOKEN_B, or --token-b).",
       );
     }
 

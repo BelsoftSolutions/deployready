@@ -21,7 +21,7 @@ import { sanitizeLine, sanitizeText } from '../utils/sanitize';
 import { setupCliProvider } from './cliSetup';
 import { verifyAiFindings, droppedNote } from '../ai/verifyAiFindings';
 import { ScoreCalculator, isNote, isUnverified } from '../analysis/ScoreCalculator';
-import { Verifier, type VerifyResult } from '../core/Verifier';
+import { Verifier, activeContextFromEnv, type VerifyResult } from '../core/Verifier';
 import { IssuePresenter } from '../ui/IssuePresenter';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
@@ -434,6 +434,8 @@ export class InteractiveShell {
       dynamic: this.state.dynamic
         ? { baseUrl: this.state.dynamic.baseUrl, routes: this.state.graph?.routes ?? [] }
         : undefined,
+      // Tokens come from DEPLOYREADY_TOKEN / DEPLOYREADY_TOKEN_B only; never echoed.
+      active: activeContextFromEnv(this.state.dynamic?.baseUrl, this.state.graph?.routes ?? []),
     };
     const res: VerifyResult = await Verifier.verify(f, ctx).catch((err) => ({ status: 'inconclusive' as const, detail: (err as Error).message }));
 

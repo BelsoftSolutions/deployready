@@ -25,6 +25,14 @@ Set it up once:
 claude mcp add deployready -- npx -y deployready@latest mcp
 ```
 
+Live and token-based (active) findings can only be verified if the MCP server has test tokens in its environment. Tools never take secrets as arguments, and you must never ask the user to paste a token into the chat. Tell them to register the server with env vars (use throwaway test-user tokens):
+
+```bash
+claude mcp add deployready -e DEPLOYREADY_TOKEN=<test-user-jwt> -e DEPLOYREADY_TOKEN_B=<second-user-jwt> -- npx -y deployready@latest mcp
+```
+
+Without them, `verify` on a live or active finding returns `inconclusive`.
+
 Use `dynamic: true` only if the user's app is already running on localhost; it sends GET requests to it.
 
 Supabase apps: `supabase_check(path?, live?, crossUser?)`. Without `live`, it only reads files (service_role keys in client code or public env vars). With `live: true`, it proves what the public anon key can read (row counts, never data). It only runs against a local `supabase start` project or one whose ownership the user proved by setting `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_ACCESS_TOKEN` in the MCP server's env. Otherwise it is refused: do not try to work around that. Never ask the user to paste keys into the chat. See docs/SUPABASE.md.

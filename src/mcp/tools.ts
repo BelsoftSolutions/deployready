@@ -4,7 +4,7 @@
  */
 import * as path from 'path';
 import { Orchestrator } from '../core/Orchestrator';
-import { Verifier } from '../core/Verifier';
+import { Verifier, activeContextFromEnv, tokensFromEnv } from '../core/Verifier';
 import type { VerifyContext } from '../core/Verifier';
 import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
@@ -59,7 +59,15 @@ export class DeployReadyTools {
   }
 
   private async runScan(target: string, dynamic: boolean): Promise<CachedScan> {
-    const report = await Orchestrator.analyze(target, { yes: true, json: true, noAi: true, noDynamic: !dynamic });
+    // Active (token-based) checks run only when DEPLOYREADY_TOKEN is set in the server env.
+    const tokens = dynamic ? tokensFromEnv() : undefined;
+    const report = await Orchestrator.analyze(target, {
+      yes: true,
+      json: true,
+      noAi: true,
+      noDynamic: !dynamic,
+      ...(tokens ? { active: true, token: tokens.token, tokenB: tokens.tokenB } : {}),
+    });
     const known = this.cache.get(target)?.known ?? new Map<string, Finding>();
     for (const f of report.findings) known.set(f.id, f);
     const entry: CachedScan = { target, dynamic, report, known };
@@ -136,6 +144,8 @@ export class DeployReadyTools {
     if (entry.report.dynamic?.baseUrl) {
       ctx.dynamic = { baseUrl: entry.report.dynamic.baseUrl, routes: entry.report.graph.routes };
     }
+    const active = activeContextFromEnv(entry.report.dynamic?.baseUrl, entry.report.graph.routes);
+    if (active) ctx.active = active;
     const res = await Verifier.verify(finding, ctx);
     return { id: finding.id, status: res.status, detail: res.detail, ...(res.proof ? { proof: res.proof } : {}) };
   }
