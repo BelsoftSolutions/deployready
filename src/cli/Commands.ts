@@ -22,6 +22,8 @@ import {
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
 import { renderTokenHelp } from '../active/tokenHelp';
+import { runAnalyzeFix } from '../mcp/analyzeFix';
+import { startMcpServer } from '../mcp/server';
 
 const VERSION = getVersion();
 
@@ -55,6 +57,7 @@ export function buildProgram(): Command {
     .description('Run a single non-interactive scan and print results')
     .argument('[path]', 'path to the project', '.')
     .option('-y, --yes', 'auto-approve all prompts (non-interactive)', false)
+    .option('--fix', 'apply safe deterministic fixes (with backups), then re-scan and report the new score', false)
     .option('--no-dynamic', 'skip live localhost testing')
     .option('--no-ai', 'skip AI analysis (local results only)')
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
@@ -105,7 +108,7 @@ export function buildProgram(): Command {
           }
         }
 
-        const report = await Orchestrator.analyze(path, {
+        const analyzeOpts = {
           yes: opts.yes || opts.json, // JSON mode is non-interactive
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
@@ -126,7 +129,10 @@ export function buildProgram(): Command {
             accessToken: opts.supabaseAccessToken,
             crossUser: opts.supabaseCrossUser,
           },
-        });
+        };
+        let report = await Orchestrator.analyze(path, analyzeOpts);
+        const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;
+        if (fixOutcome) report = fixOutcome.report;
 
         // Accept the current findings as the baseline, then stop (no gating).
         if (opts.writeBaseline) {
@@ -151,7 +157,9 @@ export function buildProgram(): Command {
         }
 
         if (opts.json) {
-          process.stdout.write(JSON.stringify(toCiJson(report, failOn), null, 2) + '\n');
+          const body = toCiJson(report, failOn);
+          if (fixOutcome) body.fix = fixOutcome.fix;
+          process.stdout.write(JSON.stringify(body, null, 2) + '\n');
         }
 
         if (shouldFail(gateSummary, failOn)) {
@@ -210,6 +218,16 @@ export function buildProgram(): Command {
             2,
           ),
         );
+      });
+    });
+
+  program
+    .command('mcp')
+    .description('Start the MCP server (stdio) so your coding agent can scan, fix and verify')
+    .argument('[path]', 'default project for tool calls', '.')
+    .action(async (path: string) => {
+      await guard(async () => {
+        await startMcpServer(path);
       });
     });
 

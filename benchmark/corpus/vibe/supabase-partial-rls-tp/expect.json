@@ -1,0 +1,15 @@
+{
+  "description": "RLS enabled on profiles but a later migration adds messages without it",
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "file": "supabase/migrations/20240201000000_messages.sql"
+    },
+    {
+      "rule": "rls-not-enabled",
+      "present": false,
+      "file": "supabase/migrations/20240101000000_init.sql"
+    }
+  ]
+}

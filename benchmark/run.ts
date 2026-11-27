@@ -10,7 +10,7 @@
  * normal text output and also writes `[{ id, kind, outcome, knownGap? }]` to <file>.
  */
 import * as fs from 'fs';
-import type { BenchCase, Check } from './core';
+import { UNSUPPORTED_PREFIX, type BenchCase, type Check } from './core';
 import { corpusCases } from './corpusCases';
 import { dynamicCases } from './dynamicCases';
 import { activeCases } from './activeCases';
@@ -23,6 +23,7 @@ interface CaseResult {
   status: Status;
   knownGap?: string;
   mismatches: string[];
+  checks: Check[];
 }
 
 interface Tally {
@@ -32,14 +33,14 @@ interface Tally {
   tn: number;
 }
 
-const KIND_ORDER = ['static', 'parser', 'dynamic', 'active'];
+const KIND_ORDER = ['static', 'parser', 'vibe', 'dynamic', 'active'];
 
 async function runCase(c: BenchCase, tallies: Map<string, Tally>): Promise<CaseResult> {
   let checks: Check[];
   try {
     checks = await c.evaluate();
   } catch (err) {
-    return { id: c.id, kind: c.kind, status: 'error', knownGap: c.knownGap, mismatches: [`error: ${(err as Error).message}`] };
+    return { id: c.id, kind: c.kind, status: 'error', knownGap: c.knownGap, mismatches: [`error: ${(err as Error).message}`], checks: [] };
   }
 
   for (const k of checks) {
@@ -53,10 +54,11 @@ async function runCase(c: BenchCase, tallies: Map<string, Tally>): Promise<CaseR
 
   const mismatches = checks
     .filter((k) => k.expected !== k.actual)
-    .map((k) => `${k.expected ? 'MISSED' : 'UNEXPECTED'}: ${k.label} -> ${k.detail}`);
-  const ok = mismatches.length === 0;
+    .map((k) => `${k.expected ? (k.unsupported ? 'MISSED (unsupported)' : 'MISSED') : 'UNEXPECTED'}: ${k.label} -> ${k.detail}`);
+  // Unsupported labels are permanent misses until a rule exists: they never decide pass/fail.
+  const ok = checks.every((k) => k.unsupported || k.expected === k.actual);
   const status: Status = ok ? (c.knownGap ? 'fixed' : 'pass') : c.knownGap ? 'known-gap' : 'fail';
-  return { id: c.id, kind: c.kind, status, knownGap: c.knownGap, mismatches };
+  return { id: c.id, kind: c.kind, status, knownGap: c.knownGap, mismatches, checks };
 }
 
 function ratio(num: number, den: number): number | null {
@@ -65,6 +67,17 @@ function ratio(num: number, den: number): number | null {
 
 function fmt(v: number | null): string {
   return v === null ? '-' : v.toFixed(2);
+}
+
+function tallyChecks(checks: Check[]): Tally {
+  const t: Tally = { tp: 0, fp: 0, fn: 0, tn: 0 };
+  for (const k of checks) {
+    if (k.expected && k.actual) t.tp++;
+    else if (!k.expected && k.actual) t.fp++;
+    else if (k.expected && !k.actual) t.fn++;
+    else t.tn++;
+  }
+  return t;
 }
 
 function summarize(t: Tally) {
@@ -98,12 +111,18 @@ async function main(): Promise<number> {
 
   const rules = [...tallies.keys()].sort();
   const total: Tally = { tp: 0, fp: 0, fn: 0, tn: 0 };
-  for (const t of tallies.values()) {
-    total.tp += t.tp;
-    total.fp += t.fp;
-    total.fn += t.fn;
-    total.tn += t.tn;
+  // `supported` leaves out labels for rules that do not exist yet; `total` includes them as misses.
+  const supported: Tally = { tp: 0, fp: 0, fn: 0, tn: 0 };
+  for (const [rule, t] of tallies) {
+    for (const acc of rule.startsWith(UNSUPPORTED_PREFIX) ? [total] : [total, supported]) {
+      acc.tp += t.tp;
+      acc.fp += t.fp;
+      acc.fn += t.fn;
+      acc.tn += t.tn;
+    }
   }
+  const misses = results.flatMap((r) => r.checks.filter((k) => k.expected && !k.actual).map((k) => ({ caseId: r.id, ...k })));
+  const falsePositives = results.flatMap((r) => r.checks.filter((k) => !k.expected && k.actual).map((k) => ({ caseId: r.id, ...k })));
   const count = (s: Status) => results.filter((r) => r.status === s).length;
   const failed = count('fail') + count('error') + count('fixed');
 
@@ -122,6 +141,9 @@ async function main(): Promise<number> {
       cases: results,
       rules: Object.fromEntries(rules.map((r) => [r, summarize(tallies.get(r)!)])),
       total: summarize(total),
+      supported: summarize(supported),
+      misses: misses.map((m) => ({ case: m.caseId, rule: m.rule, label: m.label, unsupported: m.unsupported === true })),
+      falsePositives: falsePositives.map((m) => ({ case: m.caseId, rule: m.rule, label: m.label, detail: m.detail })),
       counts: {
         cases: results.length,
         pass: count('pass'),
@@ -140,7 +162,9 @@ async function main(): Promise<number> {
   console.log('');
   for (const r of results) {
     const gap = r.knownGap ? `  [${r.knownGap}]` : '';
-    console.log(`${STATUS_LABEL[r.status].padEnd(5)} ${r.kind.padEnd(7)} ${r.id.padEnd(idWidth)}${gap}`.trimEnd());
+    const cs = summarize(tallyChecks(r.checks));
+    const pr = r.checks.length > 0 ? `  P=${fmt(cs.precision)} R=${fmt(cs.recall)}` : '';
+    console.log(`${STATUS_LABEL[r.status].padEnd(5)} ${r.kind.padEnd(7)} ${r.id.padEnd(idWidth)}${pr}${gap}`.trimEnd());
     if (r.status !== 'pass') for (const m of r.mismatches) console.log(`        ${m}`);
     if (r.status === 'fixed') console.log('        FIXED - remove knownGap');
   }
@@ -156,7 +180,15 @@ async function main(): Promise<number> {
   };
   for (const r of rules) console.log(row(r, tallies.get(r)!));
   console.log('-'.repeat(header.length));
-  console.log(row('TOTAL', total));
+  console.log(row('SUPPORTED RULES', supported));
+  console.log(row('TOTAL (incl. unsupported)', total));
+
+  console.log('');
+  console.log(`MISSES (expected but not reported): ${misses.length}`);
+  for (const m of misses) console.log(`  ${m.unsupported ? '[no rule] ' : '[rule]    '}${m.caseId}: ${m.label} -> ${m.detail}`);
+  console.log('');
+  console.log(`FALSE POSITIVES (reported but should not be): ${falsePositives.length}`);
+  for (const m of falsePositives) console.log(`  ${m.caseId}: ${m.label} -> ${m.detail}`);
 
   console.log('');
   console.log(
