@@ -29,6 +29,7 @@ import { decodeJwt } from '../active/jwt';
 import { planActiveRequests } from '../active/requestPlan';
 import { createActiveHttpAdapter } from '../active/httpAdapter';
 import { runActiveScan } from '../active/runner';
+import { supabaseStep, type SupabaseOptions } from '../supabase';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ScanReport } from '../types';
 
 export interface AnalyzeOptions {
@@ -61,6 +62,8 @@ export interface AnalyzeOptions {
   probeCommonPaths?: boolean;
   /** Pause between probe requests in ms (default 250). Tests set 0. */
   commonPathDelayMs?: number;
+  /** Supabase module: static checks always run; `live` enables the ownership-gated probes. */
+  supabase?: SupabaseOptions;
 }
 
 interface ProbeDecision {
@@ -113,8 +116,14 @@ export class Orchestrator {
       activeFindings = await Orchestrator.runActive(graph, opts);
     }
 
+    // ---- 2c. Supabase (static always; live only when owned + opted in) ----
+    const sb = await supabaseStep(projectPath, opts);
+
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
-    let agg = IssueAggregator.process(staticFindings, [...dynamicFindings, ...activeFindings]);
+    let agg = IssueAggregator.process(
+      [...staticFindings, ...sb.staticFindings],
+      [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
+    );
 
     // ---- 4. Build report ----
     let report: ScanReport = {

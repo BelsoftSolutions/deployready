@@ -83,6 +83,12 @@ export function buildProgram(): Command {
     .option('--active', 'run active (authenticated) authorization tests — needs --token', false)
     .option('--token <jwt>', 'bearer JWT for the active scan (your test user)')
     .option('--token-b <jwt>', 'second-identity JWT, for tenant/IDOR isolation tests')
+    .option('--supabase', 'run live, read-only Supabase checks (only on a local or proven-owned project; see docs/SUPABASE.md)', false)
+    .option('--supabase-url <url>', 'Supabase project URL (default: $SUPABASE_URL, then the project files)')
+    .option('--supabase-anon-key <key>', 'anon/publishable key (default: $SUPABASE_ANON_KEY, then the project files)')
+    .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
+    .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
+    .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
@@ -112,6 +118,14 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          supabase: {
+            live: opts.supabase,
+            url: opts.supabaseUrl,
+            anonKey: opts.supabaseAnonKey,
+            serviceKey: opts.supabaseServiceKey,
+            accessToken: opts.supabaseAccessToken,
+            crossUser: opts.supabaseCrossUser,
+          },
         });
 
         // Accept the current findings as the baseline, then stop (no gating).
