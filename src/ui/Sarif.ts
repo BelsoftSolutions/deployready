@@ -10,6 +10,7 @@
 import { fingerprint } from '../core/CiGate';
 import { isNonScored } from '../analysis/ScoreCalculator';
 import type { Finding, ScanReport, Severity } from '../types';
+import { sanitizeReport } from './sanitize';
 
 const SARIF_SCHEMA = 'https://json.schemastore.org/sarif-2.1.0.json';
 const INFO_URI = 'https://github.com/BelsoftSolutions/deployready';
@@ -42,7 +43,8 @@ function messageText(f: Finding): string {
   return f.evidence ? `${base} Evidence: ${f.evidence}` : base;
 }
 
-export function toSarif(report: ScanReport, version: string): SarifLog {
+export function toSarif(raw: ScanReport, version: string): SarifLog {
+  const report = sanitizeReport(raw);
   const included: Finding[] = [];
   const skipped: Finding[] = [];
   for (const f of report.findings) {

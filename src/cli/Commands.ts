@@ -29,6 +29,7 @@ import { runAnalyzeFix } from '../mcp/analyzeFix';
 import { startMcpServer } from '../mcp/server';
 import { badgeMarkdown, badgeSvg } from '../ui/badge';
 import { toSarif } from '../ui/Sarif';
+import { renderJson } from '../ui/sanitize';
 
 const VERSION = getVersion();
 
@@ -193,7 +194,7 @@ export function buildProgram(): Command {
         if (opts.json) {
           const body = toCiJson(report, failOn, cmp);
           if (fixOutcome) body.fix = fixOutcome.fix;
-          process.stdout.write(JSON.stringify(body, null, 2) + '\n');
+          process.stdout.write(renderJson(body));
         }
 
         if (shouldFail(gateSummary, failOn)) {

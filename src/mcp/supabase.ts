@@ -9,6 +9,7 @@
 import * as path from 'path';
 import { runSupabase, type SupabaseRunDeps } from '../supabase';
 import type { Finding } from '../types';
+import { redactDeep } from '../utils/redact';
 
 export interface SupabaseCheckArgs {
   path?: string;
@@ -46,5 +47,5 @@ export async function supabaseCheck(
     evidence: f.evidence,
     proof: f.proof,
   }));
-  return { target, live, refused: res.refused === true, findings, notes: res.notes };
+  return redactDeep({ target, live, refused: res.refused === true, findings, notes: res.notes });
 }

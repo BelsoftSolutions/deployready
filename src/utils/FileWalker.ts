@@ -40,6 +40,21 @@ const EXTRA_FILES = new Set([
   'next.config.mjs',
 ]);
 
+/**
+ * Config / key files that commonly hold credentials. They are kept apart from `files`
+ * (source scanners never see them) and get secret detection only.
+ */
+const SECRET_FILE_EXTS = new Set(['.json', '.yml', '.yaml', '.toml', '.ini', '.cfg', '.conf', '.properties', '.pem', '.key', '.p8', '.ppk', '.http', '.tfvars']);
+const SECRET_FILE_NAMES = new Set(['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'deploy_key', '.npmrc', '.pypirc', '.netrc', '.git-credentials', '.dockercfg', 'credentials']);
+const NOT_SECRET_FILES = /^(?:package-lock\.json|npm-shrinkwrap\.json|composer\.lock|tsconfig(?:\.[\w-]+)?\.json|jsconfig\.json|\.eslintrc(?:\.json)?|renovate\.json|.*\.min\.json|.*\.map)$/i;
+const MAX_SECRET_FILE_BYTES = 512 * 1024;
+
+/** True for config / key files that get secret-only scanning. */
+export function isSecretFileName(name: string): boolean {
+  if (NOT_SECRET_FILES.test(name)) return false;
+  return SECRET_FILE_NAMES.has(name) || SECRET_FILE_EXTS.has(path.extname(name).toLowerCase());
+}
+
 const ENV_TEMPLATES = new Set(['.env.example', '.env.sample', '.env.template']);
 
 /** `.env` or any `.env.<suffix>` (staging, development, local, ...). */
@@ -78,6 +93,8 @@ export interface WalkResult {
   skippedSpecs: { relPath: string; reason: string }[];
   /** Files and directories skipped because a .gitignore rule matched them. */
   ignoredCount: number;
+  /** Config / key files (JSON, YAML, TOML, PEM, …) that get secret detection only. */
+  secretFiles: WalkedFile[];
 }
 
 export class FileWalker {
@@ -92,7 +109,7 @@ export class FileWalker {
   /** Like `walk`, also reporting how many paths were skipped because of .gitignore rules. */
   static async walkWithStats(root: string): Promise<WalkResult> {
     const realRoot = await FileWalker.resolveRoot(root);
-    const result: WalkResult = { files: [], specFiles: [], skippedSpecs: [], ignoredCount: 0 };
+    const result: WalkResult = { files: [], specFiles: [], skippedSpecs: [], ignoredCount: 0, secretFiles: [] };
     await FileWalker.walkDir(realRoot, '', realRoot, result, []);
     return result;
   }
@@ -175,7 +192,10 @@ export class FileWalker {
       } else {
         const isSource = SOURCE_EXTS.has(ext);
         const isExtra = EXTRA_FILES.has(entry.name) || isEnvFile(entry.name);
-        if (!isSource && !isExtra) continue;
+        if (!isSource && !isExtra) {
+          if (isSecretFileName(entry.name)) await FileWalker.collectSecretFile(abs, relPath, realRoot, scopes, result);
+          continue;
+        }
         protectedFromIgnore = isExtra;
       }
 
@@ -222,6 +242,30 @@ export class FileWalker {
         return;
       }
       result.specFiles.push({ absPath: real, relPath: relOut, size });
+    } catch {
+      return;
+    }
+  }
+
+  private static async collectSecretFile(
+    abs: string,
+    relPath: string,
+    realRoot: string,
+    scopes: IgnoreScope[],
+    result: WalkResult,
+  ): Promise<void> {
+    if (result.secretFiles.length >= MAX_FILES) return;
+    if (isIgnored(scopes, relPath, false)) {
+      result.ignoredCount++;
+      return;
+    }
+    try {
+      const real = await fs.realpath(abs);
+      const rel = path.relative(realRoot, real);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) return;
+      const size = (await fs.stat(real)).size;
+      if (size > MAX_SECRET_FILE_BYTES) return;
+      result.secretFiles.push({ absPath: real, relPath: rel.split(path.sep).join('/'), size });
     } catch {
       return;
     }

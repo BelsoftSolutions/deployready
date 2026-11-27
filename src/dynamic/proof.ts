@@ -46,7 +46,8 @@ export function curlCommand(req: ProofRequest): string {
 
 /** Truncate then redact a response body. */
 export function proofBody(text: string, max = PROOF_BODY_MAX): string {
-  const trimmed = (text ?? '').trim();
+  // Redact BEFORE cutting so a secret straddling the cut is never left as an unmatched prefix.
+  const trimmed = redact((text ?? '').trim());
   const cut = trimmed.length > max ? `${trimmed.slice(0, max)}… [truncated, ${trimmed.length} chars]` : trimmed;
   return redact(cut);
 }
