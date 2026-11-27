@@ -1,0 +1,26 @@
+{
+  "description": "RLS disabled for a backfill and re-enabled in the next migration",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-disabled",
+      "present": false
+    },
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices values (1, '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": false
+      }
+    ]
+  }
+}

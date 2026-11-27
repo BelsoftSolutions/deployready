@@ -1,0 +1,29 @@
+{
+  "description": "RLS on a partitioned parent does not cover its partitions: public.events_2024 is directly readable",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.events values (1, '00000000-0000-0000-0000-00000000000b', '2024-05-01');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.events",
+        "open": false
+      },
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.events_2024",
+        "open": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "description": "Audit secure (3): world-readable product catalog and published posts; writes restricted",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    },
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.posts (author_id, title) values ('00000000-0000-0000-0000-00000000000b', 'draft');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.posts",
+        "open": false
+      },
+      {
+        "as": "anon",
+        "kind": "write",
+        "sql": "insert into public.products (name, price_cents) values ('x', 1)",
+        "open": false
+      }
+    ]
+  }
+}

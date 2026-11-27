@@ -1,0 +1,24 @@
+{
+  "description": "Audit (3): RLS enabled with owner policies, then disabled in a later migration — final state has no RLS",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-disabled",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240301000000_bulk_import.sql"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": true
+      }
+    ]
+  }
+}

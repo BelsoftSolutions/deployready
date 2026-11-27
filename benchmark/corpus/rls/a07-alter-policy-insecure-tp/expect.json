@@ -1,0 +1,30 @@
+{
+  "description": "Audit (5): an owner-scoped policy is later loosened with ALTER POLICY ... USING (true)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240401000000_support_access.sql"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": true
+      }
+    ]
+  }
+}

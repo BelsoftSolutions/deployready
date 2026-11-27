@@ -122,5 +122,5 @@ function loadVibeCases(folder = 'vibe'): BenchCase[] {
 }
 
 export function corpusCases(): BenchCase[] {
-  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases(), ...loadVibeCases('idor')];
+  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases(), ...loadVibeCases('idor'), ...loadVibeCases('rls')];
 }

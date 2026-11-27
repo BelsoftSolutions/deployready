@@ -1,0 +1,22 @@
+{
+  "description": "Unqualified tables created after SET search_path land in a private schema, not public",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into internal.jobs values (1, '{}');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from internal.jobs",
+        "open": false
+      }
+    ]
+  }
+}

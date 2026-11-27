@@ -432,6 +432,9 @@ const GENERIC_RULES: LineRule[] = [
     severity: 'critical',
     category: 'security',
     re: /disable\s+row\s+level\s+security/i,
+    // In .sql files the migration replay (analysis/rls.ts) reports this from the FINAL state, so a
+    // disable that a later migration reverts is not flagged; keep the line rule for SQL in code.
+    skip: ({ relPath }) => /\.sql$/i.test(relPath),
     owasp: 'A01:2025',
     cwe: 'CWE-285',
     recommendation:
@@ -446,7 +449,8 @@ const GENERIC_RULES: LineRule[] = [
     re: /service_role/i,
     // Server-only modules (server-only import, API routes, edge functions, Python) are the right place
     // for this key; still flag it if the name is exposed to the client bundle via NEXT_PUBLIC_/VITE_.
-    skip: ({ relPath, source, line }) => !CLIENT_ENV_RE.test(line) && isServerOnlyModule(relPath, source),
+    // A .sql file naming the service_role ROLE (`to service_role` in a policy or grant) is not a key.
+    skip: ({ relPath, source, line }) => /\.sql$/i.test(relPath) || (!CLIENT_ENV_RE.test(line) && isServerOnlyModule(relPath, source)),
     owasp: 'A01:2025',
     cwe: 'CWE-269',
     recommendation:
