@@ -15,6 +15,10 @@
         "path": "/api/orders/:id"
       },
       "guarded": true
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": false
     }
   ]
 }

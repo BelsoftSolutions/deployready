@@ -6,10 +6,9 @@
       "present": false
     },
     {
-      "unsupported": "permissive-rls-policy",
+      "rule": "rls-permissive-policy",
       "present": true,
-      "file": "supabase/migrations/20240101000000_init.sql",
-      "note": "policy with using (true) grants all rows to every role"
+      "file": "supabase/migrations/20240101000000_init.sql"
     }
   ]
 }

@@ -7,10 +7,9 @@
       "file": "lib/supabase.ts"
     },
     {
-      "unsupported": "next-public-secret",
+      "rule": "next-public-secret",
       "present": true,
-      "file": "app/chat.tsx",
-      "note": "NEXT_PUBLIC_ variable holding a secret key is inlined into the client bundle"
+      "file": "app/chat.tsx"
     }
   ]
 }

@@ -20,7 +20,11 @@ function finding(file: string, line = 1) {
 }
 
 const snip = (startLine: number, endLine: number): Snippet => ({ text: '', startLine, endLine });
-const backups = (root: string) => fs.readdirSync(root).filter((f) => f.includes('.bak.'));
+const backups = (root: string): string[] => {
+  const dir = path.join(root, '.deployready', 'backups');
+  if (!fs.existsSync(dir)) return [];
+  return (fs.readdirSync(dir, { recursive: true }) as string[]).filter((f) => f.endsWith('.bak'));
+};
 const read = (root: string, name: string) => fs.readFileSync(path.join(root, name), 'utf8');
 
 describe('FixManager.applySuggestion', () => {

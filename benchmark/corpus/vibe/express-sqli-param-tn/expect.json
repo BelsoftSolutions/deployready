@@ -1,6 +1,5 @@
 {
   "description": "Hard negative twin: parameterized queries (a template literal builds only the bound LIKE value)",
-  "knownGap": "sql-injection fires on a parameterized query whose bound LIKE value is built with a template literal",
   "strict": true,
   "expected": [
     {

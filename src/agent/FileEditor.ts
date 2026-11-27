@@ -2,7 +2,8 @@
  * Safe file read/backup/write for interactive fix application.
  *
  * Safety contract (enforced here):
- * - Every write makes a timestamped backup of the original first.
+ * - Every write makes a timestamped backup of the original first, under
+ *   <root>/.deployready/backups (never next to the source file).
  * - All access is confined to the scanned project root (no traversal/symlink escape).
  * - Edits are applied by line range (deterministic) — no fuzzy text matching.
  */
@@ -93,9 +94,21 @@ export class FileEditor {
     }
   }
 
+  /**
+   * Back up `abs` to <root>/.deployready/backups/<relpath>.<ts>.bak, keeping
+   * the project tree clean. A `.deployready/.gitignore` of `*` keeps the
+   * backups (which may hold secrets) out of version control.
+   */
   private async backup(abs: string, contents: Buffer): Promise<string> {
+    const realRoot = fs.realpathSync(this.projectRoot);
+    const rel = path.relative(realRoot, abs);
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backup = `${abs}.bak.${stamp}`;
+    const metaDir = this.resolveSafe(BACKUP_DIR);
+    await fsp.mkdir(metaDir, { recursive: true });
+    const ignoreFile = path.join(metaDir, '.gitignore');
+    if (!fs.existsSync(ignoreFile)) await fsp.writeFile(ignoreFile, '*\n', 'utf8');
+    const backup = this.resolveSafe(path.join(BACKUP_DIR, 'backups', `${rel}.${stamp}.bak`));
+    await fsp.mkdir(path.dirname(backup), { recursive: true });
     await fsp.writeFile(backup, contents);
     return backup;
   }
@@ -112,6 +125,9 @@ export class FileEditor {
     return real;
   }
 }
+
+/** Per-project scratch dir (relative to the project root) holding fix backups. */
+export const BACKUP_DIR = '.deployready';
 
 const BOM = '\uFEFF';
 

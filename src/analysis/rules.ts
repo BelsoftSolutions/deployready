@@ -26,6 +26,24 @@ export interface LineRule {
   recommendation: string;
   /** If set, the matching line is treated as evidence (will be redacted). */
   evidence?: boolean;
+  /**
+   * Evaluate before generic secret detection and suppress it for the line, so a
+   * more specific finding replaces the generic "hardcoded secret" one.
+   */
+  beforeSecrets?: boolean;
+  /** Suppress a regex hit using context the single-line pattern cannot see (whole file, path). */
+  skip?: (ctx: { relPath: string; source: string; line: string }) => boolean;
+}
+
+/** True when a module can only run on the server (never bundled for the browser). */
+export function isServerOnlyModule(relPath: string, source: string): boolean {
+  if (/^\s*(?:['"]use client['"]|['"]use client['"];)/m.test(source)) return false;
+  if (/\bimport\s+['"]server-only['"]|\brequire\(\s*['"]server-only['"]\s*\)/.test(source)) return true;
+  if (/\.py$/i.test(relPath)) return true;
+  return (
+    /(^|\/)(?:pages\/api|app\/api|supabase\/functions|server|scripts|backend)\//.test(relPath) ||
+    /(?:^|\/)(?:route|middleware)\.[jt]sx?$|\.server\.[jt]sx?$/.test(relPath)
+  );
 }
 
 const JS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
@@ -144,6 +162,26 @@ const JS_RULES: LineRule[] = [
       'Never accept the "none" JWT algorithm — it disables signature verification. Pin a strong algorithm (RS256/HS256) and verify signatures.',
   },
   {
+    rule: 'jwt-hardcoded-secret',
+    title: 'JWT signed/verified with a hardcoded secret (anyone can forge login tokens)',
+    severity: 'critical',
+    category: 'security',
+    // jwt.sign(payload, 'literal') / jsonwebtoken.verify(t, "literal") / jose with TextEncoder|Buffer of a literal.
+    re: new RegExp(
+      [
+        `\\b(?:jwt|jsonwebtoken)\\.(?:sign|verify)\\s*\\([^\\n\\[\\]]{0,300}?,\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\1\\s*[,)]`,
+        `\\.sign\\s*\\(\\s*(?:new\\s+TextEncoder\\s*\\(\\s*\\)\\s*\\.encode|Buffer\\.from)\\s*\\(\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\2`,
+        `\\bjwtVerify\\s*\\([^\\n\\[\\]]{0,200}?,\\s*(?:new\\s+TextEncoder\\s*\\(\\s*\\)\\s*\\.encode|Buffer\\.from)\\s*\\(\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\3`,
+      ].join('|'),
+    ),
+    exts: JS,
+    beforeSecrets: true,
+    owasp: 'A02:2025',
+    cwe: 'CWE-798',
+    recommendation:
+      'Anyone who reads this code (or the bundle, repo or a leaked copy) can mint valid login tokens for any user. Load the signing secret from an environment variable or secret manager, use a long random value, and rotate it now — all tokens signed with the old one must be treated as forgeable.',
+  },
+  {
     rule: 'insecure-cookie',
     title: 'Cookie set with httpOnly disabled',
     severity: 'warning',
@@ -200,7 +238,20 @@ const PY_RULES: LineRule[] = [
     title: 'SQL built with an f-string / format (SQL injection)',
     severity: 'critical',
     category: 'security',
-    re: /f["'][^"'\n]{0,200}\b(?:SELECT|INSERT|UPDATE|DELETE)\b[^"'\n]{0,200}\{/i,
+    re: new RegExp(
+      ['"', "'"]
+        .flatMap((q) => {
+          const stmt = `[^${q}\\n]{0,200}\\b(?:select\\b[^${q}\\n]{0,200}\\bfrom|insert\\s+into|update\\s+\\S+\\s+set|delete\\s+from)\\b[^${q}\\n]{0,200}`;
+          return [
+            // f"... {x}"
+            `\\bf${q}${stmt}\\{`,
+            // "...".format(x) / "... %s" % x
+            `${q}${stmt}${q}\\s*(?:\\.format\\s*\\(|%\\s*[\\w(])`,
+          ];
+        })
+        .join('|'),
+      'i',
+    ),
     exts: PY,
     owasp: 'A05:2025',
     cwe: 'CWE-89',
@@ -285,6 +336,33 @@ const PY_RULES: LineRule[] = [
     recommendation: 'Use tempfile.mkstemp() or NamedTemporaryFile() — mktemp() is vulnerable to a TOCTOU race.',
   },
   {
+    rule: 'jwt-hardcoded-secret',
+    title: 'JWT signed/verified with a hardcoded secret (anyone can forge login tokens)',
+    severity: 'critical',
+    category: 'security',
+    // jwt.encode(payload, "literal", ...) / jwt.decode(t, key="literal", ...) — plain string literals only (not f-strings).
+    re: /\bjwt\.(?:encode|decode)\s*\([^\n[\]]{0,300}?,\s*(?:key\s*=\s*)?(["'])[^"'\n]{3,}\1\s*[,)]/,
+    exts: PY,
+    beforeSecrets: true,
+    owasp: 'A02:2025',
+    cwe: 'CWE-798',
+    recommendation:
+      'Anyone who reads this code can mint valid login tokens for any user. Load the signing key from an environment variable or secret manager (os.environ), use a long random value, and rotate it now — tokens signed with the old key must be treated as forgeable.',
+  },
+  {
+    rule: 'flask-hardcoded-secret-key',
+    title: 'Hardcoded Flask/Django SECRET_KEY (anyone can forge sessions)',
+    severity: 'critical',
+    category: 'security',
+    re: /(?:\.secret_key|\[\s*["']SECRET_KEY["']\s*\]|\bSECRET_KEY)\s*=\s*(["'])(?!(?:change[-_ ]?me|your[-_]|<|x{3,}|placeholder)[^"'\n]*\1)[^"'\n]{3,}\1/,
+    exts: PY,
+    beforeSecrets: true,
+    owasp: 'A02:2025',
+    cwe: 'CWE-798',
+    recommendation:
+      'The session-signing key is in source, so anyone who sees the code can forge session cookies and log in as any user. Load it from an environment variable or secret manager, use a long random value, and rotate it now.',
+  },
+  {
     rule: 'py-jwt-none',
     title: 'JWT configured with the "none" algorithm (signature bypass)',
     severity: 'critical',
@@ -314,6 +392,13 @@ const SQL_INJECTION_RE = new RegExp(
   'i',
 );
 
+const PARAMETERIZED_CALL_RE = /\.(?:query|execute|raw|\w+Unsafe)\s*(?:<[^>;\n]{0,60}>)?\s*\(\s*(?:'[^'\n]*'|"[^"\n]*")\s*,/;
+
+/** Env var names that a bundler inlines into client code. */
+const CLIENT_ENV_RE = /\b(?:NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|NUXT_PUBLIC|PUBLIC)_[A-Z0-9_]*/;
+const SECRET_WORD = '(?:SECRET|SERVICE_ROLE|PRIVATE_KEY|PASSWORD|ACCESS_TOKEN|AUTH_TOKEN)';
+const SECRET_VENDOR = '(?:OPENAI|ANTHROPIC|STRIPE|SENDGRID|TWILIO|RESEND|MAILGUN|GROQ|GEMINI|DEEPSEEK|OPENROUTER|REPLICATE|HUGGINGFACE|MISTRAL|COHERE|AWS|GITHUB)';
+
 /** Language-agnostic rules (apply to every file). */
 const GENERIC_RULES: LineRule[] = [
   {
@@ -322,6 +407,8 @@ const GENERIC_RULES: LineRule[] = [
     severity: 'critical',
     category: 'security',
     re: SQL_INJECTION_RE,
+    // db.query('... $1 ...', [`%${x}%`]): the template is a bound parameter, not part of the SQL.
+    skip: ({ line }) => PARAMETERIZED_CALL_RE.test(line),
     owasp: 'A05:2025',
     cwe: 'CWE-89',
     recommendation:
@@ -357,10 +444,26 @@ const GENERIC_RULES: LineRule[] = [
     severity: 'warning',
     category: 'security',
     re: /service_role/i,
+    // Server-only modules (server-only import, API routes, edge functions, Python) are the right place
+    // for this key; still flag it if the name is exposed to the client bundle via NEXT_PUBLIC_/VITE_.
+    skip: ({ relPath, source, line }) => !CLIENT_ENV_RE.test(line) && isServerOnlyModule(relPath, source),
     owasp: 'A01:2025',
     cwe: 'CWE-269',
     recommendation:
       'The service_role key bypasses Row-Level Security. Use it only in trusted server-side code (never in client/browser bundles), and prefer the anon key + RLS policies for user-facing access.',
+  },
+  {
+    rule: 'next-public-secret',
+    title: 'Secret exposed to the browser through a NEXT_PUBLIC_/VITE_ environment variable',
+    severity: 'critical',
+    category: 'security',
+    re: new RegExp(
+      `\\b(?:NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|NUXT_PUBLIC)_[A-Z0-9_]*(?:${SECRET_WORD}|${SECRET_VENDOR}_[A-Z0-9_]*(?:API_KEY|KEY|TOKEN))[A-Z0-9_]*`,
+    ),
+    owasp: 'A02:2025',
+    cwe: 'CWE-200',
+    recommendation:
+      'Variables with a NEXT_PUBLIC_/VITE_/REACT_APP_ prefix are inlined into the public JavaScript bundle, so anyone can read this value. Keep the secret in a server-only variable (no prefix) and call the service from an API route or server action; rotate the exposed key.',
   },
   {
     rule: 'insecure-http-url',
