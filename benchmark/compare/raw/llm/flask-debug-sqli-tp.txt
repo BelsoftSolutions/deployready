@@ -1,0 +1,17 @@
+```jsonl
+{"file": "app.py", "line": 6, "issue": "Hardcoded Flask SECRET_KEY in source. Anyone with the repo can forge session cookies. Load it from an environment variable or secret store and generate a strong random value."}
+{"file": "app.py", "line": 16, "issue": "SQL injection: the user-supplied `name` query parameter is interpolated into the SQL string with an f-string. Use a parameterized query, e.g. execute(\"SELECT id, name FROM users WHERE name = ?\", (name,))."}
+{"file": "app.py", "line": 22, "issue": "TLS certificate verification disabled with verify=False, so responses from partner.example.com can be intercepted or tampered with by a man-in-the-middle. Remove verify=False and use the default verification."}
+{"file": "app.py", "line": 22, "issue": "No timeout on the outbound requests.get call. A slow or unresponsive partner server can hang worker threads indefinitely."}
+{"file": "app.py", "line": 23, "issue": "External response is returned without checking the HTTP status or validating the JSON structure. Errors and unexpected data are passed straight through to clients, and r.json() raises an unhandled exception on non-JSON responses."}
+{"file": "app.py", "line": 27, "issue": "app.run(debug=True) enables the Werkzeug interactive debugger. If it is reachable, it allows arbitrary code execution on the server. Never run with debug enabled in production."}
+{"file": "app.py", "line": 27, "issue": "Binding to host=0.0.0.0 exposes the development server on all network interfaces. Combined with debug=True, this makes the RCE reachable from the network. Bind to 127.0.0.1 locally or use a production WSGI server behind a reverse proxy."}
+{"file": "app.py", "line": 13, "issue": "The /users endpoint has no authentication or authorization, so any unauthenticated client can query the users table."}
+{"file": "app.py", "line": 20, "issue": "The /sync endpoint has no authentication and lets any client trigger outbound requests to a fixed external host. Access should be restricted, and the cost of repeated calls limited."}
+{"file": "app.py", "line": 9, "issue": "get_db() opens a new SQLite connection on every call and never closes it, leaking file handles and connections under load. Use a per-request connection with teardown, or a connection pool."}
+{"file": ".gitignore", "line": 2, "issue": "app.db is not listed. The SQLite database containing user data can be committed to version control by accident. Add app.db to .gitignore."}
+```
+
+Notes:
+- The SQL injection at line 16 and the debug-mode RCE at line 27 are the most serious. Fix those first.
+- The `.gitignore` finding has no line of its own to cite, so I used line 2, where the new entry would go.

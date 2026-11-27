@@ -1,0 +1,15 @@
+```jsonl
+{"file": ".env.example", "line": 1, "issue": "Variables with the VITE_ prefix are inlined into the client-side bundle and are publicly visible to anyone who loads the app. The example file does not warn that this variable must hold only the public URL, never a secret."}
+{"file": ".env.example", "line": 2, "issue": "The example does not state that VITE_SUPABASE_ANON_KEY must be the anon (public) key. Developers could mistakenly put the service_role key here, which bypasses Row Level Security and would be exposed to every browser that loads the app."}
+{"file": ".gitignore", "line": 3, "issue": "Only the exact names '.env' and '.env.local' are ignored. Environment-specific files such as .env.production, .env.development.local, or .env.production.local are not ignored, so real secrets in them could be committed to version control."}
+{"file": ".gitignore", "line": 4, "issue": "The pattern '.env.local' does not match '.env.*.local' variants, so per-mode local overrides can be committed. Use the pattern '.env*.local' and '.env.production' or similar explicit entries."}
+{"file": "package.json", "line": 1, "issue": "No dependencies or devDependencies are declared, yet the code imports @supabase/supabase-js and the script runs vite. Without declared and pinned versions, installs are not reproducible and are exposed to supply-chain risk (unpinned or typosquatted packages). Declare and pin dependencies and commit a lockfile."}
+{"file": "src/lib/supabase.ts", "line": 4, "issue": "The VITE_SUPABASE_URL value is used without validation. If it is missing or points to an unexpected host, the app may fail in confusing ways or send authenticated requests to an attacker-controlled endpoint if the env value is tampered with at build time. Validate that the value is an expected https Supabase URL."}
+{"file": "src/lib/supabase.ts", "line": 5, "issue": "The anon key is read without checks. Nothing prevents a service_role key from being supplied, and the file does not check that the key is the public anon key. Add a runtime check, such as decoding the JWT role claim, and fail if it is 'service_role'."}
+{"file": "src/lib/supabase.ts", "line": 3, "issue": "The client is created with default options, so auth sessions are stored in localStorage by default. Any XSS in the app can read those tokens. This is an informational risk; mitigate it with a strict Content Security Policy and by avoiding unsafe HTML rendering."}
+```
+
+**Notes on scope:**
+- The reviewed code contains no hardcoded secrets, so I found no critical issues in these four files.
+- The main real-world risk is not in these files. Supabase security depends on Row Level Security (RLS) policies in the database, which are not included in this project. Review the RLS policies and table grants separately, because the anon key is public by design.
+- Findings are ordered by file, not severity. The `.gitignore` gaps (lines 3–4) and the missing dependency declarations (`package.json` line 1) are the most actionable.

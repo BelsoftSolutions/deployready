@@ -1,0 +1,15 @@
+```json
+{"file": "server.js", "line": 10, "issue": "jwt.verify is called without an explicit `algorithms` option, so the accepted algorithm is not pinned (e.g., to HS256). Pin it to prevent algorithm-confusion issues if the key type or library changes later."}
+{"file": "server.js", "line": 10, "issue": "No expiration is required. Tokens issued without an `exp` claim remain valid indefinitely, and there is no revocation mechanism, so a leaked token grants lasting admin access."}
+{"file": "server.js", "line": 8, "issue": "The Bearer token is extracted with a string `replace('Bearer ', '')` that does not verify the auth scheme or the header format. Malformed headers are passed to verification instead of being rejected up front."}
+{"file": "server.js", "line": 18, "issue": "requireAdmin trusts the `role` claim in the JWT without checking the database. Demoted or disabled admins keep admin access until their token expires."}
+{"file": "server.js", "line": 22, "issue": "GET /api/admin/users returns all user records via findAll() with no field filtering or pagination. This likely exposes password hashes and PII, and can return an unbounded result set."}
+{"file": "server.js", "line": 23, "issue": "DELETE /api/admin/users/:id does not validate the `id` parameter and does not return 404 when no user matches. It also has no guard against an admin deleting themselves or the last remaining admin, and no audit logging of this destructive action."}
+{"file": "server.js", "line": 22, "issue": "Async route handlers have no try/catch or error middleware. Under Express 4, a database error becomes an unhandled promise rejection and the request hangs."}
+{"file": "server.js", "line": 28, "issue": "app.listen(3000) serves plain HTTP on all interfaces. Bearer tokens and admin data travel unencrypted, and there is no TLS, no security headers (e.g., helmet), and no rate limiting on the admin endpoints."}
+{"file": ".gitignore", "line": 2, "issue": "Only the exact `.env` file is ignored. Variants such as `.env.local` and `.env.production`, which may contain JWT_SECRET, are not, so they could be committed. Key and certificate files (*.pem, *.key) and any local database file are also not ignored."}
+```
+
+Notes:
+- I did not review `db.js`, which `server.js` requires on line 3. Whether the `:id` parameter is injectable and which user fields are returned on line 22 depend on how `db` is implemented, so those findings should be confirmed against it.
+- The JWT secret is read from `process.env.JWT_SECRET` and is not hardcoded, which is correct. If the secret is weak or unset in deployment, verification will fail closed, but a short or guessable secret would still be a problem.

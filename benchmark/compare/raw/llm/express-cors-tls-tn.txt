@@ -1,0 +1,16 @@
+```json
+{"file": "server.js", "line": 6, "issue": "CORS origins come from the ALLOWED_ORIGINS env var with no validation. Combined with credentials: true, any origin accidentally added becomes trusted for credentialed cross-origin reads. Entries with whitespace after commas (e.g. 'a, b') silently fail to match."}
+{"file": "server.js", "line": 3, "issue": "No security headers middleware (e.g. helmet), and X-Powered-By is enabled by default, which discloses the Express framework to clients."}
+{"file": "server.js", "line": 7, "issue": "express.json() is applied globally, but no route reads a request body. It parses up to 100kb of JSON on every request, which is unnecessary attack surface."}
+{"file": "server.js", "line": 9, "issue": "/api/rates has no authentication or authorization. Anyone who can reach the server can read partner rate data."}
+{"file": "server.js", "line": 9, "issue": "No rate limiting. Each request triggers an outbound fetch to partner.example.com, so a flood of requests can exhaust resources and the partner's quota."}
+{"file": "server.js", "line": 10, "issue": "fetch() has no timeout or AbortSignal. A slow or hung partner response keeps the request and socket open indefinitely."}
+{"file": "server.js", "line": 10, "issue": "The async handler has no try/catch. If Express 4.x is in use, promise rejections are not forwarded to error handling, so a network error leaves the request hanging, and on Node 15+ an unhandled rejection can crash the process."}
+{"file": "server.js", "line": 11, "issue": "The upstream response status and content type are not checked before parsing. Partner error bodies are forwarded to clients as-is, and a non-JSON body makes r.json() throw."}
+{"file": "server.js", "line": 11, "issue": "No response size limit. An oversized upstream body is buffered fully in memory before being forwarded."}
+{"file": "server.js", "line": 14, "issue": "The server listens over plain HTTP on all interfaces (no host argument, so 0.0.0.0) with no TLS. Traffic is exposed to network observers unless a TLS-terminating proxy restricts access."}
+```
+
+`.gitignore` has no issues. It excludes `.env`, so secrets are kept out of version control. Nothing in either file appears to contain hardcoded credentials.
+
+This review covers only the two files provided. I did not run the code or check the installed Express version, so the unhandled-rejection finding depends on Express 4.x.

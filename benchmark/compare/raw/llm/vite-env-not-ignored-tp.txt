@@ -1,0 +1,13 @@
+```json
+{"file": ".env", "line": 3, "issue": "STRIPE_SECRET_KEY is stored in a frontend project's env file. Secret keys belong on a server, and if this file is committed or a real key is substituted, the key is exposed. Rotate any real key that has been in this file and move Stripe calls to a backend."}
+{"file": ".env", "line": 1, "issue": "The .env file holds secrets, but no .gitignore was provided to confirm it is excluded from version control. Verify that .env is ignored, and consider committing a .env.example with placeholder values instead."}
+{"file": ".env", "line": 2, "issue": "VITE_SUPABASE_ANON_KEY is bundled into the client build, so anyone can read it. This is expected for Supabase anon keys, but data access is then controlled only by Row Level Security policies, which were not provided and cannot be verified."}
+{"file": "src/lib/supabase.ts", "line": 4, "issue": "The URL and anon key are read from import.meta.env with no check that they are defined. If either variable is missing, the client is created with undefined values and fails in unclear ways. Add a runtime check that throws a clear error."}
+{"file": "src/lib/supabase.ts", "line": 3, "issue": "The client uses the default session storage (localStorage), so any XSS vulnerability in the app could read the user's session tokens. Mitigate with a strict Content Security Policy and by avoiding unsafe HTML rendering."}
+{"file": "package.json", "line": 1, "issue": "The code imports @supabase/supabase-js and uses Vite, but neither appears in package.json. The project cannot be installed or built reproducibly, and there is no pinned, auditable dependency set. Declare the dependencies, commit a lockfile, and run npm audit."}
+```
+
+Notes:
+- The values in `.env` (`example`, `anon-example`, `placeholder`) look like placeholders, so these findings are about the pattern rather than confirmed live secrets.
+- Line numbers for `.env` and `package.json` are inferred from the pasted content.
+- I could not check `.gitignore`, Supabase RLS policies, or a lockfile, since they were not provided. The RLS policies are the main control for data access.

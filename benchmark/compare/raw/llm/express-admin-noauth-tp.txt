@@ -1,0 +1,15 @@
+```json
+{"file": "server.js", "line": 9, "issue": "GET /api/admin/users has no authentication or authorization. Any unauthenticated client can list all users."}
+{"file": "server.js", "line": 9, "issue": "The handler returns full user records from findAll() with no attribute filtering, which may expose password hashes, emails, tokens, or other PII."}
+{"file": "server.js", "line": 10, "issue": "DELETE /api/admin/users/:id has no authentication or authorization. Any client can delete any user, a destructive action with no access control."}
+{"file": "server.js", "line": 11, "issue": "req.params.id is passed to destroy() without validation, and the endpoint returns { ok: true } even when no row matched. It also does not block self-deletion or deleting privileged accounts."}
+{"file": "server.js", "line": 6, "issue": "The async handler has no try/catch. In Express 4 a rejected promise is not caught, so a database error can hang the request or, on Node 15+, crash the process (DoS)."}
+{"file": "server.js", "line": 9, "issue": "The async admin handler has no try/catch, so database errors are unhandled and can hang the request or crash the process."}
+{"file": "server.js", "line": 6, "issue": "The unauthenticated /api/products endpoint returns the entire table with no pagination, limits, or rate limiting, which allows scraping and resource exhaustion."}
+{"file": "server.js", "line": 15, "issue": "The server listens on all interfaces over plain HTTP with no TLS, no security headers (e.g., helmet), no rate limiting, and no error-handling middleware. Credentials and data are sent in cleartext unless a TLS-terminating proxy sits in front."}
+```
+
+Notes:
+- **.gitignore:** No security issues. It excludes `.env`, which is the right place for secrets. You could also add patterns for key and certificate files such as `*.pem` and `*.key`, but that is hardening, not a fix for a vulnerability.
+- **db module:** `./db` was not included, so I could not check it for SQL injection, unsafe raw queries, or plaintext password storage. Please share it if you want that reviewed.
+- **Priority:** The two unauthenticated `/api/admin/users` routes (lines 9 and 10) are the critical issues. Add an authentication and admin-role middleware before anything else, then filter response fields and add error handling.

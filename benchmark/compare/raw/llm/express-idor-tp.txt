@@ -1,0 +1,20 @@
+```json
+{"file": "server.js", "line": 13, "issue": "Broken object-level authorization (IDOR) on GET /api/orders/:id: requireAuth only confirms a valid token, and the handler never checks that the order belongs to req.user, so any logged-in user can read any order by changing the id."}
+{"file": "server.js", "line": 14, "issue": "db.orders.findByPk(req.params.id) is scoped only by the URL id, not by the authenticated user, so the full order record, including any sensitive fields, is returned for other users' orders."}
+{"file": "server.js", "line": 17, "issue": "Broken object-level authorization (IDOR) on PUT /api/orders/:id: any authenticated user can modify any order by id, with no ownership or role check."}
+{"file": "server.js", "line": 18, "issue": "Mass assignment: the entire req.body is passed to db.orders.update(), so a client can set arbitrary model fields such as userId, status, or price. Use an explicit allowlist of editable fields."}
+{"file": "server.js", "line": 18, "issue": "Update uses only req.params.id as the WHERE condition with no user scoping, so an attacker can alter ownership or other protected attributes of orders they do not own."}
+{"file": "server.js", "line": 8, "issue": "jwt.verify() is called without an explicit algorithms option, so the accepted algorithms are not pinned. Pass algorithms: ['HS256'] (or the intended algorithm) to prevent algorithm-confusion attacks."}
+{"file": "server.js", "line": 8, "issue": "Authorization header parsing does not check the scheme: split(' ')[1] accepts any scheme and ignores whether the header is 'Bearer'. Parse and validate the 'Bearer' prefix explicitly."}
+{"file": "server.js", "line": 8, "issue": "The token's claims are trusted without validation beyond the signature: there is no check on exp, iss, aud, or a revocation/session mechanism, and req.user is set straight from the payload."}
+{"file": "server.js", "line": 13, "issue": "Async route handler has no try/catch or error middleware. Under Express 4, a rejected db promise becomes an unhandled rejection that can crash the process (Node 15+) or leak stack traces via default error handling. Wrap handlers or use express-async-errors."}
+{"file": "server.js", "line": 17, "issue": "Async route handler has no try/catch or error middleware, so database errors can crash the process or expose internal error details to the client."}
+{"file": "server.js", "line": 15, "issue": "Returns 200 with a null body for nonexistent ids, which lets an authenticated user enumerate valid order ids by distinguishing 'null' from 'not found' responses. Return 404 for missing orders."}
+{"file": "server.js", "line": 19, "issue": "Returns { ok: true } even when no rows were matched by the update, which hides failed or unauthorized writes from the client and from logs."}
+{"file": "server.js", "line": 22, "issue": "The server listens on plain HTTP with no TLS, so JWTs and order data are sent in cleartext unless a TLS-terminating proxy is guaranteed in front. Also, there is no rate limiting on authentication or order endpoints, and no security headers (e.g. helmet)."}
+```
+
+Notes:
+- `.gitignore` looks fine. It excludes `.env`, which keeps secrets out of version control. I found no issues in it.
+- I could not review `db.js` or the `jsonwebtoken`/`express` versions, and `JWT_SECRET` handling is not visible here. Missing `db.js` may hide SQL or ORM issues, and the JWT findings depend on the library version.
+- The most urgent fixes are the missing ownership checks on lines 13 and 17 and the mass assignment on line 18. Scope queries to `req.user.id` and allowlist the fields a client may update.

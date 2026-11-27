@@ -1,0 +1,13 @@
+```json
+{"file": "server.js", "line": 6, "issue": "CORS is set to origin '*' with credentials: true. Any website can read responses from this API, and the config signals that credentialed cross-origin requests are allowed. Use an explicit origin allowlist."}
+{"file": "server.js", "line": 10, "issue": "TLS certificate validation is disabled (rejectUnauthorized: false) and shipped to production. This allows man-in-the-middle attacks on the partner connection, so forged or tampered rate data can be served as legitimate. Fix the certificate trust (e.g., NODE_EXTRA_CA_CERTS or a custom CA) instead."}
+{"file": "server.js", "line": 12, "issue": "/api/rates has no authentication or authorization. Any unauthenticated client can retrieve partner rate data, which may be confidential or licensed."}
+{"file": "server.js", "line": 13, "issue": "The agent option is not honored by Node's built-in fetch (undici), so the TLS bypass may be dead code, or it may behave differently depending on the fetch implementation. The code is misleading either way. The upstream fetch also has no timeout, so a hung partner stalls requests indefinitely."}
+{"file": "server.js", "line": 13, "issue": "No error handling around the upstream fetch. Express 4 does not catch rejected async handlers, so a network failure becomes an unhandled promise rejection that can crash the process."}
+{"file": "server.js", "line": 14, "issue": "The upstream response is parsed and forwarded without validation or status checks. Non-2xx responses and malformed JSON are passed through or throw, and any extra partner fields are exposed to clients."}
+{"file": "server.js", "line": 17, "issue": "The server listens on all interfaces over plain HTTP with no rate limiting, no security headers (e.g., helmet), no global error handler, and no listen error handling."}
+```
+
+Notes:
+- `.gitignore` looks fine: it excludes `.env` and `node_modules`.
+- No `package.json` or lockfile was provided, so I could not audit dependency versions. Run `npm audit` on the full project.
