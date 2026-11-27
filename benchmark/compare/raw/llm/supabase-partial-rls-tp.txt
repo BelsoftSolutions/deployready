@@ -1,0 +1,27 @@
+```json
+{"file": "supabase/migrations/20240201000000_messages.sql", "line": 2, "issue": "CRITICAL: public.messages has no 'enable row level security' and no policies. Supabase grants anon and authenticated roles access to public tables by default, so anyone with the public anon key can read, modify, and delete all messages."}
+{"file": "supabase/migrations/20240201000000_messages.sql", "line": 4, "issue": "HIGH: sender_id is nullable and not bound to auth.uid(). Even after RLS is enabled, a user could insert messages as another user (spoofing) or insert rows with a NULL sender. Needs NOT NULL and an insert policy with WITH CHECK (auth.uid() = sender_id)."}
+{"file": "supabase/migrations/20240201000000_messages.sql", "line": 5, "issue": "LOW: content text has no length limit or validation, enabling oversized-payload storage abuse. If the frontend renders it as HTML, it is also a stored XSS vector. Add a CHECK length constraint and sanitize or escape on output."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 6, "issue": "LOW: the 'for all' policy has no explicit WITH CHECK clause. Postgres reuses USING for inserts and updates, so it works, but it is implicit and easy to break. Write separate, explicit select/insert/update/delete policies with WITH CHECK (auth.uid() = id)."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 3, "issue": "LOW: username has no CHECK constraints (length, allowed characters, non-empty) and is user-writable, so it can hold arbitrary or misleading values such as impersonation names. Add format constraints."}
+{"file": ".gitignore", "line": 2, "issue": "MEDIUM: only the exact '.env' filename is ignored. Variants such as .env.local, .env.production, or .env.backup are not, so they could be committed with Supabase service_role keys or other secrets. Add '.env*' and an allowlist for templates such as '!.env.example'."}
+```
+
+**Priority fix for the messages table** (run as a new migration, since the existing one has already been applied):
+
+```sql
+alter table public.messages enable row level security;
+alter table public.messages alter column sender_id set not null;
+
+create policy "insert own messages" on public.messages
+  for insert to authenticated
+  with check (auth.uid() = sender_id);
+
+-- Define read access based on your conversation model. Until then, deny by default.
+-- Example for a sender-only read policy:
+create policy "read own messages" on public.messages
+  for select to authenticated
+  using (auth.uid() = sender_id);
+```
+
+The read policy above is a placeholder. The schema has no recipient or conversation column, so you will need to add one (for example, a `conversation_id` with a membership table) and write the select policy against it. Until you do, the table is locked to everyone except the messages' senders.

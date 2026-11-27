@@ -83,7 +83,7 @@ describe('Verifier with no routes', () => {
       },
       { target: '.', dynamic: { baseUrl: 'http://127.0.0.1:1', routes: [] } },
     );
-    expect(res.status).toBe('unknown');
+    expect(res.status).toBe('inconclusive');
     expect(res.detail).toMatch(/No routes were discovered/);
     expect(find).not.toHaveBeenCalled();
   });

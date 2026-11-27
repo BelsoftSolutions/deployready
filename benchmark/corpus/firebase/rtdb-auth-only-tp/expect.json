@@ -1,0 +1,1 @@
+{"description":"Realtime Database per-user path gated only by sign-in","expected":[{"rule":"firebase-rtdb-auth-only","present":true,"file":"database.rules.json"},{"rule":"firebase-rtdb-open","present":false}]}

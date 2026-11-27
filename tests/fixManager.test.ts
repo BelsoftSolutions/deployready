@@ -20,7 +20,11 @@ function finding(file: string, line = 1) {
 }
 
 const snip = (startLine: number, endLine: number): Snippet => ({ text: '', startLine, endLine });
-const backups = (root: string) => fs.readdirSync(root).filter((f) => f.includes('.bak.'));
+const backups = (root: string): string[] => {
+  const dir = path.join(root, '.deployready', 'backups');
+  if (!fs.existsSync(dir)) return [];
+  return (fs.readdirSync(dir, { recursive: true }) as string[]).filter((f) => f.endsWith('.bak'));
+};
 const read = (root: string, name: string) => fs.readFileSync(path.join(root, name), 'utf8');
 
 describe('FixManager.applySuggestion', () => {
@@ -180,5 +184,39 @@ describe('FileEditor.replaceLines bounds', () => {
     expect(prev).toEqual({ original: 'a\r\nb\r\n', updated: 'a\r\nB\r\n', replaced: 'b' });
     expect(read(root, 'a.txt')).toBe('a\r\nb\r\n');
     expect(backups(root)).toEqual([]);
+  });
+});
+
+describe('FixManager.autoFixAll', () => {
+  const lineFinding = (rule: string, file: string, line: number) =>
+    makeFinding({ rule, title: rule, severity: 'warning', category: 'security', source: 'static', description: '', recommendation: '', file, line });
+
+  it('applies every fixable finding, several per file, and skips the rest without aborting', async () => {
+    const root = project({
+      'a.js': "const c = require('crypto');\nc.createHash('md5');\nnew https.Agent({ rejectUnauthorized: false });\nc.createHash('sha1');\n",
+      'b.py': "import hashlib\nhashlib.md5(b'x')\n",
+    });
+    const findings = [
+      lineFinding('weak-hash', 'a.js', 2),
+      lineFinding('tls-verification-disabled', 'a.js', 3),
+      lineFinding('weak-hash', 'a.js', 4),
+      lineFinding('py-weak-hash', 'b.py', 2),
+      lineFinding('weak-hash', 'a.js', 1), // line 1 has nothing to rewrite -> skipped
+      lineFinding('sql-injection', 'a.js', 2), // no deterministic fixer -> not attempted
+    ];
+    const results = await FixManager.autoFixAll(findings, new FileEditor(root));
+
+    expect(results.filter((r) => r.applied)).toHaveLength(4);
+    expect(results.filter((r) => !r.applied)).toHaveLength(1);
+    expect(results.some((r) => r.finding.rule === 'sql-injection')).toBe(false);
+    expect(read(root, 'a.js')).toBe(
+      "const c = require('crypto');\nc.createHash('sha256');\nnew https.Agent({ rejectUnauthorized: true });\nc.createHash('sha256');\n",
+    );
+    expect(read(root, 'b.py')).toBe("import hashlib\nhashlib.sha256(b'x')\n");
+  });
+
+  it('returns nothing when no finding is auto-fixable', async () => {
+    const root = project({ 'a.js': 'x\n' });
+    expect(await FixManager.autoFixAll([lineFinding('sql-injection', 'a.js', 1)], new FileEditor(root))).toEqual([]);
   });
 });

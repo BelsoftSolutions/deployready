@@ -1,0 +1,1 @@
+{"description":"Default Firebase test-mode rules (open until a date)","expected":[{"rule":"firebase-rules-test-mode","present":true,"file":"firestore.rules"}]}

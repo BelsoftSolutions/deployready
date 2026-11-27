@@ -1,0 +1,11 @@
+{
+  "description": "Next.js route handler + Supabase service-role client: session checked, but the invoice is fetched/deleted by params.id alone (RLS bypassed)",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "app/api/invoices/[id]/route.ts",
+      "note": ".eq('id', params.id) on the service-role client, no user_id filter"
+    }
+  ]
+}

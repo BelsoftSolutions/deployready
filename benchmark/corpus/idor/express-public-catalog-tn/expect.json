@@ -1,0 +1,10 @@
+{
+  "description": "Safe: every route needs a login, but products are a shared catalog; reading one by id is normal",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

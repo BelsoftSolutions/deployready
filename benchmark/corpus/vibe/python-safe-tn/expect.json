@@ -1,0 +1,34 @@
+{
+  "description": "Hard negative: Flask with parameterized SQL, env secret, debug off by default; FastAPI delete behind Depends auth",
+  "knownGap": "possible-hardcoded-secret fires on a comparison literal; parser does not see Depends(...) in a signature as a guard (audit item P1-6)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "py-flask-debug",
+      "present": false
+    },
+    {
+      "rule": "py-sql-fstring",
+      "present": false
+    },
+    {
+      "rule": "py-requests-noverify",
+      "present": false
+    },
+    {
+      "rule": "possible-hardcoded-secret",
+      "present": false
+    },
+    {
+      "route": {
+        "method": "DELETE",
+        "path": "/items/{item_id}"
+      },
+      "guarded": true
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": false
+    }
+  ]
+}

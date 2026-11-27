@@ -1,0 +1,28 @@
+{
+  "description": "Hard negative: same admin routes behind requireAuth + requireAdmin, JWT secret from env",
+  "strict": true,
+  "expected": [
+    {
+      "route": {
+        "method": "GET",
+        "path": "/api/admin/users"
+      },
+      "guarded": true
+    },
+    {
+      "route": {
+        "method": "DELETE",
+        "path": "/api/admin/users/:id"
+      },
+      "guarded": true
+    },
+    {
+      "rule": "possible-hardcoded-secret",
+      "present": false
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": false
+    }
+  ]
+}

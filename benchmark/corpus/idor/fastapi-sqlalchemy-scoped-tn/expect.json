@@ -1,0 +1,10 @@
+{
+  "description": "Safe twin of fastapi-sqlalchemy-tp: lookups filter on owner_id == current_user.id",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

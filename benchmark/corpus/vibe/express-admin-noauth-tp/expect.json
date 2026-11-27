@@ -1,0 +1,25 @@
+{
+  "description": "Admin list and delete routes have no authentication. Parser must see them unguarded.",
+  "expected": [
+    {
+      "route": {
+        "method": "GET",
+        "path": "/api/admin/users"
+      },
+      "guarded": false
+    },
+    {
+      "route": {
+        "method": "DELETE",
+        "path": "/api/admin/users/:id"
+      },
+      "guarded": false
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": true,
+      "file": "server.js",
+      "severity": "critical"
+    }
+  ]
+}

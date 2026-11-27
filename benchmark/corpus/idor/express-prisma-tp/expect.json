@@ -1,0 +1,11 @@
+{
+  "description": "Express + Prisma: notes are listed per user, but read/update/delete by :id never check the owner",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "server.js",
+      "note": "findUnique/update/delete where { id } only"
+    }
+  ]
+}

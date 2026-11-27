@@ -1,0 +1,1 @@
+{"description":"Realtime Database open read/write at root","expected":[{"rule":"firebase-rtdb-open","present":true,"file":"database.rules.json","severity":"critical"}]}

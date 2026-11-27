@@ -1,0 +1,11 @@
+{
+  "description": "FastAPI + SQLAlchemy: item list is scoped, but get/delete by item_id ignore current_user",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "main.py",
+      "note": "query(Item).get(item_id) / filter(Item.id == item_id) without owner_id"
+    }
+  ]
+}

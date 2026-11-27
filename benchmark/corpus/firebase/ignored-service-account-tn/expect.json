@@ -1,0 +1,1 @@
+{"description":"Safe twin: a git-ignored service account file is not committed; owner-scoped rules","strict":true,"expected":[{"rule":"firebase-service-account-committed","present":false},{"rule":"firebase-rules-open","present":false}]}

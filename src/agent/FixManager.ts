@@ -8,7 +8,7 @@
  */
 import * as path from 'path';
 import { parse } from '@babel/parser';
-import type { ParserPlugin } from '@babel/parser';
+import { PARSER_PLUGINS } from './context';
 import { FileEditor } from './FileEditor';
 import type { Snippet } from './FileEditor';
 import { LINE_FIXERS, fixLine } from './lineFixers';
@@ -21,6 +21,13 @@ export interface AutoFixResult {
   backup: string | null;
 }
 
+export interface AutoFixAllResult {
+  finding: Finding;
+  applied: boolean;
+  message: string;
+  backup: string | null;
+}
+
 export interface ApplyResult {
   applied: boolean;
   message: string;
@@ -28,15 +35,6 @@ export interface ApplyResult {
 }
 
 const JS_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
-
-const PARSER_PLUGINS: ParserPlugin[] = [
-  'typescript',
-  'jsx',
-  'decorators-legacy',
-  'classProperties',
-  'topLevelAwait',
-  'importAssertions',
-];
 
 const AUTO_FIXABLE = new Set(['env-not-ignored']);
 
@@ -84,20 +82,39 @@ export class FixManager {
     throw new Error(`No automatic fix available for rule "${finding.rule}".`);
   }
 
+  /**
+   * Apply every deterministic fix in `findings` in one pass. Each edit is independent: a fixer
+   * that can't safely rewrite its line is reported as skipped and never aborts the others.
+   * Line fixers replace exactly one line with one line, so line numbers stay valid across edits.
+   */
+  static async autoFixAll(findings: Finding[], editor: FileEditor): Promise<AutoFixAllResult[]> {
+    const results: AutoFixAllResult[] = [];
+    for (const finding of findings) {
+      if (!FixManager.autoFixable(finding)) continue;
+      try {
+        const res = await FixManager.autoFix(finding, editor);
+        results.push({ finding, applied: true, message: res.message, backup: res.backup });
+      } catch (err) {
+        results.push({ finding, applied: false, message: (err as Error).message, backup: null });
+      }
+    }
+    return results;
+  }
+
   /** True if we can attempt an AI fix (finding points at a concrete file+line). */
   static aiFixable(finding: Finding): boolean {
     return Boolean(finding.file && finding.line);
   }
 
-  /** Read the snippet around the finding for an AI rewrite. */
+  /** Read the enclosing unit (plus read-only imports) around the finding for an AI rewrite. */
   static async snippetFor(finding: Finding, editor: FileEditor): Promise<Snippet> {
     if (!finding.file || !finding.line) throw new Error('This finding has no file/line to fix.');
-    return editor.snippet(finding.file, finding.line);
+    return editor.fixContext(finding.file, finding.line);
   }
 
   /** Ask the model for a corrected snippet (sends the redacted snippet). */
   static async aiSuggest(finding: Finding, snippet: Snippet, router: ModelRouter): Promise<FixSuggestion> {
-    return router.suggestFix(finding, snippet.text);
+    return router.suggestFix(finding, snippet.text, snippet.imports);
   }
 
   /**

@@ -21,6 +21,27 @@ describe('FileEditor', () => {
     expect(fs.readFileSync(backup, 'utf8')).toContain('line2');
   });
 
+  it('keeps backups under .deployready/backups (never next to the source) and ignores them', async () => {
+    const root = tmpProject();
+    fs.mkdirSync(path.join(root, 'src'));
+    fs.writeFileSync(path.join(root, 'src', 'a.js'), 'x\ny\n');
+    const backup = await new FileEditor(root).replaceLines('src/a.js', 1, 1, 'X');
+    const rel = path.relative(fs.realpathSync(root), backup).split(path.sep).join('/');
+    expect(rel).toMatch(/^\.deployready\/backups\/src\/a\.js\.[\w-]+\.bak$/);
+    expect(fs.readFileSync(backup, 'utf8')).toBe('x\ny\n');
+    expect(fs.readdirSync(path.join(root, 'src'))).toEqual(['a.js']);
+    expect(fs.readFileSync(path.join(root, '.deployready', '.gitignore'), 'utf8')).toBe('*\n');
+  });
+
+  it('does not overwrite an existing .deployready/.gitignore', async () => {
+    const root = tmpProject();
+    fs.mkdirSync(path.join(root, '.deployready'));
+    fs.writeFileSync(path.join(root, '.deployready', '.gitignore'), 'custom\n');
+    fs.writeFileSync(path.join(root, 'a.js'), 'x\n');
+    await new FileEditor(root).replaceLines('a.js', 1, 1, 'y');
+    expect(fs.readFileSync(path.join(root, '.deployready', '.gitignore'), 'utf8')).toBe('custom\n');
+  });
+
   it('refuses to write outside the project root', async () => {
     const editor = new FileEditor(tmpProject());
     await expect(editor.replaceLines('../escape.js', 1, 1, 'x')).rejects.toThrow(/outside project/);

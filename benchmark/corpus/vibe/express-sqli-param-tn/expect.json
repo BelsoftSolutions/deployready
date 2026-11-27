@@ -1,0 +1,10 @@
+{
+  "description": "Hard negative twin: parameterized queries (a template literal builds only the bound LIKE value)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "sql-injection",
+      "present": false
+    }
+  ]
+}

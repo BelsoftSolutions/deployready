@@ -11,6 +11,7 @@ import { logger } from '../../utils/logger';
 import { makeFinding } from '../../utils/finding';
 import { redact } from '../../utils/redact';
 import { assertLoopback, createClient } from '../httpClient';
+import { buildProof } from '../proof';
 import { evaluate, fingerprintResponse } from './evidence';
 import type { ProbeResponse, ShapeFingerprint, Verdict } from './evidence';
 import { PROBE_PATHS } from './signatures';
@@ -115,7 +116,14 @@ function safeTarget(baseUrl: string): string {
   return url.toString().replace(/\/$/, '');
 }
 
-function guessedFinding(path: string, verdict: Verdict, sig: PathSignature): Finding {
+function guessedFinding(
+  path: string,
+  verdict: Verdict,
+  sig: PathSignature,
+  target: string,
+  status: number,
+  control: { path: string; status?: number },
+): Finding {
   return makeFinding({
     rule: 'common-path-exposure',
     title: `${sig.what} (guessed path, lower confidence)`,
@@ -132,6 +140,12 @@ function guessedFinding(path: string, verdict: Verdict, sig: PathSignature): Fin
     ),
     recommendation: sig.recommendation,
     evidence: verdict.evidence,
+    proof: buildProof({
+      request: { method: 'GET', url: `${target}${path}` },
+      status,
+      response: `Matched by content: ${sig.proof} (${verdict.evidence ?? 'no values shown'}). Body not stored.`,
+      control: `Sent with no credentials. A random non-existent path (${control.path}) got ${control.status === undefined ? 'no answer' : `HTTP ${control.status}`}, so this is the path's own content, not a catch-all page.`,
+    }),
   });
 }
 
@@ -211,7 +225,7 @@ export async function runCommonPathProbe(
       const verdict = evaluate(signature, res, control);
       probed = { path, status: res.status, outcome: verdict.outcome, reason: verdict.reason };
       if (verdict.outcome === 'found') {
-        findings.push(guessedFinding(path, verdict, signature));
+        findings.push(guessedFinding(path, verdict, signature, target, res.status, report.control));
       }
     }
     report.probed.push(probed);

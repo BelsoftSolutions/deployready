@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0
+
+### Agent loop (MCP)
+- New `deployready mcp`: a local MCP server for Claude Code, Cursor, Codex and Windsurf with `scan`, `get_finding`, `apply_safe_fixes`, `verify`, `score` and `supabase_check`. Your coding agent fixes, DeployReady verifies.
+- Claude Code skill in `skills/deployready/SKILL.md`.
+
+### Fix faster
+- `fix --all` in the interactive shell and `analyze --fix` for CI/scripts: every safe deterministic fix in one pass, each re-verified.
+- Backups now go to `.deployready/backups/` (gitignored) instead of next to your files.
+
+### Proof, not guesses
+- Live and active findings carry reproducible proof: a redacted curl request, status, response excerpt and a control request. Shown in the terminal, `show`, markdown, HTML and JSON.
+- Proof on every live finding, including slow endpoints, cache headers, version banners and stack-trace leaks.
+- `verify` from the shell and the MCP server reads `DEPLOYREADY_TOKEN` / `DEPLOYREADY_TOKEN_B`, so an agent can confirm live fixes too.
+- `verify` returns `fixed`, `still-present` or `inconclusive`. A live finding only counts as fixed when the attack fails and a control request still works. (Before, verifying an active finding always reported fixed.)
+- Safe detection of unauthenticated DELETE/PATCH routes on localhost (non-existent record id, no body, random-path control).
+- Ownership guard: active probes only target localhost unless you pass `--active-url` with `--i-own-this-target <host>` (or `ownedTargets` in config).
+
+### GitHub Action and SARIF
+- `uses: BelsoftSolutions/deployready@v0.4.0`: scans every PR, writes a job summary, keeps one updated PR comment, uploads the report, and fails the build at your `fail-on` level. Third-party actions are pinned to commit SHAs; inputs never reach shell scripts directly. See docs/GITHUB-ACTION.md.
+- `analyze --sarif <file>` writes SARIF 2.1.0, so findings show in GitHub's Security tab.
+
+### Firebase
+- Static checks of `firestore.rules`, `storage.rules` and Realtime Database rules: open rules, test-mode rules with an expiry date, "signed in is enough" rules on user-owned paths, recursive wildcards. Committed service-account keys are critical. The public web `apiKey` is (correctly) not flagged. See docs/FIREBASE.md.
+
+### Supabase
+- Static: service_role keys in client-side code or public env vars are critical.
+- Live (`--supabase`), read-only and counts-only, only for a local project or one you prove you own (service key or access token): tables readable by anon, anon-callable RPC functions, public buckets, sign-up settings, and opt-in two-user cross-read. See docs/SUPABASE.md.
+
+### Accuracy
+- Static IDOR detection (`idor-missing-ownership-check`): handlers that load, update or delete a record by id from the request with no ownership or tenant check. Confirm with the live two-user test.
+- New rules: hardcoded JWT signing secrets (critical), Flask `SECRET_KEY` literals, secrets in `NEXT_PUBLIC_`/`VITE_` variables, routes that change data or expose /admin with no auth check.
+- RLS checks now fire when a Supabase project never enables RLS, and flag tables with RLS but no policy and `using (true)` policies.
+- `.env` is critical only when it is tracked or in git history; an untracked, un-ignored `.env` is a warning.
+- Fewer false positives on parameterized queries, header-derived tokens, comparisons and server-only Supabase modules.
+- New labelled benchmark (133 cases: vibe-coded apps, IDOR, Firebase): precision 0.88 -> 0.96, recall 0.85 -> 0.94 on supported rules. Comparison with Semgrep and a plain LLM in benchmark/COMPARISON.md.
+- `deployready badge` prints a README score badge; every finding has a copy-paste fix prompt for your coding agent.
+
+### Security
+- `follow-redirects` updated past a high-severity advisory.
+
 ## 0.3.0
 
 ### Security accuracy

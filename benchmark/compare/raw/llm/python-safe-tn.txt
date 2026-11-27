@@ -1,0 +1,11 @@
+```json
+{"file": "api.py", "line": 10, "issue": "Critical: authentication is a hardcoded string comparison (token != \"valid\"). Any client that sends Authorization: Bearer valid is authenticated. There is no real token validation (no signature, expiry, or user lookup)."}
+{"file": "api.py", "line": 16, "issue": "High: broken access control. delete_item accepts any authenticated caller and deletes any item. The user dependency is unused, so there is no ownership or role check."}
+{"file": "app.py", "line": 11, "issue": "Medium: /users has no authentication and returns every user's id and name. There is no pagination or rate limiting, so the whole table can be enumerated."}
+{"file": "app.py", "line": 19, "issue": "Low: /sync is unauthenticated, so any caller can trigger outbound requests to the partner host. The upstream JSON is returned unvalidated, and non-200 responses or invalid JSON are not handled, which causes unhandled 500 errors."}
+{"file": "app.py", "line": 23, "issue": "High: debug mode is controlled by the FLASK_DEBUG environment variable. If debug is on and the app is reachable (for example, if host is changed or it runs behind a proxy), the Werkzeug debugger allows arbitrary code execution. Debug should be hardcoded off outside development."}
+{"file": "app.py", "line": 13, "issue": "Low: a new sqlite3 connection is opened on every request and never closed, which leaks file handles and connections under load. Use a context manager or a shared connection."}
+{"file": ".gitignore", "line": 2, "issue": "Low: app.db (the SQLite database holding user data) is not ignored, so it could be committed to version control. Add *.db or app.db."}
+```
+
+The SQL query in `app.py` uses a parameterized placeholder, so it is not vulnerable to SQL injection. The `SECRET_KEY` is read from the environment and fails fast if it is missing, which is correct. Both files were reviewed by reading only; I did not run the code.

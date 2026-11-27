@@ -1,0 +1,25 @@
+{
+  "description": "FastAPI delete and admin routes with no dependency-based auth",
+  "expected": [
+    {
+      "route": {
+        "method": "DELETE",
+        "path": "/items/{item_id}"
+      },
+      "guarded": false
+    },
+    {
+      "route": {
+        "method": "GET",
+        "path": "/admin/users"
+      },
+      "guarded": false
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": true,
+      "file": "main.py",
+      "severity": "critical"
+    }
+  ]
+}

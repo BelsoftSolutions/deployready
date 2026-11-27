@@ -1,0 +1,8 @@
+{
+  "name": "billing",
+  "dependencies": {
+    "next": "14.2.3",
+    "next-auth": "4.24.7",
+    "@supabase/supabase-js": "2.43.4"
+  }
+}

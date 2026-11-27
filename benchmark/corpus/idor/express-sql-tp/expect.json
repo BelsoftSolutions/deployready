@@ -1,0 +1,11 @@
+{
+  "description": "Express + pg: parameterized SQL (no injection), but invoices are read and deleted by id alone",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "server.js",
+      "note": "WHERE id = $1 with no user_id condition"
+    }
+  ]
+}

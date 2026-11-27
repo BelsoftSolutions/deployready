@@ -1,0 +1,10 @@
+{
+  "description": "Safe: the document is loaded by id, then its owner is compared with the signed-in user before anything is returned or changed",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

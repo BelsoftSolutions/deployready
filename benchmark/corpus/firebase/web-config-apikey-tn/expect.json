@@ -1,0 +1,1 @@
+{"description": "Safe twin: the Firebase web config apiKey is public by design and must not be reported (neither by the Firebase module nor by the general hardcoded-secret rule)", "strict": true, "expected": [{"rule": "hardcoded-secret", "present": false}, {"rule": "firebase-rules-open", "present": false}]}

@@ -40,6 +40,19 @@ export interface Finding {
   note?: boolean;
   /** Found by the opt-in common-path probe (a guessed path), so lower confidence than a discovered-route finding. */
   guessed?: boolean;
+  /** Reproducible proof for a live finding. Every string MUST be passed through redact() before set. */
+  proof?: Proof;
+}
+
+/** What was sent and what came back, so a user (or their agent) can reproduce a live finding. */
+export interface Proof {
+  /** Reproducible request, e.g. a curl command (secrets redacted). */
+  request: string;
+  status?: number;
+  /** Truncated, redacted response body. */
+  response?: string;
+  /** The control request that shows the endpoint otherwise works (e.g. the owner's own request). */
+  control?: string;
 }
 
 /** A module/file node in the dependency graph. */
@@ -210,6 +223,8 @@ export interface AppConfig {
   defaultPorts: number[];
   /** Opt-in common-path probe (see docs/COMMON-PATH-PROBE.md). Off by default; never written as true by init. */
   probeCommonPaths: boolean;
+  /** Non-loopback hosts the user owns; active probes may target them (like --i-own-this-target). */
+  ownedTargets?: string[];
 }
 
 /** A single tool result returned by an AI handler. */

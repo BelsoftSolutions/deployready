@@ -2,19 +2,23 @@
  * Safe file read/backup/write for interactive fix application.
  *
  * Safety contract (enforced here):
- * - Every write makes a timestamped backup of the original first.
+ * - Every write makes a timestamped backup of the original first, under
+ *   <root>/.deployready/backups (never next to the source file).
  * - All access is confined to the scanned project root (no traversal/symlink escape).
  * - Edits are applied by line range (deterministic) — no fuzzy text matching.
  */
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
+import { extractFixRange } from './context';
 
 export interface Snippet {
   text: string;
   /** 1-based inclusive line range the snippet covers. */
   startLine: number;
   endLine: number;
+  /** Import/require lines from the same file, READ-ONLY context (outside the replaced range). */
+  imports?: string[];
 }
 
 export interface ReplacePreview {
@@ -43,6 +47,18 @@ export class FileEditor {
     const start = Math.max(1, line - context);
     const end = Math.min(lineCount(lines), line + context);
     return { text: lines.slice(start - 1, end).join('\n'), startLine: start, endLine: end };
+  }
+
+  /**
+   * The enclosing unit of `line` for an AI rewrite (function / def block / +-15 lines, capped at
+   * ~120 lines), plus the file's import lines as read-only context. See ./context.
+   */
+  async fixContext(relPath: string, line: number): Promise<Snippet> {
+    const content = await this.read(relPath);
+    const { lines } = splitText(content);
+    const r = extractFixRange(content, line, path.extname(relPath));
+    const end = Math.min(r.endLine, lineCount(lines));
+    return { text: lines.slice(r.startLine - 1, end).join('\n'), startLine: r.startLine, endLine: end, imports: r.imports };
   }
 
   /**
@@ -93,9 +109,21 @@ export class FileEditor {
     }
   }
 
+  /**
+   * Back up `abs` to <root>/.deployready/backups/<relpath>.<ts>.bak, keeping
+   * the project tree clean. A `.deployready/.gitignore` of `*` keeps the
+   * backups (which may hold secrets) out of version control.
+   */
   private async backup(abs: string, contents: Buffer): Promise<string> {
+    const realRoot = fs.realpathSync(this.projectRoot);
+    const rel = path.relative(realRoot, abs);
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backup = `${abs}.bak.${stamp}`;
+    const metaDir = this.resolveSafe(BACKUP_DIR);
+    await fsp.mkdir(metaDir, { recursive: true });
+    const ignoreFile = path.join(metaDir, '.gitignore');
+    if (!fs.existsSync(ignoreFile)) await fsp.writeFile(ignoreFile, '*\n', 'utf8');
+    const backup = this.resolveSafe(path.join(BACKUP_DIR, 'backups', `${rel}.${stamp}.bak`));
+    await fsp.mkdir(path.dirname(backup), { recursive: true });
     await fsp.writeFile(backup, contents);
     return backup;
   }
@@ -112,6 +140,9 @@ export class FileEditor {
     return real;
   }
 }
+
+/** Per-project scratch dir (relative to the project root) holding fix backups. */
+export const BACKUP_DIR = '.deployready';
 
 const BOM = '\uFEFF';
 

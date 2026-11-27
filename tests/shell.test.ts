@@ -47,3 +47,22 @@ describe('InteractiveShell (scripted session)', () => {
     expect(out).toMatch(/finding number/);
   }, 20000);
 });
+
+describe('InteractiveShell fix --all', () => {
+  it('applies all safe fixes in one go and verifies them', async () => {
+    const fs = await import('fs');
+    const os = await import('os');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'er-fixall-'));
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"t","dependencies":{"express":"^4"}}');
+    fs.writeFileSync(
+      path.join(root, 'server.js'),
+      "const express = require('express');\nconst c = require('crypto');\nconst h = c.createHash('md5');\nconst a = { rejectUnauthorized: false };\nexpress().listen(3000);\n",
+    );
+    const out = await runSession(root, ['parse', 'fix --all', 'y', 'exit']);
+    const after = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+    expect(out).toMatch(/safe automatic fix/);
+    expect(after).toContain("createHash('sha256')");
+    expect(after).toContain('rejectUnauthorized: true');
+    expect(out).toMatch(/Fixed \d+ of \d+/);
+  }, 30000);
+});

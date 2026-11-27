@@ -1,0 +1,14 @@
+{
+  "description": "Hard negative: CORS allowlist from env, default TLS verification",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "cors-wildcard",
+      "present": false
+    },
+    {
+      "rule": "tls-verification-disabled",
+      "present": false
+    }
+  ]
+}

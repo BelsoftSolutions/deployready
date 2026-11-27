@@ -1,0 +1,15 @@
+{
+  "description": "Next.js client code uses a service_role key via NEXT_PUBLIC_ and ships an OpenAI key to the browser",
+  "expected": [
+    {
+      "rule": "supabase-service-role",
+      "present": true,
+      "file": "lib/supabase.ts"
+    },
+    {
+      "rule": "next-public-secret",
+      "present": true,
+      "file": "app/chat.tsx"
+    }
+  ]
+}

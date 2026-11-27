@@ -6,6 +6,7 @@ import type { AxiosInstance } from 'axios';
 import { makeFinding } from '../utils/finding';
 import type { Finding } from '../types';
 import type { ProbeTarget } from './EndpointMapper';
+import { absoluteUrl, buildProof } from './proof';
 
 const STACK_TRACE_RE = /\b(?:at\s+[\w.$]+\s*\(|Traceback \(most recent call last\)|Exception in|\.java:\d+\))/;
 
@@ -13,6 +14,7 @@ export class APIAnalyzer {
   static async run(client: AxiosInstance, targets: ProbeTarget[]): Promise<Finding[]> {
     const findings: Finding[] = [];
     let bannerChecked = false;
+    const baseUrl = client.defaults?.baseURL;
 
     for (const t of targets.filter((x) => x.method === 'GET').slice(0, 25)) {
       let res;
@@ -21,6 +23,8 @@ export class APIAnalyzer {
       } catch {
         continue;
       }
+
+      const request = { method: 'GET', url: absoluteUrl(baseUrl, t.path) };
 
       // Verbose server banner (leaks framework/version → targeted exploits).
       if (!bannerChecked) {
@@ -39,6 +43,7 @@ export class APIAnalyzer {
               cwe: 'CWE-200',
               description: `Response advertises "${banner}" via Server/X-Powered-By header.`,
               recommendation: 'Disable version banners (e.g. app.disable("x-powered-by")) so attackers cannot fingerprint your stack.',
+              proof: buildProof({ request, status: res.status, response: `Response header: ${res.headers['x-powered-by'] ? 'X-Powered-By' : 'Server'}: ${banner}` }),
             }),
           );
         }
@@ -59,6 +64,7 @@ export class APIAnalyzer {
             cwe: 'CWE-209',
             description: `${t.path} (status ${res.status}) returned a stack trace / internal error detail.`,
             recommendation: 'Return generic error messages to clients; log full details server-side only. Disable debug mode in production.',
+            proof: buildProof({ request, status: res.status, response: body }),
           }),
         );
       }

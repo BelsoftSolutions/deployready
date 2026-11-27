@@ -1,0 +1,15 @@
+```json
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 10, "issue": "SELECT policy uses `using (true)`, so anyone, including unauthenticated anon users, can read every row in public.documents, including other users' private documents."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 11, "issue": "INSERT policy uses `with check (true)`, so anyone can create documents and set owner_id to any user's UUID, impersonating or planting content under another account."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 12, "issue": "UPDATE policy uses `using (true)` with no `with check`, so anyone can modify any document's title or content and reassign owner_id to take ownership of rows."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 13, "issue": "DELETE policy uses `using (true)`, so anyone can delete any document in the table."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 9, "issue": "The comment documents that these policies were left as placeholders (\"make it work\"). They must be replaced with owner-scoped policies such as `auth.uid() = owner_id` before any deployment with real data."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 3, "issue": "owner_id is nullable with no default and no ON DELETE behavior. Rows can be created with no owner, and an owner-scoped policy would not match them. Use `not null default auth.uid()` and `references auth.users(id) on delete cascade`."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 4, "issue": "title and content are unconstrained text with no length limits or validation at the database level. Unbounded input enables storage abuse, and if the frontend renders content as HTML, it creates a stored XSS vector."}
+{"file": ".gitignore", "line": 2, "issue": "Only the exact name `.env` is ignored. Variants such as `.env.local`, `.env.production`, and `.env.*.local` are not ignored and could be committed with secrets. Add `.env*` and keep an allowlist for files such as `.env.example`."}
+```
+
+Notes on scope:
+- Only the schema migration and `.gitignore` were provided. I haven't reviewed the client code, auth flow, or any Supabase keys handling, so there may be further issues there.
+- The four `using (true)` policies are the critical findings. Anyone with the public anon key, which is shipped in client-side code, can currently read, change, and delete all documents. The fix is to replace them with policies keyed on `auth.uid() = owner_id`, and to add `with check (auth.uid() = owner_id)` on insert and update.
+- I did not modify any files.

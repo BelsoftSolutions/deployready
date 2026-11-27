@@ -21,7 +21,8 @@ import { sanitizeLine, sanitizeText } from '../utils/sanitize';
 import { setupCliProvider } from './cliSetup';
 import { verifyAiFindings, droppedNote } from '../ai/verifyAiFindings';
 import { ScoreCalculator, isNote, isUnverified } from '../analysis/ScoreCalculator';
-import { Verifier } from '../core/Verifier';
+import { Verifier, activeContextFromEnv, type VerifyResult } from '../core/Verifier';
+import { IssuePresenter } from '../ui/IssuePresenter';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
 import { Banner } from '../ui/Banner';
@@ -31,6 +32,7 @@ import { ScoreTracker } from '../tracker/ScoreTracker';
 import { ChecklistManager } from '../tracker/ChecklistManager';
 import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
+import { buildFixPrompt } from '../agent/fixPrompt';
 import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
 import { getVersion } from '../utils/version';
@@ -142,6 +144,7 @@ export class InteractiveShell {
       case 'issues': case 'list': case 'ls': return this.issues(args[0]);
       case 'show': return this.show(args[0]);
       case 'fix': return this.fix(args[0]);
+      case 'prompt': return this.fixPrompt(args[0]);
       case 'verify': case 'v': return this.verify(args[0]);
       case 'done': case 'resolve': return this.mark(args[0], 'fixed');
       case 'ignore': return this.mark(args[0], 'ignored');
@@ -270,8 +273,17 @@ export class InteractiveShell {
     console.log(`  ${this.findingBadge(f)}  ${chalk.gray(`[${f.source}]`)}  ${chalk.gray(refs)}`);
     if (f.file || f.endpoint) console.log(`  ${chalk.gray('where:')} ${f.endpoint ?? `${f.file}:${f.line ?? '?'}`}`);
     if (f.evidence) console.log(`  ${chalk.gray('evidence:')} ${f.evidence}`);
+    if (f.proof) for (const line of IssuePresenter.proofLines(f.proof)) console.log(`  ${chalk.gray(line)}`);
     console.log(`  ${chalk.gray('what:')} ${f.description}`);
     console.log(`  ${chalk.gray('fix:')} ${f.recommendation}\n`);
+  }
+
+  /** `prompt <n>` — print a paste-ready instruction for a coding agent to fix finding n. */
+  private fixPrompt(arg?: string): void {
+    const f = this.findingAt(arg);
+    if (!f) return;
+    console.log('\n' + chalk.gray('  Paste this into your coding agent:') + '\n');
+    console.log(sanitizeText(buildFixPrompt(f)).replace(/^/gm, '  ') + '\n');
   }
 
   private status(): void {
@@ -288,6 +300,7 @@ export class InteractiveShell {
   // ---------------------------------------------------------------- fix flow
 
   private async fix(arg?: string): Promise<void> {
+    if (arg === '--all' || arg === 'all') return this.fixAll();
     const f = this.findingAt(arg);
     if (!f) return;
     this.show(arg);
@@ -332,6 +345,49 @@ export class InteractiveShell {
     await this.offerManualMark(f);
   }
 
+  /**
+   * `fix --all` — apply every safe, deterministic fix at once (one confirmation, a backup per
+   * edit), then re-verify each. AI-proposed fixes are never run in bulk: they still need `fix <n>`.
+   */
+  private async fixAll(): Promise<void> {
+    if (!this.hasFindings()) return logger.warn('No findings yet. Run `scan` or `parse`.');
+    const open = this.checklist?.openFindings() ?? this.ordered;
+    const fixable = open.filter((f) => FixManager.autoFixable(f));
+    if (fixable.length === 0) {
+      return logger.info('Nothing to fix automatically. Use `fix <n>` for AI-proposed fixes.');
+    }
+
+    console.log('\n' + chalk.bold(`  ${fixable.length} safe automatic fix${fixable.length === 1 ? '' : 'es'}:`));
+    for (const f of fixable) {
+      console.log(`  ${this.findingBadge(f)} ${f.title}  ${chalk.gray(f.endpoint ?? `${f.file}:${f.line ?? '?'}`)}`);
+    }
+    console.log('');
+    if (!(await this.confirm('Apply all of these? (a backup is created for each change)', true))) {
+      return logger.info('No changes made.');
+    }
+
+    const results = await FixManager.autoFixAll(fixable, new FileEditor(this.state.target));
+    let verified = 0;
+    for (const r of results) {
+      if (!r.applied) {
+        console.log(`  ${chalk.yellow('–')} skipped  ${r.finding.title}  ${chalk.gray(sanitizeLine(r.message))}`);
+        continue;
+      }
+      const ctx = { target: this.state.target };
+      const v = await Verifier.verify(r.finding, ctx).catch(() => ({ status: 'inconclusive' as const }));
+      if (v.status === 'still-present') {
+        console.log(`  ${chalk.yellow('!')} applied but still detected  ${r.finding.title}`);
+        continue;
+      }
+      this.markFinding(r.finding, 'fixed');
+      verified++;
+      console.log(`  ${chalk.green('✓')} fixed  ${r.finding.title}  ${chalk.gray(r.finding.file ?? '')}`);
+    }
+    const skipped = results.filter((r) => !r.applied).length;
+    logger.success(`Fixed ${verified} of ${fixable.length}${skipped ? ` (${skipped} skipped: use \`fix <n>\` for an AI diff)` : ''}.`);
+    this.printScore();
+  }
+
   private async aiFixFlow(f: Finding, editor: FileEditor, router: ModelRouter): Promise<void> {
     const ready = await router.checkReady();
     if (ready.state !== 'ready') {
@@ -367,8 +423,9 @@ export class InteractiveShell {
 
   /**
    * Re-run the check for a finding. `appliedChange` = we just edited something,
-   * so an "unknown" result is treated as fixed-but-unverified; a standalone
-   * `verify` leaves an unknown/failed finding open.
+   * so an "inconclusive" static result is treated as fixed-but-unverified; a
+   * standalone `verify`, or an inconclusive live (dynamic/active) result, leaves
+   * the finding open: a live fix needs proof.
    */
   private async verifyAndMark(f: Finding, appliedChange: boolean): Promise<void> {
     const spinner = ora('Verifying the fix…').start();
@@ -377,22 +434,27 @@ export class InteractiveShell {
       dynamic: this.state.dynamic
         ? { baseUrl: this.state.dynamic.baseUrl, routes: this.state.graph?.routes ?? [] }
         : undefined,
+      // Tokens come from DEPLOYREADY_TOKEN / DEPLOYREADY_TOKEN_B only; never echoed.
+      active: activeContextFromEnv(this.state.dynamic?.baseUrl, this.state.graph?.routes ?? []),
     };
-    const res = await Verifier.verify(f, ctx).catch((err) => ({ status: 'unknown' as const, detail: (err as Error).message }));
+    const res: VerifyResult = await Verifier.verify(f, ctx).catch((err) => ({ status: 'inconclusive' as const, detail: (err as Error).message }));
 
     if (res.status === 'fixed') {
-      spinner.succeed('Verified — the issue is gone. ✓');
+      spinner.succeed(`Verified — the issue is gone. ✓${res.detail ? ` ${res.detail}` : ''}`);
       this.markFinding(f, 'fixed');
     } else if (res.status === 'still-present') {
       spinner.warn(`Not fixed yet — ${(res.detail ?? 'the check still fails').replace(/\.$/, '')}. Leaving it open.`);
+      if (res.proof) for (const line of IssuePresenter.proofLines(res.proof)) console.log(`  ${chalk.gray(line)}`);
       if (appliedChange && f.source === 'dynamic') {
         logger.info('Tip: restart your running app so it picks up the code change, then `verify` again.');
       }
     } else {
-      spinner.info(`Could not auto-verify — ${res.detail ?? 'no check available'}.`);
-      if (appliedChange) {
+      spinner.info(`Inconclusive — ${(res.detail ?? 'no check available').replace(/\.$/, '')}.`);
+      if (appliedChange && f.source !== 'dynamic') {
         this.markFinding(f, 'fixed');
         logger.info('Marked fixed (change applied, but not automatically verified).');
+      } else if (appliedChange) {
+        logger.info('Left open: a live finding is only marked fixed with proof. Restart your app, then `verify` again.');
       }
     }
     this.printScore();
@@ -419,8 +481,11 @@ export class InteractiveShell {
 
   private printDiff(file: string, start: number, end: number, oldText: string, newText: string): void {
     console.log(chalk.gray(`  ── ${file}:${start}-${end} ──`));
-    for (const l of sanitizeText(oldText).split('\n')) console.log(chalk.red(`  - ${l}`));
-    for (const l of sanitizeText(newText).split('\n')) console.log(chalk.green(`  + ${l}`));
+    // Split on CRLF too and drop stray CRs: a leftover "\r" rewinds the cursor and
+    // overwrites the "- " marker, so blank lines vanish. Blank and trailing lines are kept.
+    const lines = (t: string): string[] => sanitizeText(t).replace(/\r/g, '').split('\n');
+    for (const l of lines(oldText)) console.log(chalk.red(`  - ${l}`));
+    for (const l of lines(newText)) console.log(chalk.green(`  + ${l}`));
     console.log('');
   }
 
@@ -635,6 +700,8 @@ export class InteractiveShell {
       ['issues [crit|warn|info]', 'list findings (optionally filter by severity)'],
       ['show <n>', 'full detail of finding n'],
       ['fix <n>', 'interactive fix: auto-fix, AI-proposed diff, or guidance (auto-verifies)'],
+      ['fix --all', 'apply every safe automatic fix in one go (backups made, each one re-verified)'],
+      ['prompt <n>', 'print a short, paste-ready fix instruction for your coding agent (no code included)'],
       ['verify <n>', 're-run the check for a finding to confirm it is resolved'],
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],

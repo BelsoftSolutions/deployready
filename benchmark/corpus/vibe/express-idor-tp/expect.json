@@ -1,0 +1,11 @@
+{
+  "description": "IDOR-shaped handlers: authenticated, but the record is fetched/updated by URL id with no ownership check",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "server.js",
+      "note": "findByPk(req.params.id) and update where { id } with no req.user ownership filter"
+    }
+  ]
+}

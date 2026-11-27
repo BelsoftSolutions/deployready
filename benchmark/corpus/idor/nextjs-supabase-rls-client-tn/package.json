@@ -1,0 +1,7 @@
+{
+  "name": "billing",
+  "dependencies": {
+    "next": "14.2.3",
+    "@supabase/ssr": "0.4.0"
+  }
+}

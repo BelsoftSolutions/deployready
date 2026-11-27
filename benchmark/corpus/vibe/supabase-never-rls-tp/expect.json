@@ -1,0 +1,10 @@
+{
+  "description": "Supabase project whose migrations create three public tables and never enable RLS: every row is readable with the anon key",
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql"
+    }
+  ]
+}

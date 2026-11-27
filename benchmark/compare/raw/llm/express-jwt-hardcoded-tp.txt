@@ -1,0 +1,14 @@
+```json
+{"file": "server.js", "line": 6, "issue": "JWT signing secret is hardcoded in source with a guessable placeholder value. Anyone with repo access can forge valid tokens for any user. Move it to an environment variable, use a long random value, and rotate it, since the current value remains in git history."}
+{"file": "server.js", "line": 8, "issue": "The /login endpoint performs no authentication. It issues a signed token for any submitted email without verifying a password or other credential, so any account can be impersonated."}
+{"file": "server.js", "line": 9, "issue": "The email value from req.body is used without validation, type checking, or normalization. Non-string values such as objects or arrays are signed into the token as-is."}
+{"file": "server.js", "line": 10, "issue": "Tokens are valid for 7 days with no revocation or refresh mechanism, so a leaked token stays usable for the full lifetime. Use a shorter expiry with refresh tokens, and set explicit issuer, audience, and algorithm options."}
+{"file": "server.js", "line": 8, "issue": "The /login route has no rate limiting, which allows brute force against any future credential check and abuse of token issuance. Add a limiter such as express-rate-limit."}
+{"file": "server.js", "line": 14, "issue": "The server listens over plain HTTP on all interfaces with no TLS, so JWTs and any credentials are exposed in transit. Terminate TLS at a reverse proxy or use HTTPS, and bind to a specific interface where appropriate."}
+{"file": "server.js", "line": 3, "issue": "No security headers are set and X-Powered-By is enabled by default, which leaks the framework. Add helmet() or disable the header with app.disable('x-powered-by')."}
+```
+
+Notes:
+- `.gitignore` is fine: it excludes `.env`, which is the right place for the secret once it is moved out of `server.js`. It contributes no findings of its own.
+- No `package.json` was provided, so I could not check the `jsonwebtoken` version. Older releases had known algorithm-confusion issues, so pin and audit the dependency versions.
+- Line 6 is the most urgent: any finding that depends on the secret is critical until it is rotated.

@@ -22,6 +22,10 @@ import {
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
 import { renderTokenHelp } from '../active/tokenHelp';
+import { runAnalyzeFix } from '../mcp/analyzeFix';
+import { startMcpServer } from '../mcp/server';
+import { badgeMarkdown, badgeSvg } from '../ui/badge';
+import { toSarif } from '../ui/Sarif';
 
 const VERSION = getVersion();
 
@@ -55,6 +59,7 @@ export function buildProgram(): Command {
     .description('Run a single non-interactive scan and print results')
     .argument('[path]', 'path to the project', '.')
     .option('-y, --yes', 'auto-approve all prompts (non-interactive)', false)
+    .option('--fix', 'apply safe deterministic fixes (with backups), then re-scan and report the new score', false)
     .option('--no-dynamic', 'skip live localhost testing')
     .option('--no-ai', 'skip AI analysis (local results only)')
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
@@ -62,6 +67,7 @@ export function buildProgram(): Command {
     .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
     .option('--open', 'open the HTML dashboard in your browser after the scan (implies --html)', false)
     .option('--json', 'print a machine-readable JSON report to stdout (implies --yes)', false)
+    .option('--sarif <file>', 'write a SARIF 2.1.0 report (for GitHub code scanning) to this file')
     .option(
       '--fail-on <severity>',
       'exit non-zero (code 2) if findings at/above this severity exist: critical | warning | info | none',
@@ -83,6 +89,19 @@ export function buildProgram(): Command {
     .option('--active', 'run active (authenticated) authorization tests — needs --token', false)
     .option('--token <jwt>', 'bearer JWT for the active scan (your test user)')
     .option('--token-b <jwt>', 'second-identity JWT, for tenant/IDOR isolation tests')
+    .option('--supabase', 'run live, read-only Supabase checks (only on a local or proven-owned project; see docs/SUPABASE.md)', false)
+    .option('--supabase-url <url>', 'Supabase project URL (default: $SUPABASE_URL, then the project files)')
+    .option('--supabase-anon-key <key>', 'anon/publishable key (default: $SUPABASE_ANON_KEY, then the project files)')
+    .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
+    .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
+    .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
+    .option(
+      '--i-own-this-target <host>',
+      'confirm you own this non-loopback host so active probes may target it (repeatable; exact host only)',
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[],
+    )
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
@@ -99,7 +118,7 @@ export function buildProgram(): Command {
           }
         }
 
-        const report = await Orchestrator.analyze(path, {
+        const analyzeOpts = {
           yes: opts.yes || opts.json, // JSON mode is non-interactive
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
@@ -112,7 +131,20 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
-        });
+          supabase: {
+            live: opts.supabase,
+            url: opts.supabaseUrl,
+            anonKey: opts.supabaseAnonKey,
+            serviceKey: opts.supabaseServiceKey,
+            accessToken: opts.supabaseAccessToken,
+            crossUser: opts.supabaseCrossUser,
+          },
+          activeUrl: opts.activeUrl as string | undefined,
+          ownedHosts: opts.iOwnThisTarget as string[],
+        };
+        let report = await Orchestrator.analyze(path, analyzeOpts);
+        const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;
+        if (fixOutcome) report = fixOutcome.report;
 
         // Accept the current findings as the baseline, then stop (no gating).
         if (opts.writeBaseline) {
@@ -120,6 +152,11 @@ export function buildProgram(): Command {
           fs.writeFileSync(opts.writeBaseline, body);
           logger.success(`Wrote baseline with ${report.summary.total} finding(s) to ${opts.writeBaseline}.`);
           return;
+        }
+
+        if (opts.sarif) {
+          fs.writeFileSync(opts.sarif, JSON.stringify(toSarif(report, VERSION), null, 2) + '\n');
+          if (!opts.json) logger.success(`Wrote SARIF report to ${opts.sarif}`);
         }
 
         // Gate on new findings only when a baseline is supplied.
@@ -137,7 +174,9 @@ export function buildProgram(): Command {
         }
 
         if (opts.json) {
-          process.stdout.write(JSON.stringify(toCiJson(report, failOn), null, 2) + '\n');
+          const body = toCiJson(report, failOn);
+          if (fixOutcome) body.fix = fixOutcome.fix;
+          process.stdout.write(JSON.stringify(body, null, 2) + '\n');
         }
 
         if (shouldFail(gateSummary, failOn)) {
@@ -196,6 +235,34 @@ export function buildProgram(): Command {
             2,
           ),
         );
+      });
+    });
+
+  program
+    .command('badge')
+    .description('Run a static scan and print a markdown score badge for your README')
+    .argument('[path]', 'path to the project', '.')
+    .option('--write-svg <file>', 'also write a local SVG badge to this file (no network)')
+    .action(async (path: string, opts) => {
+      await guard(async () => {
+        setQuiet(true);
+        const report = await Orchestrator.analyze(path, { yes: true, noAi: true, noDynamic: true, json: true });
+        setQuiet(false);
+        console.log(badgeMarkdown(report.score));
+        if (opts.writeSvg) {
+          fs.writeFileSync(opts.writeSvg, badgeSvg(report.score));
+          logger.success(`Wrote SVG badge to ${opts.writeSvg}`);
+        }
+      });
+    });
+
+  program
+    .command('mcp')
+    .description('Start the MCP server (stdio) so your coding agent can scan, fix and verify')
+    .argument('[path]', 'default project for tool calls', '.')
+    .action(async (path: string) => {
+      await guard(async () => {
+        await startMcpServer(path);
       });
     });
 

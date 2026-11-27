@@ -1,0 +1,113 @@
+name: DeployReady
+description: Local-first production-readiness and security scan with a PR summary, sticky comment and code-scanning SARIF upload.
+author: Belsoft Solutions
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  path:
+    description: Project path to scan, relative to the workspace.
+    default: .
+  fail-on:
+    description: Fail the job at or above this severity (critical, warning, info, none).
+    default: critical
+  version:
+    description: deployready npm version to run (for example 0.4.0 or latest).
+    default: latest
+  comment:
+    description: Post or update one sticky comment on pull requests (needs pull-requests write).
+    default: 'true'
+  sarif:
+    description: Upload SARIF to GitHub code scanning (needs security-events write).
+    default: 'true'
+  args:
+    description: Extra CLI arguments appended to the analyze command (space separated).
+    default: ''
+
+# Required job permissions: contents: read, security-events: write (sarif), pull-requests: write (comment).
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js if missing
+      shell: bash
+      run: |
+        if command -v node >/dev/null 2>&1; then
+          echo "DR_NEED_NODE=false" >> "$GITHUB_ENV"
+        else
+          echo "DR_NEED_NODE=true" >> "$GITHUB_ENV"
+        fi
+
+    - name: Install Node.js
+      if: env.DR_NEED_NODE == 'true'
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: '20'
+
+    - name: Run DeployReady
+      id: scan
+      shell: bash
+      env:
+        DR_PATH: ${{ inputs.path }}
+        DR_FAIL_ON: ${{ inputs.fail-on }}
+        DR_VERSION: ${{ inputs.version }}
+        DR_ARGS: ${{ inputs.args }}
+      run: |
+        set +e
+        case "$DR_FAIL_ON" in critical|warning|info|none) ;; *) echo "::error::Invalid fail-on: $DR_FAIL_ON"; exit 1 ;; esac
+        if ! printf '%s' "$DR_VERSION" | grep -Eq '^[A-Za-z0-9._-]+$'; then echo "::error::Invalid version"; exit 1; fi
+        # Extra args are split on whitespace and never passed through a shell.
+        # shellcheck disable=SC2206
+        extra=($DR_ARGS)
+        npx -y "deployready@${DR_VERSION}" analyze "$DR_PATH" --json --no-dynamic --no-ai \
+          --fail-on "$DR_FAIL_ON" --sarif deployready.sarif "${extra[@]}" > deployready.json
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "DR_EXIT_CODE=$code" >> "$GITHUB_ENV"
+        exit 0
+
+    - name: Build summary
+      if: always()
+      shell: bash
+      env:
+        DR_FAIL_ON: ${{ inputs.fail-on }}
+        DR_ACTION_PATH: ${{ github.action_path }}
+        DR_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        node "$DR_ACTION_PATH/action/summary.js" deployready.json --exit-code "${DR_EXIT_CODE:-1}" \
+          --fail-on "$DR_FAIL_ON" --run-url "$DR_RUN_URL" --out deployready-summary.md
+        cat deployready-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload full report
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: deployready-report
+        path: |
+          deployready.json
+          deployready.sarif
+          deployready-summary.md
+        if-no-files-found: ignore
+
+    - name: Sticky PR comment
+      if: always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+      env:
+        DR_SUMMARY_FILE: deployready-summary.md
+        DR_ACTION_PATH: ${{ github.action_path }}
+      with:
+        script: |
+          const upsert = require(process.env.DR_ACTION_PATH + '/action/comment.js');
+          await upsert({ github, context, core });
+
+    - name: Upload SARIF
+      if: always() && inputs.sarif == 'true' && hashFiles('deployready.sarif') != ''
+      uses: github/codeql-action/upload-sarif@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6 # v3
+      with:
+        sarif_file: deployready.sarif
+        category: deployready
+
+    - name: Enforce gate
+      if: always()
+      shell: bash
+      run: exit "${DR_EXIT_CODE:-1}"

@@ -1,8 +1,10 @@
 /**
  * The real network transport for the active scan (Phase 5a) — the ONE place that
  * actually sends requests, so it carries the safety rails:
- *   - loopback-only target (SSRF/scope guard, same bar as the dynamic suite),
- *     re-checked on every derived URL so a request can never leave the host;
+ *   - loopback-only target by default (SSRF/scope guard, same bar as the
+ *     dynamic suite); a non-loopback host only when the user explicitly confirmed
+ *     they own it (`ownedHosts`), re-checked on every derived URL so a request
+ *     can never leave the host;
  *   - dry-run that sends nothing;
  *   - hard timeout, no redirects, response-size cap.
  *
@@ -10,7 +12,7 @@
  * budget live above this (Orchestrator + runner).
  */
 import axios from 'axios';
-import { assertLoopback } from '../dynamic/httpClient';
+import { assertActiveTarget } from './scope';
 import type { HttpFn } from './runner';
 
 const TIMEOUT_MS = 8000;
@@ -30,15 +32,25 @@ export interface ActiveAdapterOptions {
   /** When true, send nothing — return a non-2xx sentinel so the runner no-ops. */
   dryRun?: boolean;
   timeoutMs?: number;
+  /**
+   * Non-loopback hosts the user explicitly confirmed they own (validated with
+   * `parseOwnedHosts`). Empty/absent = loopback only.
+   */
+  ownedHosts?: readonly string[];
 }
 
 export function createActiveHttpAdapter(opts: ActiveAdapterOptions): HttpFn {
-  assertLoopback(opts.baseUrl); // scope is fixed to this loopback host
+  const owned = opts.ownedHosts ?? [];
+  const base = assertActiveTarget(opts.baseUrl, owned); // scope is fixed to this host
   const timeout = opts.timeoutMs ?? TIMEOUT_MS;
 
   return async (req) => {
     const url = buildUrl(opts.baseUrl, req.path, req.query);
-    assertLoopback(url); // defense in depth: never leave the loopback host
+    // Defense in depth: never leave the base host, even if a path is absolute.
+    const target = assertActiveTarget(url, owned);
+    if (target.host !== base.host) {
+      throw new Error(`Refusing to send an active probe to ${target.host}: outside the scan target ${base.host}.`);
+    }
 
     if (opts.dryRun) return { status: 0, bodyText: '' };
 
@@ -53,6 +65,6 @@ export function createActiveHttpAdapter(opts: ActiveAdapterOptions): HttpFn {
       maxContentLength: MAX_BODY,
     });
     const bodyText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data ?? '');
-    return { status: res.status, bodyText };
+    return { status: res.status, bodyText, url };
   };
 }

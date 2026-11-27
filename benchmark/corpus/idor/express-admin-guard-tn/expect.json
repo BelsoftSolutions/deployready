@@ -1,0 +1,10 @@
+{
+  "description": "Safe: support staff routes reach any order by id, but only behind an admin role guard",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

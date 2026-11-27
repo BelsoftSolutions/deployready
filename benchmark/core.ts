@@ -1,6 +1,6 @@
 import type { Finding, Route } from '../src/types';
 
-export type CaseKind = 'static' | 'parser' | 'dynamic' | 'active';
+export type CaseKind = 'static' | 'parser' | 'dynamic' | 'active' | 'vibe';
 
 export interface FindingExpectation {
   rule: string;
@@ -15,7 +15,36 @@ export interface RouteExpectation {
   guarded: boolean;
 }
 
-export type Expectation = FindingExpectation | RouteExpectation;
+/**
+ * A real issue that no detection rule covers yet. It is always scored as a miss
+ * (rule `unsupported:<name>`), never given a fake rule id. When a rule ships, move
+ * the label to a real `FindingExpectation`.
+ */
+export interface UnsupportedExpectation {
+  unsupported: string;
+  present: true;
+  file?: string;
+  note?: string;
+}
+
+export type Expectation = FindingExpectation | RouteExpectation | UnsupportedExpectation;
+
+export const UNSUPPORTED_PREFIX = 'unsupported:';
+
+export function isUnsupportedExpectation(e: Expectation): e is UnsupportedExpectation {
+  return 'unsupported' in e;
+}
+
+export function checkUnsupported(expected: UnsupportedExpectation[]): Check[] {
+  return expected.map((e) => ({
+    rule: `${UNSUPPORTED_PREFIX}${e.unsupported}`,
+    label: `${e.unsupported} present${e.file ? ` (${e.file})` : ''}`,
+    expected: true,
+    actual: false,
+    detail: e.note ?? 'no rule covers this yet',
+    unsupported: true,
+  }));
+}
 
 /** One labelled yes/no question about a case: expected vs what the tool did. */
 export interface Check {
@@ -24,6 +53,8 @@ export interface Check {
   expected: boolean;
   actual: boolean;
   detail: string;
+  /** Check against a rule that does not exist yet: reported as a miss, never fails the case. */
+  unsupported?: boolean;
 }
 
 export interface BenchCase {

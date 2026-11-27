@@ -1,0 +1,1 @@
+{"description":"Recursive wildcard that only requires sign-in (helper function resolved)","expected":[{"rule":"firebase-rules-recursive-wildcard","present":true,"file":"firestore.rules"}]}

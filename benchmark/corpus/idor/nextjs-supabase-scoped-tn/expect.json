@@ -1,0 +1,10 @@
+{
+  "description": "Safe twin of nextjs-supabase-tp: the service-role query also filters on user_id = the session user",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}
