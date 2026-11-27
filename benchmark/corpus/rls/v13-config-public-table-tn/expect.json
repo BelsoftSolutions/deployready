@@ -1,0 +1,22 @@
+{
+  "description": ".deployready.json declares announcements public, so its using (true) SELECT is intended",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "write",
+        "sql": "insert into public.announcements values (9, 'x')",
+        "open": false
+      }
+    ]
+  }
+}

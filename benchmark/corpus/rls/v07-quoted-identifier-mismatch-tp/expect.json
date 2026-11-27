@@ -1,0 +1,23 @@
+{
+  "description": "public.invoices has RLS but the legacy quoted public.\"Invoices\" (a different, case-sensitive table) does not",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.\"Invoices\" values (1, '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.\"Invoices\"",
+        "open": true
+      }
+    ]
+  }
+}

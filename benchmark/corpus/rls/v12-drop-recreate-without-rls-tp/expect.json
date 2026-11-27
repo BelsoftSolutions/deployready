@@ -1,0 +1,24 @@
+{
+  "description": "A protected table is dropped and re-created without RLS (the old ENABLE no longer applies)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240201000000_rebuild.sql"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices values (1, '00000000-0000-0000-0000-00000000000b', 1);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": true
+      }
+    ]
+  }
+}

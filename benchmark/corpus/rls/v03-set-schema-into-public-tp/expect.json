@@ -1,0 +1,24 @@
+{
+  "description": "A table without RLS is moved from a private schema into public with SET SCHEMA",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240201000000_expose.sql"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.payouts values (1, '00000000-0000-0000-0000-00000000000b', 'DE00');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.payouts",
+        "open": true
+      }
+    ]
+  }
+}

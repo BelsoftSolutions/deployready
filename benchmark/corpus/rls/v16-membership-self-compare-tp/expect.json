@@ -1,0 +1,23 @@
+{
+  "description": "Membership subquery compares m.org_id with an unqualified org_id that resolves to m.org_id itself: any member reads every org",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.memberships values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000a'); insert into public.projects values (1, '10000000-0000-0000-0000-000000000002', 'B secret project');",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.projects",
+        "open": true
+      }
+    ]
+  }
+}

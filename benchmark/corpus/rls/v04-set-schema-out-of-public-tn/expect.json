@@ -1,0 +1,22 @@
+{
+  "description": "A table created in public without RLS is moved to a private schema before release",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into internal.raw_events values (1, '{}');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from internal.raw_events",
+        "open": false
+      }
+    ]
+  }
+}
