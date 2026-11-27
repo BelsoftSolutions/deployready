@@ -117,8 +117,11 @@ describe('MCP tool handlers', () => {
       'get_finding',
       'scan',
       'score',
+      'supabase_check',
       'verify',
     ]);
-    for (const tool of Object.values(server._registeredTools)) expect(tool.description).toMatch(/scan -> apply_safe_fixes/);
+    for (const [name, tool] of Object.entries(server._registeredTools)) {
+      if (name !== 'supabase_check') expect(tool.description).toMatch(/scan -> apply_safe_fixes/);
+    }
   });
 });

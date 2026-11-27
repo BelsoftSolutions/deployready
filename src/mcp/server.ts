@@ -5,6 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { DeployReadyTools } from './tools';
+import { supabaseCheck } from './supabase';
 import { setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
 
@@ -23,7 +24,7 @@ function wrap<A>(fn: Handler<A>): (args: A) => Promise<{ content: { type: 'text'
   };
 }
 
-export function buildMcpServer(tools: DeployReadyTools): McpServer {
+export function buildMcpServer(tools: DeployReadyTools, projectPath = '.'): McpServer {
   const server = new McpServer({ name: 'deployready', version: getVersion() });
   const pathArg = z.string().optional().describe('Project directory; defaults to the directory the server was started for.');
 
@@ -78,6 +79,23 @@ export function buildMcpServer(tools: DeployReadyTools): McpServer {
     wrap(tools.score.bind(tools)),
   );
 
+  server.registerTool(
+    'supabase_check',
+    {
+      description:
+        'Supabase checks. Static (always): service_role keys in client code or public env vars. Live (live: true): read-only proof of what the public anon key can read (row counts, never row data), anon-callable RPC functions, listable storage buckets, auth settings, and optionally a two-user cross-read. Live runs ONLY on a local (loopback) project or one whose ownership is proven by SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ACCESS_TOKEN in the server env; otherwise it is refused. Credentials are read from env vars only. Rotate any leaked service key.',
+      inputSchema: {
+        path: pathArg,
+        live: z.boolean().optional().describe('Run the ownership-gated, read-only live probes (needs SUPABASE_URL + SUPABASE_ANON_KEY, or both in the project files).'),
+        crossUser: z
+          .boolean()
+          .optional()
+          .describe('Also test whether test user A can read user B\'s rows (SUPABASE_TEST_USER_A_EMAIL/_PASSWORD and _B_ in env).'),
+      },
+    },
+    wrap((args: { path?: string; live?: boolean; crossUser?: boolean }) => supabaseCheck(projectPath, args)),
+  );
+
   return server;
 }
 
@@ -87,7 +105,7 @@ export async function startMcpServer(projectPath = '.'): Promise<void> {
   console.log = console.error;
   console.info = console.error;
 
-  const server = buildMcpServer(new DeployReadyTools(projectPath));
+  const server = buildMcpServer(new DeployReadyTools(projectPath), projectPath);
   await server.connect(new StdioServerTransport());
   console.error(`deployready MCP server ready (stdio), default project: ${projectPath}`);
 }

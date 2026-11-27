@@ -102,10 +102,15 @@ export function parseOpenApi(bodyText: string): Schema | undefined {
   return { tables, rpc, columns };
 }
 
-function curl(method: string, url: string, headers: string[]): string {
+/** Reproducible curl; keys appear only as ${ENV_VAR} placeholders (which redact leaves readable). */
+function curl(method: string, url: string, headers: string[], extra = ''): string {
   const flag = method === 'HEAD' ? '-I' : `-X ${method}`;
-  return redact(`curl ${flag} '${url}' ${headers.map((h) => `-H '${h}'`).join(' ')}`.trim());
+  const parts = [`curl ${flag} '${url}'`, ...headers.map((h) => `-H "${h}"`)];
+  if (extra) parts.push(extra);
+  return redact(parts.join(' '));
 }
+
+const ANON_H = 'apikey: ${SUPABASE_ANON_KEY}';
 
 function columnHint(cols: string[] | undefined): string {
   if (!cols || cols.length === 0) return '';
@@ -177,7 +182,7 @@ export async function runLiveChecks(ctx: LiveContext): Promise<LiveResult> {
           description: `Anyone with the anon key (it ships in your frontend) can read ${anon.count}${of} row(s) of "${redact(table)}".${columnHint(columns[table])} Row contents were not fetched.`,
           recommendation: `Enable RLS on "${table}" (ALTER TABLE public."${table}" ENABLE ROW LEVEL SECURITY;) and add policies that scope reads to the owner, e.g. USING (auth.uid() = user_id). If the table must be public, expose only the columns you intend via a view.`,
           proof: {
-            request: curl('HEAD', url, ['apikey: $SUPABASE_ANON_KEY', 'Authorization: Bearer $SUPABASE_ANON_KEY', 'Prefer: count=exact']),
+            request: curl('HEAD', url, [ANON_H, 'Prefer: count=exact']),
             status: anon.status,
             response: `Content-Range: 0-0/${anon.count}`,
             control: total !== undefined ? `Same request with the service_role key: ${total} row(s) in total.` : undefined,
@@ -278,11 +283,7 @@ export async function runLiveChecks(ctx: LiveContext): Promise<LiveResult> {
             description: `With only the public anon key, anyone can enumerate the files in "${redact(b.id)}"${b.public ? ' and, since the bucket is public, download them' : ''}.`,
             recommendation: 'Remove or narrow the SELECT policy on storage.objects for this bucket (e.g. restrict to auth.uid() = owner, or to a per-user folder).',
             proof: {
-              request: curl('POST', url, [
-                'apikey: $SUPABASE_ANON_KEY',
-                'Authorization: Bearer $SUPABASE_ANON_KEY',
-                'Content-Type: application/json',
-              ]).concat(` --data '{"prefix":"","limit":1}'`),
+              request: curl('POST', url, [ANON_H, 'Content-Type: application/json'], `--data '{"prefix":"","limit":1}'`),
               status: lres.status,
               response: '[1 object] (name withheld)',
             },
@@ -408,7 +409,7 @@ async function crossUserRead(
     if (!control.count) continue; // B owns no visible rows here: nothing to prove
     const leak = await count(table, userHeaders(anonKey, a.jwt), filter);
     if (!leak.count) continue;
-    const url = http.buildUrl(`/rest/v1/${encodeURIComponent(table)}`, { select: '*', limit: 1, [col]: `eq.<user B id>` });
+    const url = http.buildUrl(`/rest/v1/${encodeURIComponent(table)}`, { select: '*', limit: 1, [col]: `eq.${b.id}` });
     findings.push(
       makeFinding({
         rule: 'supabase-cross-user-read',
@@ -423,7 +424,7 @@ async function crossUserRead(
         description: `Signed in as test user A, ${leak.count} row(s) of "${redact(table)}" owned by test user B (${col} = B) are visible. RLS does not scope reads to the owner. Row contents were not fetched.`,
         recommendation: `Add/repair the SELECT policy on "${table}": USING (auth.uid() = ${col}). Check that no permissive policy such as USING (true) for "authenticated" remains.`,
         proof: {
-          request: curl('HEAD', url, ['apikey: $SUPABASE_ANON_KEY', 'Authorization: Bearer <user A access token>', 'Prefer: count=exact']),
+          request: curl('HEAD', url, [ANON_H, 'Prefer: count=exact'], '--oauth2-bearer "${USER_A_ACCESS_TOKEN}"'),
           status: leak.status,
           response: `Content-Range: 0-0/${leak.count}`,
           control: `Same request as user B (the owner): ${control.count} row(s).`,

@@ -27,6 +27,8 @@ claude mcp add deployready -- npx -y deployready@latest mcp
 
 Use `dynamic: true` only if the user's app is already running on localhost; it sends GET requests to it.
 
+Supabase apps: `supabase_check(path?, live?, crossUser?)`. Without `live`, it only reads files (service_role keys in client code or public env vars). With `live: true`, it proves what the public anon key can read (row counts, never data). It only runs against a local `supabase start` project or one whose ownership the user proved by setting `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_ACCESS_TOKEN` in the MCP server's env. Otherwise it is refused: do not try to work around that. Never ask the user to paste keys into the chat. See docs/SUPABASE.md.
+
 ## Without MCP (CLI only)
 
 ```bash
