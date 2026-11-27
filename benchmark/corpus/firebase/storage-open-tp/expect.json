@@ -1,0 +1,1 @@
+{"description":"Storage rules with no condition on a recursive wildcard","expected":[{"rule":"firebase-rules-open","present":true,"file":"storage.rules"}]}

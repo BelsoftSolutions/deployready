@@ -1,0 +1,1 @@
+{"description":"users/{userId} gated only by sign-in, not by owner","expected":[{"rule":"firebase-rules-auth-only","present":true,"file":"firestore.rules","severity":"critical"},{"rule":"firebase-rules-open","present":false}]}

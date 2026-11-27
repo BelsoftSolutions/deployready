@@ -30,6 +30,7 @@ import { planActiveRequests } from '../active/requestPlan';
 import { createActiveHttpAdapter } from '../active/httpAdapter';
 import { runActiveScan } from '../active/runner';
 import { supabaseStep, type SupabaseOptions } from '../supabase';
+import { firebaseStep } from '../firebase';
 import { assertActiveTarget, parseOwnedHosts } from '../active/scope';
 import { planMutationProbes, runMutationProbes } from '../active/mutationProbe';
 import { assertLoopback } from '../dynamic/httpClient';
@@ -125,10 +126,11 @@ export class Orchestrator {
 
     // ---- 2c. Supabase (static always; live only when owned + opted in) ----
     const sb = await supabaseStep(projectPath, opts);
+    const fb = await firebaseStep(projectPath, opts);
 
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
-      [...staticFindings, ...sb.staticFindings],
+      [...staticFindings, ...sb.staticFindings, ...fb.staticFindings],
       [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
     );
 

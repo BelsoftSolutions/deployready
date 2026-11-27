@@ -1,0 +1,1 @@
+{"description":"Safe twin: storage paths scoped to the owner","strict":true,"expected":[{"rule":"firebase-rules-open","present":false},{"rule":"firebase-rules-auth-only","present":false}]}

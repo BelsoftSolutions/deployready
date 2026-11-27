@@ -1,0 +1,1 @@
+{"description":"Safe twin: RTDB rules scoped to the owner, root closed","strict":true,"expected":[{"rule":"firebase-rtdb-open","present":false},{"rule":"firebase-rtdb-auth-only","present":false}]}

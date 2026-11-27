@@ -1,0 +1,1 @@
+{"description":"Service account key committed in the repo","expected":[{"rule":"firebase-service-account-committed","present":true,"file":"serviceAccountKey.json","severity":"critical"}]}
