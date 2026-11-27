@@ -1,0 +1,10 @@
+{
+  "description": "Express app signs JWTs with a hardcoded literal secret",
+  "expected": [
+    {
+      "rule": "possible-hardcoded-secret",
+      "present": true,
+      "file": "server.js"
+    }
+  ]
+}

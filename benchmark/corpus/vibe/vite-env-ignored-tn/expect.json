@@ -1,0 +1,10 @@
+{
+  "description": "Hard negative: .env is gitignored and a template .env.example is committed",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "env-not-ignored",
+      "present": false
+    }
+  ]
+}

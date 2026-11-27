@@ -1,0 +1,15 @@
+{
+  "description": "Wildcard CORS with credentials and TLS verification disabled for an upstream call",
+  "expected": [
+    {
+      "rule": "cors-wildcard",
+      "present": true,
+      "file": "server.js"
+    },
+    {
+      "rule": "tls-verification-disabled",
+      "present": true,
+      "file": "server.js"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "description": "Flask app with debug=True, f-string SQL, verify=False, and a hardcoded SECRET_KEY",
+  "knownGap": "py-sql-fstring misses f-strings that quote values with single quotes inside double quotes; no rule for Flask config[\"SECRET_KEY\"] literals",
+  "expected": [
+    {
+      "rule": "py-flask-debug",
+      "present": true,
+      "file": "app.py"
+    },
+    {
+      "rule": "py-sql-fstring",
+      "present": true,
+      "file": "app.py"
+    },
+    {
+      "rule": "py-requests-noverify",
+      "present": true,
+      "file": "app.py"
+    },
+    {
+      "rule": "possible-hardcoded-secret",
+      "present": true,
+      "file": "app.py"
+    }
+  ]
+}

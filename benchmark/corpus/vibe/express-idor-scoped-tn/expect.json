@@ -1,0 +1,20 @@
+{
+  "description": "Hard negative twin of express-idor-tp: every lookup is scoped to the authenticated user",
+  "strict": true,
+  "expected": [
+    {
+      "route": {
+        "method": "GET",
+        "path": "/api/orders/:id"
+      },
+      "guarded": true
+    },
+    {
+      "route": {
+        "method": "PUT",
+        "path": "/api/orders/:id"
+      },
+      "guarded": true
+    }
+  ]
+}
