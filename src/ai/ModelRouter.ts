@@ -91,12 +91,12 @@ export class ModelRouter {
   }
 
   /**
-   * Ask the model to rewrite `snippet` to fix `finding`. The snippet is redacted
+   * Ask the model to rewrite `snippet` to fix `finding`; `imports` is read-only context. Both are redacted
    * before sending. Caller is responsible for obtaining the user's consent.
    */
-  async suggestFix(finding: Finding, snippet: string): Promise<FixSuggestion> {
+  async suggestFix(finding: Finding, snippet: string, imports: string[] = []): Promise<FixSuggestion> {
     const { handler } = this.resolveHandler();
-    const prompt = PromptBuilder.buildFixPrompt(finding, redact(snippet));
+    const prompt = PromptBuilder.buildFixPrompt(finding, redact(snippet), imports.length ? redact(imports.join('\n')) : undefined);
     const raw = await handler.complete(prompt);
     const parsed = extractFix(raw);
     if (!parsed) throw new Error('The model did not return a usable fix.');

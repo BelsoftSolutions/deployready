@@ -8,6 +8,7 @@ import { Verifier } from '../core/Verifier';
 import type { VerifyContext } from '../core/Verifier';
 import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
+import { buildFixPrompt } from '../agent/fixPrompt';
 import { isNonScored } from '../analysis/ScoreCalculator';
 import { applySafeFixes } from './fixes';
 import type { SafeFixResult } from './fixes';
@@ -93,6 +94,7 @@ export class DeployReadyTools {
       ...summarize(finding),
       category: finding.category,
       description: finding.description,
+      fixPrompt: buildFixPrompt(finding),
       fix: {
         recommendation: finding.recommendation,
         owasp: finding.owasp,

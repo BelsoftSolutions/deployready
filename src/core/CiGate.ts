@@ -9,6 +9,7 @@
  */
 import { ScoreCalculator, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
 import type { Finding, ScanReport } from '../types';
+import { buildFixPrompt } from '../agent/fixPrompt';
 import { COMMON_PATH_TITLE, guessedFindings, normalFindings } from '../ui/commonPathSection';
 
 export type FailOn = 'critical' | 'warning' | 'info' | 'none';
@@ -120,6 +121,8 @@ function ciFinding(f: Finding): Record<string, unknown> {
     endpoint: f.endpoint,
     owasp: f.owasp,
     cwe: f.cwe,
+    // Paste-ready instruction for a coding agent (metadata only, no source code).
+    fixPrompt: buildFixPrompt(f),
     // Reproducible evidence for live findings (redacted when it was built).
     ...(f.proof ? { proof: f.proof } : {}),
   };

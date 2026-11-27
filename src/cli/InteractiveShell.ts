@@ -32,6 +32,7 @@ import { ScoreTracker } from '../tracker/ScoreTracker';
 import { ChecklistManager } from '../tracker/ChecklistManager';
 import { FileEditor } from '../agent/FileEditor';
 import { FixManager } from '../agent/FixManager';
+import { buildFixPrompt } from '../agent/fixPrompt';
 import { openInBrowser } from '../utils/openBrowser';
 import { logger } from '../utils/logger';
 import { getVersion } from '../utils/version';
@@ -143,6 +144,7 @@ export class InteractiveShell {
       case 'issues': case 'list': case 'ls': return this.issues(args[0]);
       case 'show': return this.show(args[0]);
       case 'fix': return this.fix(args[0]);
+      case 'prompt': return this.fixPrompt(args[0]);
       case 'verify': case 'v': return this.verify(args[0]);
       case 'done': case 'resolve': return this.mark(args[0], 'fixed');
       case 'ignore': return this.mark(args[0], 'ignored');
@@ -274,6 +276,14 @@ export class InteractiveShell {
     if (f.proof) for (const line of IssuePresenter.proofLines(f.proof)) console.log(`  ${chalk.gray(line)}`);
     console.log(`  ${chalk.gray('what:')} ${f.description}`);
     console.log(`  ${chalk.gray('fix:')} ${f.recommendation}\n`);
+  }
+
+  /** `prompt <n>` — print a paste-ready instruction for a coding agent to fix finding n. */
+  private fixPrompt(arg?: string): void {
+    const f = this.findingAt(arg);
+    if (!f) return;
+    console.log('\n' + chalk.gray('  Paste this into your coding agent:') + '\n');
+    console.log(sanitizeText(buildFixPrompt(f)).replace(/^/gm, '  ') + '\n');
   }
 
   private status(): void {
@@ -689,6 +699,7 @@ export class InteractiveShell {
       ['show <n>', 'full detail of finding n'],
       ['fix <n>', 'interactive fix: auto-fix, AI-proposed diff, or guidance (auto-verifies)'],
       ['fix --all', 'apply every safe automatic fix in one go (backups made, each one re-verified)'],
+      ['prompt <n>', 'print a short, paste-ready fix instruction for your coding agent (no code included)'],
       ['verify <n>', 're-run the check for a finding to confirm it is resolved'],
       ['done <n> / ignore <n>', 'mark finding fixed / ignored (score updates live)'],
       ['score / status', 'show the current score / session state'],

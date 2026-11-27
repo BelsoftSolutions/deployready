@@ -10,12 +10,15 @@
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
+import { extractFixRange } from './context';
 
 export interface Snippet {
   text: string;
   /** 1-based inclusive line range the snippet covers. */
   startLine: number;
   endLine: number;
+  /** Import/require lines from the same file, READ-ONLY context (outside the replaced range). */
+  imports?: string[];
 }
 
 export interface ReplacePreview {
@@ -44,6 +47,18 @@ export class FileEditor {
     const start = Math.max(1, line - context);
     const end = Math.min(lineCount(lines), line + context);
     return { text: lines.slice(start - 1, end).join('\n'), startLine: start, endLine: end };
+  }
+
+  /**
+   * The enclosing unit of `line` for an AI rewrite (function / def block / +-15 lines, capped at
+   * ~120 lines), plus the file's import lines as read-only context. See ./context.
+   */
+  async fixContext(relPath: string, line: number): Promise<Snippet> {
+    const content = await this.read(relPath);
+    const { lines } = splitText(content);
+    const r = extractFixRange(content, line, path.extname(relPath));
+    const end = Math.min(r.endLine, lineCount(lines));
+    return { text: lines.slice(r.startLine - 1, end).join('\n'), startLine: r.startLine, endLine: end, imports: r.imports };
   }
 
   /**
