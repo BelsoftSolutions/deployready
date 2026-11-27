@@ -463,8 +463,11 @@ export class InteractiveShell {
 
   private printDiff(file: string, start: number, end: number, oldText: string, newText: string): void {
     console.log(chalk.gray(`  ── ${file}:${start}-${end} ──`));
-    for (const l of sanitizeText(oldText).split('\n')) console.log(chalk.red(`  - ${l}`));
-    for (const l of sanitizeText(newText).split('\n')) console.log(chalk.green(`  + ${l}`));
+    // Split on CRLF too and drop stray CRs: a leftover "\r" rewinds the cursor and
+    // overwrites the "- " marker, so blank lines vanish. Blank and trailing lines are kept.
+    const lines = (t: string): string[] => sanitizeText(t).replace(/\r/g, '').split('\n');
+    for (const l of lines(oldText)) console.log(chalk.red(`  - ${l}`));
+    for (const l of lines(newText)) console.log(chalk.green(`  + ${l}`));
     console.log('');
   }
 

@@ -1,6 +1,5 @@
 {
   "description": "Hard negative: same admin routes behind requireAuth + requireAdmin, JWT secret from env",
-  "knownGap": "possible-hardcoded-secret fires on a token-named variable assigned from a header expression",
   "strict": true,
   "expected": [
     {
@@ -19,6 +18,10 @@
     },
     {
       "rule": "possible-hardcoded-secret",
+      "present": false
+    },
+    {
+      "rule": "missing-auth-route",
       "present": false
     }
   ]

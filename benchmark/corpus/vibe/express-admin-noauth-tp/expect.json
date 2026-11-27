@@ -1,5 +1,5 @@
 {
-  "description": "Admin list and delete routes have no authentication. Parser must see them unguarded; no static rule reports the missing auth yet.",
+  "description": "Admin list and delete routes have no authentication. Parser must see them unguarded.",
   "expected": [
     {
       "route": {
@@ -16,10 +16,10 @@
       "guarded": false
     },
     {
-      "unsupported": "missing-auth-admin-route",
+      "rule": "missing-auth-route",
       "present": true,
       "file": "server.js",
-      "note": "unauthenticated admin/delete route is only visible in the route graph, not reported as a finding"
+      "severity": "critical"
     }
   ]
 }

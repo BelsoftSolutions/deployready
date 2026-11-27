@@ -16,10 +16,10 @@
       "guarded": false
     },
     {
-      "unsupported": "missing-auth-admin-route",
+      "rule": "missing-auth-route",
       "present": true,
       "file": "main.py",
-      "note": "unauthenticated delete/admin route is only visible in the route graph, not reported as a finding"
+      "severity": "critical"
     }
   ]
 }

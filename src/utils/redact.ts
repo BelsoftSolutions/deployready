@@ -36,9 +36,10 @@ const BENIGN_VALUE_RE =
  * Detection-only assignment pattern (used for FINDINGS, not redaction). Stricter
  * than ASSIGNMENT_RE: drops the over-broad bare `auth` (which matched `author`,
  * `authMode`, …) and requires a 6+ char value, to cut false-positive "secret".
+ * An optional type annotation (`token: str = "…"`) is skipped so the literal is seen.
  */
 const DETECT_ASSIGNMENT_RE =
-  /\b([A-Za-z0-9_]*(?:secret|password|passwd|api[_-]?key|apikey|access[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|credential|token)[A-Za-z0-9_]*)\b\s*[:=]\s*(['"`]?)([^'"`\n]{6,})\2/gi;
+  /\b([A-Za-z0-9_]*(?:secret|password|passwd|api[_-]?key|apikey|access[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|credential|token)[A-Za-z0-9_]*)\b\s*(?::\s*[A-Za-z_][\w.[\]]{0,40}\s*(?==))?[:=]\s*(['"`]?)([^'"`\n]{6,})\2/gi;
 
 /**
  * Values that are clearly NOT real secrets: config words, log levels, URLs,

@@ -25,6 +25,10 @@
         "path": "/items/{item_id}"
       },
       "guarded": true
+    },
+    {
+      "rule": "missing-auth-route",
+      "present": false
     }
   ]
 }

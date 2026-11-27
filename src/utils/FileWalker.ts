@@ -147,6 +147,8 @@ export class FileWalker {
 
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
+        // DeployReady's own fix backups: copies of source that must never be scanned twice.
+        if (relPath === '.deployready') continue;
         if (entry.name.startsWith('.git') && relPath !== '.github') continue;
         if (relDir === '.github' && entry.name !== 'workflows') continue;
         if (relDir === '.github/workflows') continue;
