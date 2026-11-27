@@ -25,8 +25,14 @@ const secureApp: HttpFn = async (req) => {
 const vulnApp: HttpFn = async (req) => {
   if (!req.headers.Authorization) return { status: 401, bodyText: 'unauthorized' };
   const org = req.query?.org_id ?? 'A';
-  return { status: 200, bodyText: JSON.stringify({ org_id: org, data: 'secret' }) };
+  return { status: 200, bodyText: JSON.stringify({ org_id: org, data: `secret of tenant ${org}` }) };
 };
+
+/** Wrap a fake app so it answers 401 to requests without credentials (a protected API). */
+const authed =
+  (app: HttpFn): HttpFn =>
+  async (req) =>
+    req.headers.Authorization ? app(req) : { status: 401, bodyText: '{"error":"unauthorized"}' };
 
 describe('active/runner', () => {
   it('reports nothing against a secure app', async () => {
@@ -194,10 +200,10 @@ describe('active/runner — param-aware cross-access', () => {
   });
 
   it('reports a tenant path param as tenant-isolation-broken, not bola-idor', async () => {
-    const app: HttpFn = async (req) => {
+    const app: HttpFn = authed(async (req) => {
       const org = req.path.split('/')[2];
       return { status: 200, bodyText: JSON.stringify({ org, projects: [`${org}-p1`] }) };
-    };
+    });
     const findings = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [orgReq] }, app);
     expect(findings.some((f) => f.rule === 'tenant-isolation-broken' && f.endpoint === '/orgs/orgA/projects')).toBe(true);
     expect(findings.some((f) => f.rule === 'bola-idor')).toBe(false);
@@ -229,18 +235,19 @@ describe('active/runner — owner-baseline proof', () => {
   });
 
   it('finds an IDOR whose response does not echo the id but equals the owner baseline', async () => {
-    const app: HttpFn = async (req) => ({ status: 200, bodyText: JSON.stringify(DATA[idOf(req)] ?? {}) });
+    const app: HttpFn = authed(async (req) => ({ status: 200, bodyText: JSON.stringify(DATA[idOf(req)] ?? {}) }));
     const findings = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq] }, app);
     const f = findings.find((x) => x.rule === 'bola-idor');
     expect(f).toBeDefined();
-    expect(f!.description).toMatch(/exactly what that identity itself receives/);
+    expect(f!.severity).toBe('critical');
+    expect(f!.description).toMatch(/same record the owner receives/);
   });
 
   it('compares bodies as canonical JSON (key order and whitespace do not matter)', async () => {
-    const app: HttpFn = async (req) =>
+    const app: HttpFn = authed(async (req) =>
       subOf(req) === 'u2' || idOf(req) === 'u2'
         ? { status: 200, bodyText: '{"name":"Bob","plan":"pro"}' }
-        : { status: 200, bodyText: '{ "plan": "free", "name": "Alice" }' };
+        : { status: 200, bodyText: '{ "plan": "free", "name": "Alice" }' });
     const findings = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq] }, app);
     expect(findings.some((f) => f.rule === 'bola-idor')).toBe(true);
   });
@@ -269,15 +276,25 @@ describe('active/runner — owner-baseline proof', () => {
     }
   });
 
-  it('falls back to the echo proof when the owner baseline is unavailable', async () => {
-    const app: HttpFn = async (req) =>
+  it('without a working owner baseline an id echo is never reported (echo is not disclosure)', async () => {
+    const app: HttpFn = authed(async (req) =>
       subOf(req) === 'u2'
         ? { status: 500, bodyText: 'owner path broken' }
-        : { status: 200, bodyText: JSON.stringify({ id: idOf(req), data: 'x' }) };
+        : { status: 200, bodyText: JSON.stringify({ id: idOf(req), data: 'x' }) });
+    const findings = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq] }, app);
+    expect(findings.filter((x) => x.rule === 'bola-idor')).toHaveLength(0);
+  });
+
+  it('without a working owner baseline, new sensitive fields are only "suspected"', async () => {
+    const app: HttpFn = authed(async (req) =>
+      subOf(req) === 'u2'
+        ? { status: 500, bodyText: 'owner path broken' }
+        : { status: 200, bodyText: JSON.stringify({ id: idOf(req), email: `${idOf(req)}@example.test` }) });
     const findings = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq] }, app);
     const f = findings.find((x) => x.rule === 'bola-idor');
-    expect(f).toBeDefined();
-    expect(f!.description).toMatch(/no owner baseline/);
+    expect(f?.severity).toBe('warning');
+    expect(f?.title).toMatch(/^Suspected/);
+    expect(f?.description).toMatch(/could not|cannot be proven/);
   });
 
   it('does not report echo-only when the owner baseline exists and disagrees', async () => {
@@ -298,19 +315,20 @@ describe('active/runner — owner-baseline proof', () => {
 
   it('counts owner-baseline requests against the budget', async () => {
     let calls = 0;
+    const inner = authed(async (req) => ({ status: 200, bodyText: JSON.stringify(DATA[idOf(req)] ?? {}) }));
     const app: HttpFn = async (req) => {
       calls++;
-      return { status: 200, bodyText: JSON.stringify(DATA[idOf(req)] ?? {}) };
+      return inner(req);
     };
-    // baseline, anonymous control, tampered, owner baseline
-    const tight = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq], maxRequests: 3 }, app);
-    expect(calls).toBeLessThanOrEqual(3);
+    // baseline, anonymous jwt control, forged token, second own baseline, tampered, owner ×2, anonymous control
+    const tight = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq], maxRequests: 5 }, app);
+    expect(calls).toBe(5);
     expect(tight.some((f) => f.rule === 'bola-idor')).toBe(false);
 
     calls = 0;
-    const full = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq], maxRequests: 4 }, app);
-    expect(calls).toBe(4);
-    expect(full.some((f) => f.rule === 'bola-idor')).toBe(true);
+    const full = await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq], maxRequests: 8 }, app);
+    expect(calls).toBe(8);
+    expect(full.some((f) => f.rule === 'bola-idor' && f.severity === 'critical')).toBe(true);
   });
 
   it('fetches each owner baseline only once per path', async () => {
@@ -320,6 +338,6 @@ describe('active/runner — owner-baseline proof', () => {
       return { status: 200, bodyText: JSON.stringify(DATA[idOf(req)] ?? {}) };
     };
     await runActiveScan({ token: tokenU1, tokenB: tokenU2, requests: [userReq, userReq] }, app);
-    expect(ownerCalls).toBe(1);
+    expect(ownerCalls).toBe(2); // two owner baselines (volatile-field learning), fetched once per path
   });
 });

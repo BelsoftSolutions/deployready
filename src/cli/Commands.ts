@@ -99,6 +99,8 @@ export function buildProgram(): Command {
     .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--safety-level <level>', 'active-scan safety level: passive | read-only (default) | controlled-active | stateful')
+    .option('--dry-run', 'list the active requests that would be sent, without sending any', false)
     .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
     .option('--no-deps', 'skip dependency-vulnerability engines (npm/pnpm audit, OSV-Scanner, pip-audit)')
     .option('--engines <list>', 'comma-separated engines to run (npm-audit, osv-scanner, pip-audit, semgrep, all); semgrep runs only when named; see docs/ENGINES.md')
@@ -150,6 +152,8 @@ export function buildProgram(): Command {
           },
           activeUrl: opts.activeUrl as string | undefined,
           ownedHosts: opts.iOwnThisTarget as string[],
+          safetyLevel: opts.safetyLevel as string | undefined,
+          dryRun: Boolean(opts.dryRun),
         };
         let report = await Orchestrator.analyze(path, analyzeOpts);
         const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;

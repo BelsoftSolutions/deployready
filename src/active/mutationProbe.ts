@@ -3,7 +3,8 @@
  * a request with NO credentials?
  *
  * Safety design (it never touches real data):
- *   - Only runs inside the consented active scan, and only against a loopback
+ *   - Only runs at safety level "controlled-active" or higher (opt-in), never on
+ *     a route listed in `unsafeRoutes`, inside the consented active scan, and only against a loopback
  *     target (never an owned remote host, even with --i-own-this-target).
  *   - Only routes with at least one path parameter are probed, and EVERY
  *     parameter is filled with a value that cannot exist
@@ -26,6 +27,7 @@ import { randomBytes } from 'crypto';
 import { makeFinding } from '../utils/finding';
 import { absoluteUrl, buildProof } from '../dynamic/proof';
 import type { HttpFn, ActiveResponse } from './runner';
+import { matchRoutePattern } from './safety';
 import type { Finding, Route, SkippedRoute } from '../types';
 
 export const MUTATION_RULE = 'unauthenticated-mutation';
@@ -51,7 +53,7 @@ export function probeValue(): string {
   return `__deployready_probe_${randomBytes(4).toString('hex')}__`;
 }
 
-export function planMutationProbes(routes: Route[], value = probeValue()): MutationPlan {
+export function planMutationProbes(routes: Route[], value = probeValue(), opts: { unsafeRoutes?: readonly string[] } = {}): MutationPlan {
   const targets: MutationTarget[] = [];
   const skipped: SkippedRoute[] = [];
   const seen = new Set<string>();
@@ -65,6 +67,11 @@ export function planMutationProbes(routes: Route[], value = probeValue()): Mutat
     const key = `${method} ${r.path}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    const denied = matchRoutePattern(opts.unsafeRoutes ?? [], method, r.path);
+    if (denied) {
+      skipped.push({ method, path: r.path, reason: `listed in unsafeRoutes ("${denied}")` });
+      continue;
+    }
     let params = 0;
     let bad = false;
     const out = r.path.split('/').map((seg) => {

@@ -138,6 +138,8 @@ npx deployready@latest config                            # show the active confi
 | `--token-b <jwt>` | a second user's JWT — enables tenant / IDOR isolation tests |
 | `--active-url <url>` | base URL for the active scan (default: the app found on localhost) |
 | `--i-own-this-target <host>` | confirm you own a non-loopback host so active probes may target it (repeatable, exact host) |
+| `--safety-level <level>` | active-scan safety level: `passive`, `read-only` (default), `controlled-active` (adds the write-route probe), `stateful` (needs a disposable target) |
+| `--dry-run` | list the active requests that would be sent, without sending any |
 | `-v, --verbose` | verbose debug output |
 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
@@ -243,9 +245,51 @@ npx deployready@latest analyze . --active --token "<your-JWT>" --token-b "<secon
 - **Broken tenant isolation** — swaps `org_id`/tenant to reach another tenant's data.
 - **Privilege escalation** — forges a `role: admin` claim and checks whether a forbidden route opens up.
 - **JWT not verified** — checks whether the server accepts a forged `alg:none` token.
-- **Unauthenticated write routes** — sends each discovered `DELETE`/`PATCH` route once with **no credentials**, aimed at a record id that cannot exist (`__deployready_probe_<random>__`), with no body. A `2xx` (when a random-path control does not also answer `2xx`) means the route handles writes for anonymous callers; `401`/`403` means auth is enforced; anything else is not reported.
+- **Unauthenticated write routes** (safety level `controlled-active` only) — sends each discovered `DELETE`/`PATCH` route once with **no credentials**, aimed at a record id that cannot exist (`__deployready_probe_<random>__`), with no body. A `2xx` (when a random-path control does not also answer `2xx`) means the route handles writes for anonymous callers; `401`/`403` means auth is enforced; anything else is not reported.
 
-It is **opt-in and consented** and **loopback-only**. The tampering checks are GET-only. The write-route probe never addresses real data: it only probes routes whose every path parameter can be filled with a non-existent id, skips routes without a parameter (e.g. `DELETE /api/session`), skips `PUT` (often an upsert, so it could create data), and never runs on a non-loopback host. Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
+**How an IDOR / tenant verdict is reached.** Status codes are never taken as proof, and the whole response is never compared byte for byte. For each swapped id the scan fetches your own resource twice (`$TOKEN`) and the owner's resource twice (`$TOKEN_B`), then compares JSON field by field (nested objects; arrays order-insensitive):
+
+- fields whose value changes between two requests of the same identity (request ids, timestamps, nonces), well-known volatile names, and your configured `ignoredFields` are ignored;
+- **owner markers** are the owner's stable values that never appear in your own copy (their email, amount, name, notes, ...); keys are classified as sensitive by name (email, amount, total, address, phone, ssn, card, token, secret, message, notes, ...);
+- the tampered response — **including the body of a 401/403/404** — is searched for those markers. An echo of only the requested id (`{"error":"not found","id":"<id>"}`, `{"requested":"<id>"}`) is not disclosure;
+- when owner data shows up, one anonymous request (no credentials) tells a public resource apart from a leak.
+
+| Verdict | Meaning | Reported |
+|---|---|---|
+| `confirmed-vulnerable` | the owner's private values came back (a sensitive field, two or more values, or the owner's full record) | critical finding |
+| `suspected` | something owner-like came back, but too little to prove it (or no working owner baseline) | warning finding, "Suspected:" |
+| `verified-denied` | the owner can read it; you got none of it (a clean refusal, an id echo, or your own data because the server ignored the id) | no |
+| `inconclusive` | neither proven safe nor vulnerable (e.g. the owner's own request failed) | no |
+| `untested` | not run (request budget used up, no claim to swap) | no |
+| `intentionally-public` | declared in `publicRoutes`, or anyone (even anonymous) gets the same non-sensitive data | no |
+
+Each finding says which fields were disclosed (values masked and redacted, e.g. `customer.email (sensitive) = b***@e***.test`), why that violates the policy, and how it was established (baselines compared, fields ignored, anonymous control). The proof's response body has the owner's values masked, and tokens appear only as `$TOKEN` / `$TOKEN_B`.
+
+**Safety levels** (`--safety-level`, or `"active": { "safetyLevel": ... }` in the config):
+
+| Level | What is sent |
+|---|---|
+| `passive` | nothing (the plan is printed, like `--dry-run`) |
+| `read-only` *(default for `--active`)* | GET probes only. A GET is never assumed to be side-effect-free: routes on the `unsafeRoutes` denylist and routes whose path suggests a side effect (logout, delete, send, pay, charge, export, webhook, reset, ...) are skipped |
+| `controlled-active` | read-only plus the unauthenticated `DELETE`/`PATCH` probe above (loopback only) |
+| `stateful` | may change state (side-effect-looking GETs are no longer skipped; the denylist still is). **Refused** unless the config declares `"disposableEnvironment": true` and the target is loopback or a host you declared you own |
+
+`--dry-run` lists every request the active scan would send (with `$TOKEN` placeholders), every skipped route and why, and the request budget, and sends nothing. Every run has a hard request budget (default 200, `"active": { "maxRequests": N }`) shared by all checks. Redirects are never followed across hosts; a same-host redirect of a GET is followed (at most 3 hops) only after the scope check passes again for the new URL.
+
+```json
+{
+  "active": {
+    "safetyLevel": "read-only",
+    "maxRequests": 200,
+    "unsafeRoutes": ["GET /api/reports/*/regenerate", "/internal/*"],
+    "ignoredFields": ["meta.buildId", "etag"],
+    "publicRoutes": ["/api/products/*"],
+    "disposableEnvironment": false
+  }
+}
+```
+
+It is **opt-in and consented** and **loopback-only**. The tampering checks are GET-only. The write-route probe is off unless you choose `controlled-active`, and never addresses real data: it only probes routes whose every path parameter can be filled with a non-existent id, skips routes without a parameter (e.g. `DELETE /api/session`), skips `PUT` (often an upsert, so it could create data), and never runs on a non-loopback host. Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
 
 Every live finding carries **proof**: a copy-pasteable `curl` command (your tokens appear only as `$TOKEN` / `$TOKEN_B`), the status, a truncated response and the control request that shows the endpoint otherwise works, all redacted. It appears in `show`, the terminal report, the markdown/HTML reports and `--json`. `verify` reports `fixed` only with proof (the attack fails **and** a control request still works); otherwise it says `inconclusive` and why.
 

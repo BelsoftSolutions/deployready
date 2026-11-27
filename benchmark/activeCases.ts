@@ -110,6 +110,48 @@ const profileLeakyApp: HttpFn = async (req) => {
   return json(200, { org_id: req.query?.org_id ?? claims.org_id, data: 'tenant data' });
 };
 
+/** Two users who each own one private invoice; `mode` is how the server answers a foreign id. */
+type InvoiceMode = 'volatile-leak' | 'partial-leak' | 'ignore-id' | 'echo-only' | '404-with-data';
+const INVOICES: Record<string, Record<string, unknown>> = {
+  alice: { invoiceId: 'inv_1001', email: 'alice@example.test', amount: 1250.5, notes: 'back door' },
+  bob: { invoiceId: 'inv_2002', email: 'bob@example.test', amount: 8730.25, notes: 'VIP, call first' },
+};
+let invoiceCounter = 0;
+const invoiceApp =
+  (mode: InvoiceMode): HttpFn =>
+  async (req) => {
+    const claims = authenticate(req.headers, true);
+    if (!claims) return UNAUTHORIZED;
+    const id = /^\/api\/users\/([^/]+)\/invoice$/.exec(req.path)?.[1];
+    if (!id) return NOT_FOUND;
+    const own = id === claims.sub;
+    const meta = { requestId: `r${++invoiceCounter}`, servedAt: `2026-01-01T00:00:${String(invoiceCounter % 60).padStart(2, '0')}Z` };
+    if (own) return json(200, mode === 'volatile-leak' ? { meta, invoice: INVOICES[id] } : INVOICES[id]!);
+    switch (mode) {
+      case 'volatile-leak':
+        return json(200, { meta, invoice: INVOICES[id] });
+      case 'partial-leak':
+        return json(200, { contact: INVOICES[id]?.email, status: 'paid' });
+      case 'ignore-id':
+        return json(200, INVOICES[String(claims.sub)]!);
+      case 'echo-only':
+        return json(200, { error: 'not found', id });
+      case '404-with-data':
+        return json(404, { error: 'not found', debug: INVOICES[id] });
+    }
+  };
+const tokenAlice = jwt({ sub: 'alice' });
+const tokenBob = jwt({ sub: 'bob' });
+const invoiceCase = (id: string, mode: InvoiceMode, present: boolean, description: string): ActiveCaseDef => ({
+  id,
+  description,
+  token: tokenAlice,
+  tokenB: tokenBob,
+  requests: plan(tokenAlice, '/api/users/:id/invoice'),
+  app: invoiceApp(mode),
+  expected: [{ rule: 'bola-idor', present, ...(present ? { severity: 'critical' } : {}) }],
+});
+
 const tokenUser1 = jwt({ sub: '1' });
 const tokenUser2 = jwt({ sub: '2' });
 const tokenUserU1 = jwt({ sub: 'u1' });
@@ -224,8 +266,7 @@ const ACTIVE_DEFS: ActiveCaseDef[] = [
   {
     id: 'bola-public-resource',
     description:
-      'A public catalogue (/api/products/:id readable by anyone, echoing the id) is not an IDOR; accepted open false positive: the scan still reports it',
-    knownGap: 'audit item P2-8',
+      'A public catalogue (/api/products/:id readable by anyone, echoing the id) is not an IDOR: the anonymous control shows it is intentionally public',
     token: tokenUser1,
     tokenB: tokenUser2,
     requests: plan(tokenUser1, '/api/products/:id'),
@@ -271,6 +312,11 @@ const ACTIVE_DEFS: ActiveCaseDef[] = [
       { rule: 'bola-idor', present: false },
     ],
   },
+  invoiceCase('bola-volatile-metadata-leak', 'volatile-leak', true, 'IDOR whose responses carry a fresh requestId/timestamp each time: volatile fields are learned and ignored, the leak is confirmed'),
+  invoiceCase('bola-partial-private-fields', 'partial-leak', true, "IDOR that returns only a subset of the owner's private fields (the email): partial disclosure is confirmed"),
+  invoiceCase('bola-ignores-swapped-id', 'ignore-id', false, "The server ignores the swapped id and returns the caller's own invoice: safe, not reported"),
+  invoiceCase('bola-requested-id-echo', 'echo-only', false, 'A 200 {"error":"not found","id":<owner id>} only echoes the requested id: not disclosure, not reported'),
+  invoiceCase('bola-404-with-owner-data', '404-with-data', true, "HTTP 404 whose body still carries the owner's invoice: status codes are not proof, the leak is confirmed"),
 ];
 
 export function activeCases(): BenchCase[] {
