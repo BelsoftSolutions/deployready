@@ -86,6 +86,13 @@ export function buildProgram(): Command {
     .option('--active', 'run active (authenticated) authorization tests — needs --token', false)
     .option('--token <jwt>', 'bearer JWT for the active scan (your test user)')
     .option('--token-b <jwt>', 'second-identity JWT, for tenant/IDOR isolation tests')
+    .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
+    .option(
+      '--i-own-this-target <host>',
+      'confirm you own this non-loopback host so active probes may target it (repeatable; exact host only)',
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[],
+    )
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
@@ -115,6 +122,8 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          activeUrl: opts.activeUrl as string | undefined,
+          ownedHosts: opts.iOwnThisTarget as string[],
         };
         let report = await Orchestrator.analyze(path, analyzeOpts);
         const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;

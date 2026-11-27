@@ -116,6 +116,13 @@ export class ExportManager {
     if (f.owasp) out.push(`- **OWASP:** ${f.owasp}`);
     if (f.cwe) out.push(`- **CWE:** ${f.cwe}`);
     if (f.evidence) out.push(`- **Evidence:** \`${f.evidence}\``);
+    if (f.proof) {
+      out.push('- **Proof** (reproduce it; secrets redacted, $TOKEN / $TOKEN_B are your --token / --token-b):');
+      out.push('', '  ```sh', `  ${f.proof.request}`, '  ```', '');
+      if (f.proof.status !== undefined) out.push(`  - **Status:** ${f.proof.status}`);
+      if (f.proof.response) out.push(`  - **Response:** \`${f.proof.response.replace(/`/g, "'").replace(/\s*\n\s*/g, ' ')}\``);
+      if (f.proof.control) out.push(`  - **Control:** ${f.proof.control}`);
+    }
     out.push(`- **Description:** ${f.description}`);
     out.push(`- **Fix:** ${f.recommendation}`);
     out.push('');

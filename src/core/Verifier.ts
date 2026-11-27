@@ -28,6 +28,7 @@ import { decodeJwt } from '../active/jwt';
 import { planActiveRequests } from '../active/requestPlan';
 import { createActiveHttpAdapter } from '../active/httpAdapter';
 import { ACTIVE_RULES, runActiveScan, type ActiveObservation, type HttpFn } from '../active/runner';
+import { MUTATION_RULE, planMutationProbes, runMutationProbes, type MutationObservation } from '../active/mutationProbe';
 import type { Finding, Proof, Route } from '../types';
 
 export type VerifyStatus = 'fixed' | 'still-present' | 'inconclusive';
@@ -71,6 +72,7 @@ const UNAUTH_ACCESS_RULES = new Set(['auth-bypass', 'exposed-admin-route']);
 export class Verifier {
   static async verify(finding: Finding, ctx: VerifyContext): Promise<VerifyResult> {
     if (finding.source === 'static') return Verifier.verifyStatic(finding, ctx);
+    if (finding.source === 'dynamic' && finding.rule === MUTATION_RULE) return Verifier.verifyMutation(finding, ctx);
     if (finding.source === 'dynamic' && ACTIVE_RULES.has(finding.rule)) return Verifier.verifyActive(finding, ctx);
     if (finding.source === 'dynamic') return Verifier.verifyDynamic(finding, ctx);
     return inconclusive('AI-inferred finding — re-run `ai` or `scan` to re-check.');
@@ -225,6 +227,38 @@ export class Verifier {
     const baseline = seen.find((o) => o.kind === 'baseline' && o.endpoint === finding.endpoint);
     const baselineNote = baseline?.kind === 'baseline' ? ` (your token now gets HTTP ${baseline.status} there)` : '';
     return Verifier.judgeActive(finding, seen, baselineNote);
+  }
+
+  /** Re-send the anonymous DELETE/PATCH (non-existent id, loopback only). */
+  private static async verifyMutation(finding: Finding, ctx: VerifyContext): Promise<VerifyResult> {
+    const active = ctx.active;
+    if (!active) {
+      return inconclusive('Re-checking a write route needs the opted-in active scan — re-run `deployready analyze --active --token …`.');
+    }
+    try {
+      assertLoopback(active.baseUrl);
+    } catch {
+      return inconclusive('Write routes are only re-probed on a loopback target. Nothing was sent.');
+    }
+    const targets = planMutationProbes(active.routes).targets.filter((t) => `${t.method} ${t.route}` === finding.endpoint);
+    if (targets.length === 0) return inconclusive(`${finding.endpoint} is no longer a discovered route that can be probed safely.`);
+    let http: HttpFn;
+    try {
+      http = active.http ?? createActiveHttpAdapter({ baseUrl: active.baseUrl });
+    } catch (err) {
+      return inconclusive(`${(err as Error).message} Nothing was re-checked.`);
+    }
+    const seen: MutationObservation[] = [];
+    const again = await runMutationProbes(targets, http, { baseUrl: active.baseUrl, onObserve: (o) => seen.push(o) });
+    if (again.length) {
+      return { status: 'still-present', detail: 'The route still accepts the request without credentials.', ...(again[0]!.proof ? { proof: again[0]!.proof } : {}) };
+    }
+    const o = seen[0];
+    if (o?.trigger === undefined) return inconclusive(`${finding.endpoint} did not answer; a failed request is not proof of a fix.`);
+    if (isDenied(o.trigger)) {
+      return { status: 'fixed', detail: `${finding.endpoint} without credentials now gets HTTP ${o.trigger} (an explicit auth refusal).` };
+    }
+    return inconclusive(`${finding.endpoint} without credentials got HTTP ${o.trigger}; only a 401/403 proves authentication is enforced.`);
   }
 
   /** Decide fixed vs inconclusive from what the active re-check observed. */

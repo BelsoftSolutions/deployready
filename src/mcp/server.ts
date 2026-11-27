@@ -63,7 +63,7 @@ export function buildMcpServer(tools: DeployReadyTools): McpServer {
   server.registerTool(
     'verify',
     {
-      description: `Re-check one finding after you changed the code. Returns the status exactly as DeployReady reports it (e.g. fixed, still-present, or an unconfirmed status) plus detail. Do not claim a fix until verify says it is fixed. ${LOOP}`,
+      description: `Re-check one finding after you changed the code. Returns the status exactly as DeployReady reports it (fixed, still-present, or inconclusive when the re-check could not prove either) plus detail. Do not claim a fix until verify says it is fixed. ${LOOP}`,
       inputSchema: { id: z.string().describe('Finding id from scan.'), path: pathArg },
     },
     wrap(tools.verify.bind(tools)),

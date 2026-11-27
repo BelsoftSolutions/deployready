@@ -29,6 +29,9 @@ import { decodeJwt } from '../active/jwt';
 import { planActiveRequests } from '../active/requestPlan';
 import { createActiveHttpAdapter } from '../active/httpAdapter';
 import { runActiveScan } from '../active/runner';
+import { assertActiveTarget, parseOwnedHosts } from '../active/scope';
+import { planMutationProbes, runMutationProbes } from '../active/mutationProbe';
+import { assertLoopback } from '../dynamic/httpClient';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ScanReport } from '../types';
 
 export interface AnalyzeOptions {
@@ -54,6 +57,10 @@ export interface AnalyzeOptions {
   token?: string;
   /** Optional second-identity JWT — enables the cleanest tenant/IDOR proof. */
   tokenB?: string;
+  /** Base URL for the active scan; default = the local server found on localhost. */
+  activeUrl?: string;
+  /** Non-loopback hosts the user explicitly confirmed they own (--i-own-this-target). */
+  ownedHosts?: string[];
   /**
    * Opt-in common-path probe. Tri-state: `true`/`false` = given on the command line,
    * `undefined` = not given (then the config key applies, in interactive runs only).
@@ -341,20 +348,54 @@ export class Orchestrator {
     }
 
     const config = await ConfigManager.load();
-    const detect = ora('Active scan: looking for a local server on localhost…').start();
-    const app = await LocalhostDetector.find(config.defaultPorts);
-    if (!app) {
-      detect.info('Active scan: no local server found listening — start your app, then re-run. Skipping.');
+    // Ownership guard: loopback only, unless the user named the host they own.
+    let owned: string[];
+    try {
+      owned = parseOwnedHosts([...(opts.ownedHosts ?? []), ...(Array.isArray(config.ownedTargets) ? config.ownedTargets : [])]);
+    } catch (err) {
+      logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
       return [];
     }
-    detect.succeed(`Active scan target: local server listening on port ${app.port} (${app.baseUrl})`);
+    let app: { baseUrl: string };
+    if (opts.activeUrl) {
+      try {
+        assertActiveTarget(opts.activeUrl, owned);
+      } catch (err) {
+        logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
+        return [];
+      }
+      app = { baseUrl: opts.activeUrl };
+      logger.info(`Active scan target: ${app.baseUrl}`);
+    } else {
+      const detect = ora('Active scan: looking for a local server on localhost…').start();
+      const local = await LocalhostDetector.find(config.defaultPorts);
+      if (!local) {
+        detect.info('Active scan: no local server found listening — start your app, then re-run. Skipping.');
+        return [];
+      }
+      detect.succeed(`Active scan target: local server listening on port ${local.port} (${local.baseUrl})`);
+      app = local;
+    }
+    let loopback = true;
+    try {
+      assertLoopback(app.baseUrl);
+    } catch {
+      loopback = false;
+    }
+    // Write-route probe: loopback only, never on an owned remote host.
+    const mutation = loopback ? planMutationProbes(graph.routes) : { targets: [], skipped: [] };
+    for (const s of mutation.skipped) logger.debug(`[active] skip ${s.method} ${s.path}: ${s.reason}`);
 
     if (!opts.yes) {
       const { ok } = await inquirer.prompt<{ ok: boolean }>([
         {
           type: 'confirm',
           name: 'ok',
-          message: `Run ACTIVE authenticated tests against ${app.baseUrl}? Sends real GET requests as your token, including identity-tampered variants (no writes).`,
+          message: `Run ACTIVE authenticated tests against ${app.baseUrl}? Sends real GET requests as your token, including identity-tampered variants${
+            mutation.targets.length
+              ? `, plus ${mutation.targets.length} unauthenticated DELETE/PATCH request(s) aimed at a record id that cannot exist (no body; no real data is addressed)`
+              : ' (no writes)'
+          }.`,
           default: false,
         },
       ]);
@@ -365,10 +406,11 @@ export class Orchestrator {
     }
 
     const { requests } = plan;
-    const adapter = createActiveHttpAdapter({ baseUrl: app.baseUrl });
+    const adapter = createActiveHttpAdapter({ baseUrl: app.baseUrl, ownedHosts: owned });
     const spinner = ora(`Active scan: probing ${requests.length} endpoint(s)…`).start();
     try {
-      const findings = await runActiveScan({ token: opts.token, tokenB: opts.tokenB, requests }, adapter);
+      const findings = await runActiveScan({ token: opts.token, tokenB: opts.tokenB, requests, baseUrl: app.baseUrl }, adapter);
+      if (mutation.targets.length) findings.push(...(await runMutationProbes(mutation.targets, adapter, { baseUrl: app.baseUrl })));
       spinner.succeed(`Active scan done — ${findings.length} access-control finding(s).`);
       return findings;
     } catch (err) {

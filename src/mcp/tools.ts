@@ -13,7 +13,7 @@ import { applySafeFixes } from './fixes';
 import type { SafeFixResult } from './fixes';
 import { assess } from './readiness';
 import type { Readiness } from './readiness';
-import type { Finding, ScanReport } from '../types';
+import type { Finding, Proof, ScanReport } from '../types';
 
 const EVIDENCE_MAX = 200;
 const FILE_MAX_BYTES = 256 * 1024;
@@ -128,14 +128,14 @@ export class DeployReadyTools {
     };
   }
 
-  async verify(args: { id: string; path?: string }): Promise<{ id: string; status: string; detail?: string }> {
+  async verify(args: { id: string; path?: string }): Promise<{ id: string; status: string; detail?: string; proof?: Proof }> {
     const { entry, finding } = this.find(args.id, args.path);
     const ctx: VerifyContext = { target: entry.target };
     if (entry.report.dynamic?.baseUrl) {
       ctx.dynamic = { baseUrl: entry.report.dynamic.baseUrl, routes: entry.report.graph.routes };
     }
     const res = await Verifier.verify(finding, ctx);
-    return { id: finding.id, status: res.status, detail: res.detail };
+    return { id: finding.id, status: res.status, detail: res.detail, ...(res.proof ? { proof: res.proof } : {}) };
   }
 
   async score(args: { path?: string } = {}): Promise<Readiness & { target: string; openCritical: FindingSummary[] }> {

@@ -36,7 +36,10 @@ function shellQuote(s: string): string {
 export function curlCommand(req: ProofRequest): string {
   const parts = ['curl', '-i'];
   if (req.method.toUpperCase() !== 'GET') parts.push('-X', req.method.toUpperCase());
-  if (req.auth) parts.push('-H', `"Authorization: Bearer ${req.auth.replace(/"/g, '')}"`);
+  // --oauth2-bearer sends "Authorization: Bearer <value>" and keeps the shell
+  // variable readable after redaction (a literal "Authorization: …" header
+  // would itself be redacted as a secret assignment).
+  if (req.auth) parts.push('--oauth2-bearer', `"${req.auth.replace(/"/g, '')}"`);
   parts.push(shellQuote(req.url));
   return redact(parts.join(' '));
 }

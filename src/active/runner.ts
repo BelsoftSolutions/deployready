@@ -165,7 +165,7 @@ async function tryEscalate(
           request: { method: req.method, url: urlOf(req, r), auth: label },
           status: r.status,
           response: r.bodyText,
-          control: `Same request with your real token ($TOKEN): HTTP ${baseline.status}.`,
+          control: `Same request with your real $TOKEN got HTTP ${baseline.status}.`,
         }),
       });
     }
@@ -243,7 +243,7 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
                   request: { method: req.method, url: urlOf(req, r), auth: '<alg:none copy of $TOKEN, signature removed>' },
                   status: r.status,
                   response: r.bodyText,
-                  control: `Same request with no token: HTTP ${control.status}; with your real token ($TOKEN): HTTP ${baseline.status}.`,
+                  control: `Same request without any credentials got HTTP ${control.status}; with your real $TOKEN it got HTTP ${baseline.status}.`,
                 }),
               }),
             );
@@ -328,8 +328,8 @@ export async function runActiveScan(config: ActiveScanConfig, http: HttpFn): Pro
               response: r.bodyText,
               control:
                 proof === 'owner-baseline' && ownerBaseline
-                  ? `The owning identity ($TOKEN_B) requesting the same resource: HTTP ${ownerBaseline.status} with an identical body. Your own resource (${req.path}) with $TOKEN: HTTP ${baseline.status}.`
-                  : `Your own resource (${req.path}) with $TOKEN: HTTP ${baseline.status}. No owner baseline was available; the response contains the other identity's value.`,
+                  ? `The owning identity ($TOKEN_B) requesting the same resource: HTTP ${ownerBaseline.status} with an identical body. Your own resource (${req.path}) with $TOKEN got HTTP ${baseline.status}.`
+                  : `Your own resource (${req.path}) with $TOKEN got HTTP ${baseline.status}. No owner baseline was available; the response contains the other identity's value.`,
             }),
           }),
         );

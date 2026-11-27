@@ -5,7 +5,7 @@
  */
 import chalk from 'chalk';
 import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
-import type { Finding, ScanReport, Severity } from '../types';
+import type { Finding, Proof, ScanReport, Severity } from '../types';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
 const BADGE: Record<Severity, string> = {
@@ -104,7 +104,17 @@ export class IssuePresenter {
     if (refs || isUnverified(f) || isNote(f)) console.log(chalk.gray(`     ${refs ? `${refs}  ·  ` : ''}${badge} ${chalk.gray(`[${f.source}]`)}`));
     if (isNonScored(f) && f.description) console.log(chalk.gray(`     ${f.description}`));
     if (f.evidence) console.log(chalk.gray(`     evidence: ${f.evidence}`));
+    if (f.proof) for (const line of IssuePresenter.proofLines(f.proof)) console.log(chalk.gray(`     ${line}`));
     console.log(chalk.gray(`     fix: ${f.recommendation}`));
+  }
+
+  /** Plain-text lines for a finding's proof (already redacted at creation). */
+  static proofLines(p: Proof): string[] {
+    const out = [`proof: ${p.request}`];
+    if (p.status !== undefined) out.push(`  -> HTTP ${p.status}`);
+    if (p.response) out.push(`  response: ${p.response.replace(/\s*\n\s*/g, ' ')}`);
+    if (p.control) out.push(`  control: ${p.control}`);
+    return out;
   }
 }
 

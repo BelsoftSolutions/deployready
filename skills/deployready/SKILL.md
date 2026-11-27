@@ -12,7 +12,7 @@ DeployReady is a local-first scanner. You do the fixing; DeployReady finds issue
 1. **scan**: list findings and the score.
 2. **apply_safe_fixes**: let DeployReady apply its deterministic, backed-up fixes first.
 3. **Fix the rest yourself**: for each remaining finding (critical first), call **get_finding** (it returns the recommendation, OWASP/CWE and the whole file with the line marked), then edit the code with your own tools. Fix the cause, not the symptom.
-4. **verify** each finding id after you edit. Only call it fixed when the status is `fixed`. If it is `still-present`, look again. For any other status, read `detail` and tell the user it could not be confirmed.
+4. **verify** each finding id after you edit. Only call it fixed when the status is `fixed`. If it is `still-present`, look again. If it is `inconclusive`, read `detail` (it says what proof was missing) and tell the user it could not be confirmed.
 5. **score** at the end: report the score and the verdict. Ready means no open critical findings.
 
 ## With the MCP server (preferred)

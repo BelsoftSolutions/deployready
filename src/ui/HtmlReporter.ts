@@ -8,7 +8,7 @@
  * - Every dynamic value is HTML-escaped. Findings come from user code, so the
  *   report itself must not become an XSS vector when opened in a browser.
  */
-import type { Finding, ScanReport, Severity } from '../types';
+import type { Finding, Proof, ScanReport, Severity } from '../types';
 import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { isNote, isUnverified } from '../analysis/ScoreCalculator';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, normalFindings } from './commonPathSection';
@@ -173,8 +173,21 @@ function findingCard(f: Finding): string {
   <div class="f-meta">${loc ? `<code>${esc(loc)}</code>` : ''} ${refs}</div>
   <p class="f-desc">${esc(f.description)}</p>
   ${f.evidence ? `<pre class="f-ev">${esc(f.evidence)}</pre>` : ''}
+  ${f.proof ? proofBlock(f.proof) : ''}
   <p class="f-fix"><strong>Fix:</strong> ${esc(f.recommendation)}</p>
 </article>`;
+}
+
+function proofBlock(p: Proof): string {
+  const rows = [
+    p.status !== undefined ? `<dt>Status</dt><dd>${p.status}</dd>` : '',
+    p.response ? `<dt>Response</dt><dd><pre>${esc(p.response)}</pre></dd>` : '',
+    p.control ? `<dt>Control</dt><dd>${esc(p.control)}</dd>` : '',
+  ].join('');
+  return `<details class="f-proof" open><summary>Proof (reproducible; secrets redacted)</summary>
+    <pre class="f-curl">${esc(p.request)}</pre>
+    <dl>${rows}</dl>
+  </details>`;
 }
 
 /** Escape the five HTML-significant characters. */
@@ -229,6 +242,10 @@ main{max-width:980px;margin:0 auto;padding:28px}
 .ref{background:#1a1a1a;color:#888;border-radius:6px;padding:2px 8px;font-size:11px}
 .f-desc{margin:6px 0;color:#cbd5e1}
 .f-ev{background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;overflow:auto;font-size:12px;color:#fca5a5;margin:8px 0}
+.f-proof{margin:8px 0;font-size:13px}.f-proof summary{cursor:pointer;color:${ACCENT}}
+.f-curl{background:#0a0a0a;border:1px solid rgba(0,255,136,0.25);border-radius:8px;padding:8px 12px;overflow:auto;font-size:12px;color:#f0f0f0;margin:6px 0}
+.f-proof dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:4px 0}.f-proof dt{color:#888}.f-proof dd{margin:0;color:#cbd5e1}
+.f-proof dd pre{margin:0;white-space:pre-wrap;word-break:break-all;font-size:12px}
 .f-fix{margin:6px 0 0;color:#a7f3d0;font-size:14px}
 .probe{margin-top:28px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px}
 .probe h2{margin:0 0 6px;font-size:16px}
