@@ -1,0 +1,11 @@
+```json
+{"file": ".gitignore", "line": 2, "issue": "Only '.env' is ignored. Variants such as '.env.local' and '.env.production' are not, so they could be committed and leak secrets. Add '.env.*' (and keep '!.env.example' if you ship a template)."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 3, "issue": "username has no length, character-set, or whitespace constraints. The unique index is case-sensitive, so 'Alice' and 'alice' can coexist, and visually similar names (homoglyphs) are allowed, which enables impersonation. Add a CHECK constraint and a unique index on lower(username)."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 12, "issue": "posts.body has no maximum length, so an authenticated user can insert arbitrarily large rows and consume storage. Add a CHECK such as char_length(body) <= N."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 11, "issue": "posts.user_id has no index, but the RLS policies filter on it for every select and insert. This causes full-table scans that degrade performance and can be abused for resource exhaustion. Add CREATE INDEX on posts(user_id)."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 2, "issue": "profiles.id references auth.users(id) without ON DELETE CASCADE. Deleting an auth user fails while a profile exists, or leaves orphaned data if the delete is handled another way, which complicates account deletion and data-erasure requirements."}
+```
+
+Summary: I found no critical or high-severity issues in these two files. RLS is enabled on both tables. Policies correctly scope reads and writes to `auth.uid()`, and the update policy's `with check` stops users from changing `id`. There is no insert policy on `profiles`, so users cannot create rows for arbitrary IDs. Deletes are denied by default. The findings above are hardening and robustness items.
+
+This review covers only the two files you provided. Application code, any trigger that creates profiles on signup, and any Edge Functions or client-side key handling could contain issues that this review cannot see. If you share those, I can review them too.

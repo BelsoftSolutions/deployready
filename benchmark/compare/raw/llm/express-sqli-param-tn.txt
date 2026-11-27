@@ -1,0 +1,19 @@
+```jsonl
+{"file": "server.js", "line": 6, "issue": "No authentication or rate limiting on /api/search, so unauthenticated clients can send unlimited expensive queries."}
+{"file": "server.js", "line": 6, "issue": "The handler has no try/catch. On Express 4, a rejected promise from pool.query is not passed to the error middleware. On Node 15+ it becomes an unhandled rejection that can crash the process (DoS)."}
+{"file": "server.js", "line": 6, "issue": "SELECT * returns every column of the products table, which may expose internal fields such as cost, supplier, or internal flags. The response also has no LIMIT or pagination."}
+{"file": "server.js", "line": 7, "issue": "User input is not escaped for LIKE wildcards. % and _ in req.query.q are passed through, so callers can force broad or full-table scans. There is no length limit. The parameterized query prevents SQL injection, but not wildcard abuse."}
+{"file": "server.js", "line": 7, "issue": "req.query.q is not type-checked. Array or object values (e.g. ?q[]=a) are coerced into the pattern string, and a missing parameter becomes the literal '%undefined%'. Input validation is missing."}
+{"file": "server.js", "line": 11, "issue": "No authentication or authorization on /api/users/:id. Any caller can read the id and name of any user, and can enumerate all user IDs (IDOR / user enumeration)."}
+{"file": "server.js", "line": 11, "issue": "No try/catch, and the :id parameter is not validated as an integer. A non-numeric value causes a Postgres error that is not handled in the route. Depending on the error handler, this can leak database error details or crash the process."}
+{"file": "server.js", "line": 13, "issue": "When the user does not exist, res.json(undefined) returns HTTP 200 with an empty body instead of 404. Combined with the unauthenticated endpoint, this makes existence checks easy."}
+{"file": "server.js", "line": 3, "issue": "The Pool has no ssl option and no pool limits (max, idleTimeoutMillis, connectionTimeoutMillis). If DATABASE_URL points at a remote database without sslmode, traffic may be unencrypted. Without a connection cap, load can exhaust database connections."}
+{"file": "server.js", "line": 4, "issue": "The app uses Express defaults: X-Powered-By is enabled and no security headers are set (no helmet). Adding helmet and disabling X-Powered-By reduces information disclosure and hardens headers."}
+{"file": "server.js", "line": 16, "issue": "The server listens on all interfaces over plain HTTP with no TLS and no error or 404 handling. Credentials and data travel unencrypted unless a TLS-terminating proxy sits in front of it."}
+{"file": ".gitignore", "line": 2, "issue": "Only the exact name .env is ignored. Variants such as .env.local, .env.production, or .env.development are not, so secrets could be committed by accident. Consider adding .env* (and keeping a committed .env.example if needed)."}
+```
+
+Notes:
+- The SQL is parameterized in both queries, so I found no direct SQL injection.
+- I could not check dependency versions or known CVEs because no `package.json` or lockfile was provided. The Express version matters for the unhandled-rejection finding on line 6.
+- No `.env` file was provided, so I could not check whether any secrets are committed. The `.gitignore` entry for `.env` is correct as far as it goes.

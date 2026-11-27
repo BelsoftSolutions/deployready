@@ -1,0 +1,15 @@
+```json
+{"file": "server.js", "line": 18, "issue": "Mass assignment: req.body is passed unfiltered to db.orders.update, so a client can overwrite any column, including userId (moving an order to another account) and fields like price or status. Restrict updates to an allowlist of editable fields."}
+{"file": "server.js", "line": 8, "issue": "jwt.verify is called without an algorithms option, so the accepted algorithm is not pinned. Pass algorithms: ['HS256'] (or the algorithm you actually use) to prevent algorithm-confusion attacks."}
+{"file": "server.js", "line": 8, "issue": "Tokens are not required to include an exp claim, and no maximum lifetime is enforced, so a leaked token may remain valid indefinitely. Require exp with a short lifetime and consider a revocation mechanism."}
+{"file": "server.js", "line": 8, "issue": "JWT_SECRET is read from the environment without validation at startup. If it is missing or weak, tokens are either all rejected or forgeable. Fail fast when it is unset and require a long, random secret."}
+{"file": "server.js", "line": 8, "issue": "The Authorization header is parsed with split(' ')[1] without checking for the 'Bearer' scheme. Parse the header explicitly and reject malformed or non-Bearer values."}
+{"file": "server.js", "line": 13, "issue": "req.params.id is passed to the ORM without type or format validation. Validate it as the expected type (e.g., a positive integer) before querying."}
+{"file": "server.js", "line": 13, "issue": "The async handler has no try/catch. A database error becomes an unhandled promise rejection, which can leave the request hanging or crash the process on modern Node. Add error handling or an async error wrapper."}
+{"file": "server.js", "line": 15, "issue": "res.json(order) returns the entire order record with no field filtering, which can expose internal or sensitive columns. Return only the fields the client needs."}
+{"file": "server.js", "line": 18, "issue": "The async update handler has no try/catch, so database errors are unhandled, same as the GET handler."}
+{"file": "server.js", "line": 22, "issue": "The server listens on plain HTTP on all interfaces with no rate limiting or security headers. Bearer tokens are sent in cleartext unless TLS is terminated upstream, and the API is open to brute-force and abuse. Terminate TLS and add rate limiting and helmet."}
+{"file": ".gitignore", "line": 2, "issue": "Only the exact name '.env' is ignored. Variants such as .env.local or .env.production are not, so secrets could be committed. Add an .env* pattern and keep a tracked .env.example if needed."}
+```
+
+The most serious issue is the mass assignment on line 18, because it lets a user reassign ownership of their orders. I could not review the `db` module (`require('./db')`), so I haven't verified how the ORM scopes queries or handles IDs. Those findings depend on that code.

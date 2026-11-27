@@ -1,0 +1,1781 @@
+{
+ "DeployReady": {
+  "total": {
+   "tp": 16,
+   "fp": 0,
+   "fn": 1,
+   "tnAlerts": 0,
+   "other": 0,
+   "extra": 0
+  },
+  "byClass": {
+   "missing-auth": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "cors": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "tls": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "idor": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "hardcoded-secret": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "sqli": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "debug": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "service-role-exposed": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "client-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-missing": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-permissive": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "env-committed": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   }
+  },
+  "perCase": {
+   "express-admin-auth-tn": [],
+   "express-admin-noauth-tp": [
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "missing-auth",
+     "raw": "missing-auth-route"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "missing-auth",
+     "raw": "missing-auth-route"
+    }
+   ],
+   "express-cors-tls-tn": [],
+   "express-cors-tls-tp": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "cors",
+     "raw": "cors-wildcard"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "tls",
+     "raw": "tls-verification-disabled"
+    }
+   ],
+   "express-idor-scoped-tn": [],
+   "express-idor-tp": [],
+   "express-jwt-hardcoded-tp": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "hardcoded-secret",
+     "raw": "jwt-hardcoded-secret"
+    }
+   ],
+   "express-sqli-concat-tp": [
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "sqli",
+     "raw": "sql-injection"
+    },
+    {
+     "file": "server.js",
+     "line": 12,
+     "cls": "sqli",
+     "raw": "sql-injection"
+    }
+   ],
+   "express-sqli-param-tn": [],
+   "fastapi-delete-noauth-tp": [
+    {
+     "file": "main.py",
+     "line": 13,
+     "cls": "missing-auth",
+     "raw": "missing-auth-route"
+    },
+    {
+     "file": "main.py",
+     "line": 19,
+     "cls": "missing-auth",
+     "raw": "missing-auth-route"
+    }
+   ],
+   "flask-debug-sqli-tp": [
+    {
+     "file": "app.py",
+     "line": 6,
+     "cls": "hardcoded-secret",
+     "raw": "flask-hardcoded-secret-key"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "py-sql-fstring"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "tls",
+     "raw": "py-requests-noverify"
+    },
+    {
+     "file": "app.py",
+     "line": 27,
+     "cls": "debug",
+     "raw": "py-flask-debug"
+    }
+   ],
+   "nextjs-client-secrets-tp": [
+    {
+     "file": "app/chat.tsx",
+     "line": 5,
+     "cls": "client-secret",
+     "raw": "next-public-secret"
+    },
+    {
+     "file": "lib/supabase.ts",
+     "line": 7,
+     "cls": "service-role-exposed",
+     "raw": "supabase-service-role"
+    }
+   ],
+   "nextjs-server-service-role-tn": [],
+   "python-safe-tn": [],
+   "supabase-never-rls-tp": [
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 2,
+     "cls": "rls-missing",
+     "raw": "rls-not-enabled"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 8,
+     "cls": "rls-missing",
+     "raw": "rls-not-enabled"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 15,
+     "cls": "rls-missing",
+     "raw": "rls-not-enabled"
+    }
+   ],
+   "supabase-partial-rls-tp": [
+    {
+     "file": "supabase/migrations/20240201000000_messages.sql",
+     "line": 2,
+     "cls": "rls-missing",
+     "raw": "rls-not-enabled"
+    }
+   ],
+   "supabase-rls-proper-tn": [],
+   "supabase-using-true-tp": [
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 11,
+     "cls": "rls-permissive",
+     "raw": "rls-permissive-policy"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 12,
+     "cls": "rls-permissive",
+     "raw": "rls-permissive-policy"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 13,
+     "cls": "rls-permissive",
+     "raw": "rls-permissive-policy"
+    }
+   ],
+   "vite-env-ignored-tn": [],
+   "vite-env-not-ignored-tp": [
+    {
+     "file": ".env",
+     "cls": "env-committed",
+     "raw": "env-not-ignored"
+    }
+   ]
+  }
+ },
+ "Semgrep": {
+  "total": {
+   "tp": 6,
+   "fp": 0,
+   "fn": 11,
+   "tnAlerts": 5,
+   "other": 8,
+   "extra": 0
+  },
+  "byClass": {
+   "other": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 5,
+    "other": 8,
+    "extra": 0
+   },
+   "missing-auth": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 2,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "cors": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "tls": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "idor": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "hardcoded-secret": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "sqli": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "debug": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "service-role-exposed": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "client-secret": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-missing": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 2,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-permissive": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "env-committed": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   }
+  },
+  "perCase": {
+   "express-admin-auth-tn": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-admin-noauth-tp": [
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-cors-tls-tn": [
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-cors-tls-tp": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-idor-scoped-tn": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-idor-tp": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "express-jwt-hardcoded-tp": [
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "hardcoded-secret",
+     "raw": "hardcoded-jwt-secret"
+    }
+   ],
+   "express-sqli-concat-tp": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    },
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "sqli",
+     "raw": "tainted-sql-string"
+    },
+    {
+     "file": "server.js",
+     "line": 12,
+     "cls": "sqli",
+     "raw": "tainted-sql-string"
+    }
+   ],
+   "express-sqli-param-tn": [
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "express-check-csurf-middleware-usage"
+    }
+   ],
+   "fastapi-delete-noauth-tp": [],
+   "flask-debug-sqli-tp": [
+    {
+     "file": "app.py",
+     "line": 6,
+     "cls": "hardcoded-secret",
+     "raw": "avoid_hardcoded_config_SECRET_KEY"
+    },
+    {
+     "file": "app.py",
+     "line": 15,
+     "cls": "sqli",
+     "raw": "sql-injection-db-cursor-execute"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "formatted-sql-query"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "sqlalchemy-execute-raw-query"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "tainted-sql-string"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "tainted-sql-string"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "other",
+     "raw": "use-raise-for-status"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "other",
+     "raw": "use-timeout"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "tls",
+     "raw": "disabled-cert-validation"
+    },
+    {
+     "file": "app.py",
+     "line": 27,
+     "cls": "other",
+     "raw": "avoid_app_run_with_bad_host"
+    },
+    {
+     "file": "app.py",
+     "line": 27,
+     "cls": "debug",
+     "raw": "debug-enabled"
+    }
+   ],
+   "nextjs-client-secrets-tp": [],
+   "nextjs-server-service-role-tn": [],
+   "python-safe-tn": [
+    {
+     "file": "app.py",
+     "line": 19,
+     "cls": "other",
+     "raw": "use-raise-for-status"
+    }
+   ],
+   "supabase-never-rls-tp": [],
+   "supabase-partial-rls-tp": [],
+   "supabase-rls-proper-tn": [],
+   "supabase-using-true-tp": [],
+   "vite-env-ignored-tn": [],
+   "vite-env-not-ignored-tp": []
+  }
+ },
+ "LLM (haiku)": {
+  "total": {
+   "tp": 17,
+   "fp": 13,
+   "fn": 0,
+   "tnAlerts": 73,
+   "other": 57,
+   "extra": 12
+  },
+  "byClass": {
+   "other": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 57,
+    "other": 57,
+    "extra": 0
+   },
+   "missing-auth": {
+    "tp": 2,
+    "fp": 3,
+    "fn": 0,
+    "tnAlerts": 6,
+    "other": 0,
+    "extra": 7
+   },
+   "cors": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tnAlerts": 1,
+    "other": 0,
+    "extra": 1
+   },
+   "tls": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "client-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 1
+   },
+   "idor": {
+    "tp": 1,
+    "fp": 2,
+    "fn": 0,
+    "tnAlerts": 2,
+    "other": 0,
+    "extra": 3
+   },
+   "hardcoded-secret": {
+    "tp": 2,
+    "fp": 1,
+    "fn": 0,
+    "tnAlerts": 1,
+    "other": 0,
+    "extra": 0
+   },
+   "sqli": {
+    "tp": 2,
+    "fp": 1,
+    "fn": 0,
+    "tnAlerts": 1,
+    "other": 0,
+    "extra": 0
+   },
+   "env-committed": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tnAlerts": 1,
+    "other": 0,
+    "extra": 0
+   },
+   "debug": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tnAlerts": 1,
+    "other": 0,
+    "extra": 0
+   },
+   "service-role-exposed": {
+    "tp": 1,
+    "fp": 3,
+    "fn": 0,
+    "tnAlerts": 3,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-missing": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   },
+   "rls-permissive": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tnAlerts": 0,
+    "other": 0,
+    "extra": 0
+   }
+  },
+  "perCase": {
+   "express-admin-auth-tn": [
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "other",
+     "raw": "jwt.verify is called without an explicit `algorithms` option, so the accepted al"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "other",
+     "raw": "No expiration is required. Tokens issued without an `exp` claim remain valid ind"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "The Bearer token is extracted with a string `replace('Bearer ', '')` that does n"
+    },
+    {
+     "file": "server.js",
+     "line": 18,
+     "cls": "other",
+     "raw": "requireAdmin trusts the `role` claim in the JWT without checking the database. D"
+    },
+    {
+     "file": "server.js",
+     "line": 22,
+     "cls": "other",
+     "raw": "GET /api/admin/users returns all user records via findAll() with no field filter"
+    },
+    {
+     "file": "server.js",
+     "line": 23,
+     "cls": "other",
+     "raw": "DELETE /api/admin/users/:id does not validate the `id` parameter and does not re"
+    },
+    {
+     "file": "server.js",
+     "line": 22,
+     "cls": "other",
+     "raw": "Async route handlers have no try/catch or error middleware. Under Express 4, a d"
+    },
+    {
+     "file": "server.js",
+     "line": 28,
+     "cls": "other",
+     "raw": "app.listen(3000) serves plain HTTP on all interfaces. Bearer tokens and admin da"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Only the exact `.env` file is ignored. Variants such as `.env.local` and `.env.p"
+    }
+   ],
+   "express-admin-noauth-tp": [
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "missing-auth",
+     "raw": "GET /api/admin/users has no authentication or authorization. Any unauthenticated"
+    },
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "other",
+     "raw": "The handler returns full user records from findAll() with no attribute filtering"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "missing-auth",
+     "raw": "DELETE /api/admin/users/:id has no authentication or authorization. Any client c"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "other",
+     "raw": "req.params.id is passed to destroy() without validation, and the endpoint return"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "other",
+     "raw": "The async handler has no try/catch. In Express 4 a rejected promise is not caugh"
+    },
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "other",
+     "raw": "The async admin handler has no try/catch, so database errors are unhandled and c"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "missing-auth",
+     "raw": "The unauthenticated /api/products endpoint returns the entire table with no pagi"
+    },
+    {
+     "file": "server.js",
+     "line": 15,
+     "cls": "other",
+     "raw": "The server listens on all interfaces over plain HTTP with no TLS, no security he"
+    }
+   ],
+   "express-cors-tls-tn": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "cors",
+     "raw": "CORS origins come from the ALLOWED_ORIGINS env var with no validation. Combined "
+    },
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "No security headers middleware (e.g. helmet), and X-Powered-By is enabled by def"
+    },
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "other",
+     "raw": "express.json() is applied globally, but no route reads a request body. It parses"
+    },
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "missing-auth",
+     "raw": "/api/rates has no authentication or authorization. Anyone who can reach the serv"
+    },
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "other",
+     "raw": "No rate limiting. Each request triggers an outbound fetch to partner.example.com"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "other",
+     "raw": "fetch() has no timeout or AbortSignal. A slow or hung partner response keeps the"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "other",
+     "raw": "The async handler has no try/catch. If Express 4.x is in use, promise rejections"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "other",
+     "raw": "The upstream response status and content type are not checked before parsing. Pa"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "other",
+     "raw": "No response size limit. An oversized upstream body is buffered fully in memory b"
+    },
+    {
+     "file": "server.js",
+     "line": 14,
+     "cls": "other",
+     "raw": "The server listens over plain HTTP on all interfaces (no host argument, so 0.0.0"
+    }
+   ],
+   "express-cors-tls-tp": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "cors",
+     "raw": "CORS is set to origin '*' with credentials: true. Any website can read responses"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "tls",
+     "raw": "TLS certificate validation is disabled (rejectUnauthorized: false) and shipped t"
+    },
+    {
+     "file": "server.js",
+     "line": 12,
+     "cls": "missing-auth",
+     "raw": "/api/rates has no authentication or authorization. Any unauthenticated client ca"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "other",
+     "raw": "The agent option is not honored by Node's built-in fetch (undici), so the TLS by"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "other",
+     "raw": "No error handling around the upstream fetch. Express 4 does not catch rejected a"
+    },
+    {
+     "file": "server.js",
+     "line": 14,
+     "cls": "client-secret",
+     "raw": "The upstream response is parsed and forwarded without validation or status check"
+    },
+    {
+     "file": "server.js",
+     "line": 17,
+     "cls": "other",
+     "raw": "The server listens on all interfaces over plain HTTP with no rate limiting, no s"
+    }
+   ],
+   "express-idor-scoped-tn": [
+    {
+     "file": "server.js",
+     "line": 18,
+     "cls": "other",
+     "raw": "Mass assignment: req.body is passed unfiltered to db.orders.update, so a client "
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "jwt.verify is called without an algorithms option, so the accepted algorithm is "
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "Tokens are not required to include an exp claim, and no maximum lifetime is enfo"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "JWT_SECRET is read from the environment without validation at startup. If it is "
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "The Authorization header is parsed with split(' ')[1] without checking for the '"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "other",
+     "raw": "req.params.id is passed to the ORM without type or format validation. Validate i"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "other",
+     "raw": "The async handler has no try/catch. A database error becomes an unhandled promis"
+    },
+    {
+     "file": "server.js",
+     "line": 15,
+     "cls": "other",
+     "raw": "res.json(order) returns the entire order record with no field filtering, which c"
+    },
+    {
+     "file": "server.js",
+     "line": 18,
+     "cls": "other",
+     "raw": "The async update handler has no try/catch, so database errors are unhandled, sam"
+    },
+    {
+     "file": "server.js",
+     "line": 22,
+     "cls": "other",
+     "raw": "The server listens on plain HTTP on all interfaces with no rate limiting or secu"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Only the exact name '.env' is ignored. Variants such as .env.local or .env.produ"
+    }
+   ],
+   "express-idor-tp": [
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "idor",
+     "raw": "Broken object-level authorization (IDOR) on GET /api/orders/:id: requireAuth onl"
+    },
+    {
+     "file": "server.js",
+     "line": 14,
+     "cls": "other",
+     "raw": "db.orders.findByPk(req.params.id) is scoped only by the URL id, not by the authe"
+    },
+    {
+     "file": "server.js",
+     "line": 17,
+     "cls": "idor",
+     "raw": "Broken object-level authorization (IDOR) on PUT /api/orders/:id: any authenticat"
+    },
+    {
+     "file": "server.js",
+     "line": 18,
+     "cls": "other",
+     "raw": "Mass assignment: the entire req.body is passed to db.orders.update(), so a clien"
+    },
+    {
+     "file": "server.js",
+     "line": 18,
+     "cls": "idor",
+     "raw": "Update uses only req.params.id as the WHERE condition with no user scoping, so a"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "jwt.verify() is called without an explicit algorithms option, so the accepted al"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "Authorization header parsing does not check the scheme: split(' ')[1] accepts an"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "The token's claims are trusted without validation beyond the signature: there is"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "other",
+     "raw": "Async route handler has no try/catch or error middleware. Under Express 4, a rej"
+    },
+    {
+     "file": "server.js",
+     "line": 17,
+     "cls": "other",
+     "raw": "Async route handler has no try/catch or error middleware, so database errors can"
+    },
+    {
+     "file": "server.js",
+     "line": 15,
+     "cls": "other",
+     "raw": "Returns 200 with a null body for nonexistent ids, which lets an authenticated us"
+    },
+    {
+     "file": "server.js",
+     "line": 19,
+     "cls": "other",
+     "raw": "Returns { ok: true } even when no rows were matched by the update, which hides f"
+    },
+    {
+     "file": "server.js",
+     "line": 22,
+     "cls": "missing-auth",
+     "raw": "The server listens on plain HTTP with no TLS, so JWTs and order data are sent in"
+    }
+   ],
+   "express-jwt-hardcoded-tp": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "hardcoded-secret",
+     "raw": "JWT signing secret is hardcoded in source with a guessable placeholder value. An"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "missing-auth",
+     "raw": "The /login endpoint performs no authentication. It issues a signed token for any"
+    },
+    {
+     "file": "server.js",
+     "line": 9,
+     "cls": "other",
+     "raw": "The email value from req.body is used without validation, type checking, or norm"
+    },
+    {
+     "file": "server.js",
+     "line": 10,
+     "cls": "other",
+     "raw": "Tokens are valid for 7 days with no revocation or refresh mechanism, so a leaked"
+    },
+    {
+     "file": "server.js",
+     "line": 8,
+     "cls": "other",
+     "raw": "The /login route has no rate limiting, which allows brute force against any futu"
+    },
+    {
+     "file": "server.js",
+     "line": 14,
+     "cls": "other",
+     "raw": "The server listens over plain HTTP on all interfaces with no TLS, so JWTs and an"
+    },
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "No security headers are set and X-Powered-By is enabled by default, which leaks "
+    }
+   ],
+   "express-sqli-concat-tp": [
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "sqli",
+     "raw": "SQL injection (critical): req.query.q is concatenated directly into the query st"
+    },
+    {
+     "file": "server.js",
+     "line": 12,
+     "cls": "sqli",
+     "raw": "SQL injection (critical): req.params.id is interpolated into the SQL via a templ"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "missing-auth",
+     "raw": "Broken access control / IDOR: /api/users/:id has no authentication or authorizat"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "idor",
+     "raw": "Broken access control / IDOR: /api/users/:id has no authentication or authorizat"
+    },
+    {
+     "file": "server.js",
+     "line": 12,
+     "cls": "other",
+     "raw": "Sensitive data exposure: SELECT * on the users table returns every column, which"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "other",
+     "raw": "Unhandled promise rejections: the async route handler has no try/catch or error "
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "other",
+     "raw": "Unhandled promise rejections: same missing error handling as the /api/search rou"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "other",
+     "raw": "No rate limiting or query constraints on /api/search: the leading and trailing w"
+    },
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "Database connection without TLS enforcement: the Pool is created with no ssl opt"
+    },
+    {
+     "file": "server.js",
+     "line": 16,
+     "cls": "cors",
+     "raw": "Plain HTTP on all interfaces with no security middleware: app.listen(3000) binds"
+    }
+   ],
+   "express-sqli-param-tn": [
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "missing-auth",
+     "raw": "No authentication or rate limiting on /api/search, so unauthenticated clients ca"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "other",
+     "raw": "The handler has no try/catch. On Express 4, a rejected promise from pool.query i"
+    },
+    {
+     "file": "server.js",
+     "line": 6,
+     "cls": "other",
+     "raw": "SELECT * returns every column of the products table, which may expose internal f"
+    },
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "sqli",
+     "raw": "User input is not escaped for LIKE wildcards. % and _ in req.query.q are passed "
+    },
+    {
+     "file": "server.js",
+     "line": 7,
+     "cls": "other",
+     "raw": "req.query.q is not type-checked. Array or object values (e.g. ?q[]=a) are coerce"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "missing-auth",
+     "raw": "No authentication or authorization on /api/users/:id. Any caller can read the id"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "idor",
+     "raw": "No authentication or authorization on /api/users/:id. Any caller can read the id"
+    },
+    {
+     "file": "server.js",
+     "line": 11,
+     "cls": "other",
+     "raw": "No try/catch, and the :id parameter is not validated as an integer. A non-numeri"
+    },
+    {
+     "file": "server.js",
+     "line": 13,
+     "cls": "missing-auth",
+     "raw": "When the user does not exist, res.json(undefined) returns HTTP 200 with an empty"
+    },
+    {
+     "file": "server.js",
+     "line": 3,
+     "cls": "other",
+     "raw": "The Pool has no ssl option and no pool limits (max, idleTimeoutMillis, connectio"
+    },
+    {
+     "file": "server.js",
+     "line": 4,
+     "cls": "other",
+     "raw": "The app uses Express defaults: X-Powered-By is enabled and no security headers a"
+    },
+    {
+     "file": "server.js",
+     "line": 16,
+     "cls": "other",
+     "raw": "The server listens on all interfaces over plain HTTP with no TLS and no error or"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "env-committed",
+     "raw": "Only the exact name .env is ignored. Variants such as .env.local, .env.productio"
+    }
+   ],
+   "fastapi-delete-noauth-tp": [
+    {
+     "file": "main.py",
+     "line": 8,
+     "cls": "missing-auth",
+     "raw": "GET /items has no authentication or authorization. Any unauthenticated client ca"
+    },
+    {
+     "file": "main.py",
+     "line": 13,
+     "cls": "missing-auth",
+     "raw": "DELETE /items/{item_id} has no authentication or authorization. Any unauthentica"
+    },
+    {
+     "file": "main.py",
+     "line": 14,
+     "cls": "idor",
+     "raw": "item_id is accepted as an unbounded int with no ownership check. Any caller can "
+    },
+    {
+     "file": "main.py",
+     "line": 16,
+     "cls": "other",
+     "raw": "The delete endpoint returns {\"ok\": True} even when the item does not exist, so c"
+    },
+    {
+     "file": "main.py",
+     "line": 19,
+     "cls": "missing-auth",
+     "raw": "/admin/users is an administrative route with no authentication or authorization."
+    },
+    {
+     "file": "main.py",
+     "line": 21,
+     "cls": "missing-auth",
+     "raw": "The admin endpoint returns a placeholder response, so the route is live in produ"
+    },
+    {
+     "file": "main.py",
+     "line": 10,
+     "cls": "other",
+     "raw": "GET /items returns the full collection with no pagination or size limit. A large"
+    }
+   ],
+   "flask-debug-sqli-tp": [
+    {
+     "file": "app.py",
+     "line": 6,
+     "cls": "hardcoded-secret",
+     "raw": "Hardcoded Flask SECRET_KEY in source. Anyone with the repo can forge session coo"
+    },
+    {
+     "file": "app.py",
+     "line": 16,
+     "cls": "sqli",
+     "raw": "SQL injection: the user-supplied `name` query parameter is interpolated into the"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "tls",
+     "raw": "TLS certificate verification disabled with verify=False, so responses from partn"
+    },
+    {
+     "file": "app.py",
+     "line": 22,
+     "cls": "other",
+     "raw": "No timeout on the outbound requests.get call. A slow or unresponsive partner ser"
+    },
+    {
+     "file": "app.py",
+     "line": 23,
+     "cls": "other",
+     "raw": "External response is returned without checking the HTTP status or validating the"
+    },
+    {
+     "file": "app.py",
+     "line": 27,
+     "cls": "debug",
+     "raw": "app.run(debug=True) enables the Werkzeug interactive debugger. If it is reachabl"
+    },
+    {
+     "file": "app.py",
+     "line": 27,
+     "cls": "debug",
+     "raw": "Binding to host=0.0.0.0 exposes the development server on all network interfaces"
+    },
+    {
+     "file": "app.py",
+     "line": 13,
+     "cls": "missing-auth",
+     "raw": "The /users endpoint has no authentication or authorization, so any unauthenticat"
+    },
+    {
+     "file": "app.py",
+     "line": 20,
+     "cls": "missing-auth",
+     "raw": "The /sync endpoint has no authentication and lets any client trigger outbound re"
+    },
+    {
+     "file": "app.py",
+     "line": 9,
+     "cls": "other",
+     "raw": "get_db() opens a new SQLite connection on every call and never closes it, leakin"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "app.db is not listed. The SQLite database containing user data can be committed "
+    }
+   ],
+   "nextjs-client-secrets-tp": [
+    {
+     "file": "app/chat.tsx",
+     "line": 5,
+     "cls": "client-secret",
+     "raw": "CRITICAL: The OpenAI API key is read from NEXT_PUBLIC_OPENAI_API_KEY. The NEXT_P"
+    },
+    {
+     "file": "app/chat.tsx",
+     "line": 6,
+     "cls": "client-secret",
+     "raw": "dangerouslyAllowBrowser: true explicitly permits the OpenAI SDK to run in the br"
+    },
+    {
+     "file": "app/chat.tsx",
+     "line": 10,
+     "cls": "missing-auth",
+     "raw": "The model call is made directly from the client with no server-side proxy, authe"
+    },
+    {
+     "file": "app/chat.tsx",
+     "line": 10,
+     "cls": "other",
+     "raw": "User input `q` is forwarded to the API without length or content limits, which i"
+    },
+    {
+     "file": "lib/supabase.ts",
+     "line": 7,
+     "cls": "service-role-exposed",
+     "raw": "CRITICAL: The Supabase service-role key is read from NEXT_PUBLIC_SUPABASE_SERVIC"
+    },
+    {
+     "file": "lib/supabase.ts",
+     "line": 4,
+     "cls": "other",
+     "raw": "The comment 'one client for everything, just works in the browser' reflects the "
+    },
+    {
+     "file": "lib/supabase.ts",
+     "line": 5,
+     "cls": "other",
+     "raw": "createClient is called with the `!` non-null assertion on env vars. If the varia"
+    }
+   ],
+   "nextjs-server-service-role-tn": [
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 10,
+     "cls": "service-role-exposed",
+     "raw": "Authorization gap (High): the handler only checks that the caller is authenticat"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 12,
+     "cls": "other",
+     "raw": "Missing input validation (Medium): the email from req.json() is passed straight "
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 13,
+     "cls": "other",
+     "raw": "No rate limiting (Medium): an authenticated user can call this endpoint repeated"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 12,
+     "cls": "other",
+     "raw": "Unguarded request parsing (Low): req.json() is not wrapped in try/catch, so a ma"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 14,
+     "cls": "other",
+     "raw": "Misleading failure response (Low): on failure the route still returns HTTP 200 w"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 6,
+     "cls": "other",
+     "raw": "CSRF exposure (Low/Medium): the state-changing POST authenticates only through c"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 8,
+     "cls": "other",
+     "raw": "Incomplete cookie adapter (Low, correctness): cookies().get is called synchronou"
+    },
+    {
+     "file": "app/api/invite/route.ts",
+     "line": 7,
+     "cls": "other",
+     "raw": "Unchecked environment variables (Low): the non-null assertions (!) on NEXT_PUBLI"
+    },
+    {
+     "file": "lib/supabaseAdmin.ts",
+     "line": 7,
+     "cls": "other",
+     "raw": "Service-role key used without validation (Low): SUPABASE_SERVICE_ROLE_KEY is ass"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Incomplete ignore rules (Low): '.env*' covers env files, but the file has no ent"
+    }
+   ],
+   "python-safe-tn": [
+    {
+     "file": "api.py",
+     "line": 10,
+     "cls": "hardcoded-secret",
+     "raw": "Critical: authentication is a hardcoded string comparison (token != \"valid\"). An"
+    },
+    {
+     "file": "api.py",
+     "line": 16,
+     "cls": "idor",
+     "raw": "High: broken access control. delete_item accepts any authenticated caller and de"
+    },
+    {
+     "file": "app.py",
+     "line": 11,
+     "cls": "missing-auth",
+     "raw": "Medium: /users has no authentication and returns every user's id and name. There"
+    },
+    {
+     "file": "app.py",
+     "line": 19,
+     "cls": "missing-auth",
+     "raw": "Low: /sync is unauthenticated, so any caller can trigger outbound requests to th"
+    },
+    {
+     "file": "app.py",
+     "line": 23,
+     "cls": "debug",
+     "raw": "High: debug mode is controlled by the FLASK_DEBUG environment variable. If debug"
+    },
+    {
+     "file": "app.py",
+     "line": 13,
+     "cls": "other",
+     "raw": "Low: a new sqlite3 connection is opened on every request and never closed, which"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Low: app.db (the SQLite database holding user data) is not ignored, so it could "
+    }
+   ],
+   "supabase-never-rls-tp": [
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 2,
+     "cls": "rls-missing",
+     "raw": "public.profiles has no RLS enabled. Because Supabase exposes public-schema table"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 8,
+     "cls": "rls-missing",
+     "raw": "public.posts has no RLS enabled, so any client can read, insert, update, or dele"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 10,
+     "cls": "idor",
+     "raw": "posts.user_id is nullable, so posts can exist without an owner. Without an owner"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 11,
+     "cls": "other",
+     "raw": "posts.body has no length limit or CHECK constraint, which allows arbitrarily lar"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 15,
+     "cls": "rls-missing",
+     "raw": "public.messages has no RLS enabled. Private direct messages are readable by any "
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 17,
+     "cls": "other",
+     "raw": "messages.sender_id is nullable and has no check tying it to the authenticated us"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 18,
+     "cls": "other",
+     "raw": "messages.recipient_id is nullable, so a message can have no intended recipient, "
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 19,
+     "cls": "other",
+     "raw": "messages.content is nullable and has no length limit, which allows empty and ove"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 5,
+     "cls": "other",
+     "raw": "profiles.avatar_url is an unvalidated free-text field. If the client or any serv"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 4,
+     "cls": "other",
+     "raw": "profiles.username has a UNIQUE constraint but no format or length validation. Th"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "The pattern '.env' only matches a file named exactly '.env'. Common variants suc"
+    }
+   ],
+   "supabase-partial-rls-tp": [
+    {
+     "file": "supabase/migrations/20240201000000_messages.sql",
+     "line": 2,
+     "cls": "rls-missing",
+     "raw": "CRITICAL: public.messages has no 'enable row level security' and no policies. Su"
+    },
+    {
+     "file": "supabase/migrations/20240201000000_messages.sql",
+     "line": 4,
+     "cls": "other",
+     "raw": "HIGH: sender_id is nullable and not bound to auth.uid(). Even after RLS is enabl"
+    },
+    {
+     "file": "supabase/migrations/20240201000000_messages.sql",
+     "line": 5,
+     "cls": "other",
+     "raw": "LOW: content text has no length limit or validation, enabling oversized-payload "
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 6,
+     "cls": "other",
+     "raw": "LOW: the 'for all' policy has no explicit WITH CHECK clause. Postgres reuses USI"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 3,
+     "cls": "other",
+     "raw": "LOW: username has no CHECK constraints (length, allowed characters, non-empty) a"
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "MEDIUM: only the exact '.env' filename is ignored. Variants such as .env.local, "
+    }
+   ],
+   "supabase-rls-proper-tn": [
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Only '.env' is ignored. Variants such as '.env.local' and '.env.production' are "
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 3,
+     "cls": "other",
+     "raw": "username has no length, character-set, or whitespace constraints. The unique ind"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 12,
+     "cls": "other",
+     "raw": "posts.body has no maximum length, so an authenticated user can insert arbitraril"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 11,
+     "cls": "other",
+     "raw": "posts.user_id has no index, but the RLS policies filter on it for every select a"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 2,
+     "cls": "other",
+     "raw": "profiles.id references auth.users(id) without ON DELETE CASCADE. Deleting an aut"
+    }
+   ],
+   "supabase-using-true-tp": [
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 10,
+     "cls": "missing-auth",
+     "raw": "SELECT policy uses `using (true)`, so anyone, including unauthenticated anon use"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 10,
+     "cls": "rls-permissive",
+     "raw": "SELECT policy uses `using (true)`, so anyone, including unauthenticated anon use"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 11,
+     "cls": "rls-permissive",
+     "raw": "INSERT policy uses `with check (true)`, so anyone can create documents and set o"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 12,
+     "cls": "rls-permissive",
+     "raw": "UPDATE policy uses `using (true)` with no `with check`, so anyone can modify any"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 13,
+     "cls": "rls-permissive",
+     "raw": "DELETE policy uses `using (true)`, so anyone can delete any document in the tabl"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 9,
+     "cls": "other",
+     "raw": "The comment documents that these policies were left as placeholders (\"make it wo"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 3,
+     "cls": "other",
+     "raw": "owner_id is nullable with no default and no ON DELETE behavior. Rows can be crea"
+    },
+    {
+     "file": "supabase/migrations/20240101000000_init.sql",
+     "line": 4,
+     "cls": "other",
+     "raw": "title and content are unconstrained text with no length limits or validation at "
+    },
+    {
+     "file": ".gitignore",
+     "line": 2,
+     "cls": "other",
+     "raw": "Only the exact name `.env` is ignored. Variants such as `.env.local`, `.env.prod"
+    }
+   ],
+   "vite-env-ignored-tn": [
+    {
+     "file": ".env.example",
+     "line": 1,
+     "cls": "other",
+     "raw": "Variables with the VITE_ prefix are inlined into the client-side bundle and are "
+    },
+    {
+     "file": ".env.example",
+     "line": 2,
+     "cls": "service-role-exposed",
+     "raw": "The example does not state that VITE_SUPABASE_ANON_KEY must be the anon (public)"
+    },
+    {
+     "file": ".gitignore",
+     "line": 3,
+     "cls": "other",
+     "raw": "Only the exact names '.env' and '.env.local' are ignored. Environment-specific f"
+    },
+    {
+     "file": ".gitignore",
+     "line": 4,
+     "cls": "other",
+     "raw": "The pattern '.env.local' does not match '.env.*.local' variants, so per-mode loc"
+    },
+    {
+     "file": "package.json",
+     "line": 1,
+     "cls": "other",
+     "raw": "No dependencies or devDependencies are declared, yet the code imports @supabase/"
+    },
+    {
+     "file": "src/lib/supabase.ts",
+     "line": 4,
+     "cls": "other",
+     "raw": "The VITE_SUPABASE_URL value is used without validation. If it is missing or poin"
+    },
+    {
+     "file": "src/lib/supabase.ts",
+     "line": 5,
+     "cls": "service-role-exposed",
+     "raw": "The anon key is read without checks. Nothing prevents a service_role key from be"
+    },
+    {
+     "file": "src/lib/supabase.ts",
+     "line": 3,
+     "cls": "other",
+     "raw": "The client is created with default options, so auth sessions are stored in local"
+    }
+   ],
+   "vite-env-not-ignored-tp": [
+    {
+     "file": ".env",
+     "line": 3,
+     "cls": "other",
+     "raw": "STRIPE_SECRET_KEY is stored in a frontend project's env file. Secret keys belong"
+    },
+    {
+     "file": ".env",
+     "line": 1,
+     "cls": "env-committed",
+     "raw": "The .env file holds secrets, but no .gitignore was provided to confirm it is exc"
+    },
+    {
+     "file": ".env",
+     "line": 2,
+     "cls": "other",
+     "raw": "VITE_SUPABASE_ANON_KEY is bundled into the client build, so anyone can read it. "
+    },
+    {
+     "file": "src/lib/supabase.ts",
+     "line": 4,
+     "cls": "other",
+     "raw": "The URL and anon key are read from import.meta.env with no check that they are d"
+    },
+    {
+     "file": "src/lib/supabase.ts",
+     "line": 3,
+     "cls": "other",
+     "raw": "The client uses the default session storage (localStorage), so any XSS vulnerabi"
+    },
+    {
+     "file": "package.json",
+     "line": 1,
+     "cls": "other",
+     "raw": "The code imports @supabase/supabase-js and uses Vite, but neither appears in pac"
+    }
+   ]
+  }
+ }
+}

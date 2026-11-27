@@ -1,0 +1,14 @@
+```json
+{"file": "server.js", "line": 7, "issue": "SQL injection (critical): req.query.q is concatenated directly into the query string. An attacker can read or modify any table. Fix: use a parameterized query, e.g. pool.query('SELECT * FROM products WHERE name LIKE $1', ['%' + q + '%']). Also confirm q is a string, since repeated params like ?q=a&q=b produce arrays."}
+{"file": "server.js", "line": 12, "issue": "SQL injection (critical): req.params.id is interpolated into the SQL via a template literal without validation. Fix: parameterize with pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]) and validate that id is an integer before use."}
+{"file": "server.js", "line": 11, "issue": "Broken access control / IDOR: /api/users/:id has no authentication or authorization check, so any client can fetch any user's record by enumerating ids."}
+{"file": "server.js", "line": 12, "issue": "Sensitive data exposure: SELECT * on the users table returns every column, which may include password hashes, tokens, or PII. Fix: select only the fields the client needs."}
+{"file": "server.js", "line": 6, "issue": "Unhandled promise rejections: the async route handler has no try/catch or error middleware. A database error leaves the request hanging, and on Node 15+ an unhandled rejection can crash the process. Fix: wrap handlers in try/catch or use an async error wrapper, and return a generic 500 without leaking DB error details."}
+{"file": "server.js", "line": 11, "issue": "Unhandled promise rejections: same missing error handling as the /api/search route. Also, res.json(result.rows[0]) returns an empty or undefined body for a missing user instead of a 404."}
+{"file": "server.js", "line": 6, "issue": "No rate limiting or query constraints on /api/search: the leading and trailing wildcard LIKE '%...%' forces full table scans, so a client can cause resource exhaustion. Fix: add rate limiting (e.g. express-rate-limit), a maximum length on q, and pagination with LIMIT."}
+{"file": "server.js", "line": 3, "issue": "Database connection without TLS enforcement: the Pool is created with no ssl option, so credentials and data may travel unencrypted if DATABASE_URL points to a remote host. Fix: set ssl with certificate verification for non-local databases."}
+{"file": "server.js", "line": 16, "issue": "Plain HTTP on all interfaces with no security middleware: app.listen(3000) binds to 0.0.0.0 over HTTP with no helmet headers, no CORS policy, and no TLS. Fix: terminate TLS at a reverse proxy, bind to localhost where appropriate, and add helmet."}
+{"file": ".gitignore", "line": 2, "issue": "No issue found: .env is correctly ignored, so the DATABASE_URL secret is not committed. Keep it out of the repo history and rotate the credential if it was ever committed."}
+```
+
+The two SQL injections on lines 7 and 12 are the critical findings. Fix those first, then add authentication and error handling to the user routes.
