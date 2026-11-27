@@ -6,7 +6,7 @@
 import type { Finding, Severity } from '../types';
 import { isNote, isUnverified } from './ScoreCalculator';
 
-const ALWAYS_CRITICAL = new Set(['hardcoded-secret', 'env-not-ignored', 'sql-injection', 'command-injection']);
+const ALWAYS_CRITICAL = new Set(['hardcoded-secret', 'sql-injection', 'command-injection']);
 
 export class SeverityScorer {
   static apply(findings: Finding[]): Finding[] {

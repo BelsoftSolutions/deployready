@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.4.0
+
+### Agent loop (MCP)
+- New `deployready mcp`: a local MCP server for Claude Code, Cursor, Codex and Windsurf with `scan`, `get_finding`, `apply_safe_fixes`, `verify`, `score` and `supabase_check`. Your coding agent fixes, DeployReady verifies.
+- Claude Code skill in `skills/deployready/SKILL.md`.
+
+### Fix faster
+- `fix --all` in the interactive shell and `analyze --fix` for CI/scripts: every safe deterministic fix in one pass, each re-verified.
+- Backups now go to `.deployready/backups/` (gitignored) instead of next to your files.
+
+### Proof, not guesses
+- Live and active findings carry reproducible proof: a redacted curl request, status, response excerpt and a control request. Shown in the terminal, `show`, markdown, HTML and JSON.
+- `verify` returns `fixed`, `still-present` or `inconclusive`. A live finding only counts as fixed when the attack fails and a control request still works. (Before, verifying an active finding always reported fixed.)
+- Safe detection of unauthenticated DELETE/PATCH routes on localhost (non-existent record id, no body, random-path control).
+- Ownership guard: active probes only target localhost unless you pass `--active-url` with `--i-own-this-target <host>` (or `ownedTargets` in config).
+
+### Supabase
+- Static: service_role keys in client-side code or public env vars are critical.
+- Live (`--supabase`), read-only and counts-only, only for a local project or one you prove you own (service key or access token): tables readable by anon, anon-callable RPC functions, public buckets, sign-up settings, and opt-in two-user cross-read. See docs/SUPABASE.md.
+
+### Accuracy
+- New rules: hardcoded JWT signing secrets (critical), Flask `SECRET_KEY` literals, secrets in `NEXT_PUBLIC_`/`VITE_` variables, routes that change data or expose /admin with no auth check.
+- RLS checks now fire when a Supabase project never enables RLS, and flag tables with RLS but no policy and `using (true)` policies.
+- `.env` is critical only when it is tracked or in git history; an untracked, un-ignored `.env` is a warning.
+- Fewer false positives on parameterized queries, header-derived tokens, comparisons and server-only Supabase modules.
+- New labelled benchmark of vibe-coded apps (106 cases): precision 0.88 -> 0.95, recall 0.85 -> 0.92 on supported rules.
+
+### Security
+- `follow-redirects` updated past a high-severity advisory.
+
 ## 0.3.0
 
 ### Security accuracy

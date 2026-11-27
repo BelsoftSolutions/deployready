@@ -169,7 +169,7 @@ const JS_RULES: LineRule[] = [
     // jwt.sign(payload, 'literal') / jsonwebtoken.verify(t, "literal") / jose with TextEncoder|Buffer of a literal.
     re: new RegExp(
       [
-        `\\b(?:jwt|jsonwebtoken)\\.(?:sign|verify)\\s*\\([^\\n\\[\\]]{0,300}?,\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\1\\s*[,)]`,
+        `\\b(?:jwt|jsonwebtoken)\\.(?:sign|verify)\\s*\\((?:[^\\n\\[\\]]|\\[[^\\]'"\`\\n]*\\]){0,300}?,\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\1\\s*[,)]`,
         `\\.sign\\s*\\(\\s*(?:new\\s+TextEncoder\\s*\\(\\s*\\)\\s*\\.encode|Buffer\\.from)\\s*\\(\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\2`,
         `\\bjwtVerify\\s*\\([^\\n\\[\\]]{0,200}?,\\s*(?:new\\s+TextEncoder\\s*\\(\\s*\\)\\s*\\.encode|Buffer\\.from)\\s*\\(\\s*(["'\`])(?![^"'\`\\n]*\\$\\{)[^"'\`\\n]{3,}\\3`,
       ].join('|'),

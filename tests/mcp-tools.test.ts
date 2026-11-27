@@ -12,6 +12,7 @@ function project(): string {
     path.join(root, 'app.js'),
     "const crypto = require('crypto');\nconst h = crypto.createHash('md5');\nmodule.exports = h;\n",
   );
+  fs.writeFileSync(path.join(root, 'client.js'), "const https = require('https');\nmodule.exports = new https.Agent({ rejectUnauthorized: false });\n");
   fs.writeFileSync(path.join(root, 'package.json'), '{"name":"x","dependencies":{"express":"4.0.0"}}');
   return root;
 }
@@ -22,7 +23,7 @@ describe('MCP tool handlers', () => {
   it('scan returns findings and a not-ready verdict while a critical is open', async () => {
     const t = new DeployReadyTools(project());
     const r = await t.scan();
-    expect(r.findings.some((f) => f.rule === 'env-not-ignored' && f.severity === 'critical')).toBe(true);
+    expect(r.findings.some((f) => f.rule === 'tls-verification-disabled' && f.severity === 'critical')).toBe(true);
     expect(r.findings.every((f) => f.id && f.rule && f.severity && f.title)).toBe(true);
     expect(r.ready).toBe(false);
     expect(r.verdict).toMatch(/^NOT READY/);
@@ -89,8 +90,8 @@ describe('MCP tool handlers', () => {
     await t.scan();
     const bad = await t.score();
     expect(bad.ready).toBe(false);
-    expect(bad.openCritical.map((f) => f.rule)).toContain('env-not-ignored');
-    fs.writeFileSync(path.join(root, '.gitignore'), '.env\n');
+    expect(bad.openCritical.map((f) => f.rule)).toContain('tls-verification-disabled');
+    fs.writeFileSync(path.join(root, 'client.js'), "module.exports = {};\n");
     const good = await t.score();
     expect(good.openCritical).toEqual([]);
     expect(good.ready).toBe(true);
