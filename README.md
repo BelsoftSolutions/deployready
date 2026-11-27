@@ -1,57 +1,76 @@
 # DeployReady
 
-> **AI wrote it fast. DeployReady checks if it's safe to ship.**
-
-A pre-flight check for vibe-coded apps: run 30+ structured tests across your code **and** your running app, get a 0–100 readiness score, and apply **AI-powered fixes** — all in one command. Built for people shipping with Cursor, Copilot, Claude Code, v0, or bolt — not a lecture about them.
+DeployReady is a local security and production-readiness scanner for apps built with AI coding tools. It reads your code, optionally tests your app running on localhost, and gives a 0-100 readiness score with fixes.
 
 ```bash
-npx deployready@latest analyze ./my-app
+npx deployready@latest
 ```
 
+Requires Node.js 18 or later. Use `@latest` because plain `npx deployready` can reuse a cached older copy. To install globally instead: `npm install -g deployready`, then run `deployready`.
+
 <p align="center">
-  <img src="docs/scan-demo.svg" alt="Terminal recording of DeployReady scanning a small AI-generated Express app and finding a SQL injection, a hardcoded AWS key, eval() code injection, and an unprotected .env file — readiness score 39/100" width="720">
+  <img src="docs/screenshots/report.png" alt="DeployReady HTML report for the bundled sample app: readiness score 38/100, 4 critical and 3 warning findings" width="720">
 </p>
 
-<p align="center"><sub>Unedited output from a real scan of a small AI-generated app — see <a href="tests/sample-app"><code>tests/sample-app</code></a>.</sub></p>
+<p align="center"><sub>HTML report (<code>--html</code>) for the deliberately vulnerable <a href="tests/sample-app"><code>tests/sample-app</code></a>.</sub></p>
 
-> _Privacy:_ scanning runs locally. Only a redacted findings report is ever sent to an AI — after you approve it, never your source code — and you can use a local model (Ollama) to keep everything 100% offline.
+## Quick start (about 60 seconds)
+
+```bash
+# 1. Scan. Static only, fully offline:
+npx deployready@latest analyze ./my-app --no-ai --no-dynamic
+
+# 2. Apply the safe, deterministic fixes (backups are written first):
+npx deployready@latest analyze ./my-app --no-ai --no-dynamic --fix
+#    in the interactive session the same thing is: fix --all
+
+# 3. Let your coding agent scan, fix and verify in a loop (Claude Code):
+claude mcp add deployready -- npx -y deployready@latest mcp
+```
+
+Run `npx deployready@latest` with no arguments to open the guided interactive session instead.
+
+<p align="center">
+  <img src="docs/scan-demo.svg" alt="Terminal output of DeployReady scanning a small Express app: SQL injection, hardcoded AWS key, eval() and a committed .env, score 39/100" width="720">
+</p>
+
+## What it checks, and what it doesn't
+
+**Checks**
+
+- Static analysis of JavaScript/TypeScript and Python: hardcoded secrets, `eval`, command and SQL injection, XSS sinks, weak crypto, disabled TLS verification, insecure cookies, JWT `none`, unsafe deserialization, committed `.env`. Findings map to OWASP Top 10 (2025) and CWE.
+- Access control patterns: routes without an auth check, Supabase tables without Row-Level Security, `service_role` keys in client code.
+- Live checks against your app on localhost: auth bypass, exposed admin routes, secrets in responses, CORS, security headers, rate limiting.
+- Opt-in active (authenticated) tests and Supabase checks, described below.
+
+**Does not**
+
+- It is not a penetration test or a substitute for a code review. A score of 100 means none of these checks fired, not that the app is secure.
+- Static analysis has false positives and false negatives. Business-logic flaws, most authorization design errors, and anything in languages other than JS/TS/Python are out of reach.
+- Live tests only cover routes your code or OpenAPI file defines, plus links your running app advertises. Paths are not guessed unless you opt in to the common-path probe.
+- AI-generated findings are marked unverified and never change the score or the CI gate.
+- Supabase checks are read-only, so write exposure (INSERT/UPDATE/DELETE policies) is not tested.
+
+Test coverage numbers are in [`docs/COVERAGE.md`](docs/COVERAGE.md).
+
+## Score badge
+
+```bash
+npx deployready@latest badge .                        # prints a markdown badge
+npx deployready@latest badge . --write-svg badge.svg  # also writes a local SVG, no network
+```
+
+The command runs a static scan and prints, for example:
+
+```markdown
+![DeployReady score](https://img.shields.io/badge/DeployReady-87%2F100-green)
+```
+
+Colors: 90-100 bright green, 75-89 green, 60-74 yellow, 40-59 orange, below 40 red. The badge is a snapshot; regenerate it when the score changes.
 
 ## Install
 
-**Run without installing** (recommended — always works, nothing to set up):
-
-```bash
-npx deployready@latest ./my-app
-```
-
-**Or install globally** if you run it often (faster, but you must update it yourself):
-
-```bash
-npm install -g deployready
-deployready ./my-app
-# update later with: npm i -g deployready@latest
-```
-
-Requires Node.js >= 18. The `@latest` tag ensures you always get the newest version — plain `npx deployready` can reuse a cached older copy. Every command below is shown with `npx deployready@latest`; if you installed globally, use `deployready` instead.
-
-## Quick start
-
-Run it inside your project to open an interactive, guided session — no commands to memorize, just pick a number:
-
-```bash
-npx deployready@latest ./my-app     # or just: npx deployready@latest
-```
-
-```
-  What would you like to do?
-   1  Scan this project now            (recommended)
-   2  Set up or change the AI model
-   3  How does DeployReady work?
-   4  Go to the command prompt
-   5  Exit
-```
-
-After each action it suggests your next step (e.g. “type `fix 1` to fix the top issue”). Type `menu` anytime to bring the guide back.
+See the top of this page. Every command here is written as `npx deployready@latest ...`; with a global install, use `deployready ...`.
 
 ## Interactive commands
 
@@ -88,6 +107,7 @@ npx deployready@latest init                              # first-time setup (pic
 npx deployready@latest analyze ./my-app                  # single non-interactive scan, prints results
 npx deployready@latest analyze . --no-ai --no-dynamic    # static only, fully offline
 npx deployready@latest report ./my-app                   # scan and export the markdown report
+npx deployready@latest badge ./my-app                    # print a markdown score badge
 npx deployready@latest config                            # show the active config (secrets never printed)
 ```
 
@@ -213,17 +233,6 @@ To run active probes against a host you own that is not on your machine (e.g. st
 
 By default the live tests never guess paths. With `--probe-common-paths` (or `"probeCommonPaths": true` in your config, interactive runs only) DeployReady also requests a fixed list of 16 well-known paths such as `/.env` and `/.git/config` from your local app, at most 20 GET requests, after showing you the list and asking first. A path is reported only when its content proves it (a `200` alone is never enough), and findings are labelled as guessed, lower confidence, in their own report section. In `--yes`, `--json` and CI only the explicit flag enables it. Details: [`docs/COMMON-PATH-PROBE.md`](docs/COMMON-PATH-PROBE.md).
 
-## What it checks
-
-- **Static analysis** — Babel-based AST parsing (pure JS, no native build) for JavaScript/TypeScript, plus Python. Dependency graph, route-mount resolution across files, and stack detection (Express, Next.js, Fastify, NestJS, Koa, FastAPI, Flask, Django, Laravel).
-- **Secrets & vulnerabilities** — hardcoded credentials, `eval`/command/SQL injection, XSS sinks, weak crypto, insecure randomness, disabled TLS verification, JWT `none` algorithm, insecure cookies, unsafe deserialization, insecure temp files, committed `.env`, log injection — each mapped to **OWASP Top 10 (2025)** and **CWE**.
-- **Access control & transport** — Row-Level Security disabled or never enabled on a table, Supabase `service_role` key used in app code (RLS bypass), and insecure cleartext `http://` endpoints.
-- **Live dynamic testing** — finds a local server listening on a common port and, for the routes your code defines (never guessed paths), checks for auth bypass, exposed admin routes, secrets in responses, wildcard CORS, missing security headers, missing rate limiting, slow endpoints, missing cache headers, and version/stack-trace leaks.
-- **Active authorization testing** (opt-in, `--active`) — acts as a logged-in user to find broken object-level auth (IDOR/BOLA), broken tenant isolation, privilege escalation (forged `role`), and unverified JWTs (`alg:none`).
-- **Readiness score (0–100)** with a critical / warning / info breakdown.
-- **Deployment recommendation** — suggests where to host based on your stack, size, and whether you're frontend / backend / full-stack, flags when to split frontend and backend across platforms, and marks suitable free tiers.
-- **Reports** — terminal output, markdown export, and a branded HTML dashboard.
-
 ## How it works
 
 ```
@@ -259,7 +268,7 @@ Choose these in `init` (or in the interactive menu under "Set up or change the A
 
 ## Security & privacy
 
-DeployReady reads your code, probes your ports, and holds your keys — so it's built to a high bar:
+To report a vulnerability in DeployReady itself, see [SECURITY.md](SECURITY.md). DeployReady reads your code, probes your ports and can hold API keys, so:
 
 - API keys are read from environment variables first and **never logged**; the on-disk config is written with `0600` permissions.
 - All terminal output and any AI payload pass through a central **secret redactor**.

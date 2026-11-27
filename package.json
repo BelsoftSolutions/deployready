@@ -22,7 +22,8 @@
     "dist/",
     "skills/",
     "docs/sample-config.json",
-    "README.md"
+    "README.md",
+    "SECURITY.md"
   ],
   "engines": {
     "node": ">=18"

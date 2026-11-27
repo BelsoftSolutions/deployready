@@ -24,6 +24,7 @@ import { getVersion } from '../utils/version';
 import { renderTokenHelp } from '../active/tokenHelp';
 import { runAnalyzeFix } from '../mcp/analyzeFix';
 import { startMcpServer } from '../mcp/server';
+import { badgeMarkdown, badgeSvg } from '../ui/badge';
 
 const VERSION = getVersion();
 
@@ -227,6 +228,24 @@ export function buildProgram(): Command {
             2,
           ),
         );
+      });
+    });
+
+  program
+    .command('badge')
+    .description('Run a static scan and print a markdown score badge for your README')
+    .argument('[path]', 'path to the project', '.')
+    .option('--write-svg <file>', 'also write a local SVG badge to this file (no network)')
+    .action(async (path: string, opts) => {
+      await guard(async () => {
+        setQuiet(true);
+        const report = await Orchestrator.analyze(path, { yes: true, noAi: true, noDynamic: true, json: true });
+        setQuiet(false);
+        console.log(badgeMarkdown(report.score));
+        if (opts.writeSvg) {
+          fs.writeFileSync(opts.writeSvg, badgeSvg(report.score));
+          logger.success(`Wrote SVG badge to ${opts.writeSvg}`);
+        }
       });
     });
 
