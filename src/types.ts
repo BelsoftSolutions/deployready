@@ -223,6 +223,8 @@ export interface AppConfig {
   defaultPorts: number[];
   /** Opt-in common-path probe (see docs/COMMON-PATH-PROBE.md). Off by default; never written as true by init. */
   probeCommonPaths: boolean;
+  /** Non-loopback hosts the user owns; active probes may target them (like --i-own-this-target). */
+  ownedTargets?: string[];
 }
 
 /** A single tool result returned by an AI handler. */

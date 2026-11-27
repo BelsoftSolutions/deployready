@@ -21,7 +21,8 @@ import { sanitizeLine, sanitizeText } from '../utils/sanitize';
 import { setupCliProvider } from './cliSetup';
 import { verifyAiFindings, droppedNote } from '../ai/verifyAiFindings';
 import { ScoreCalculator, isNote, isUnverified } from '../analysis/ScoreCalculator';
-import { Verifier } from '../core/Verifier';
+import { Verifier, type VerifyResult } from '../core/Verifier';
+import { IssuePresenter } from '../ui/IssuePresenter';
 import { ConfigManager } from '../config/ConfigManager';
 import { ExportManager } from '../ui/ExportManager';
 import { Banner } from '../ui/Banner';
@@ -270,6 +271,7 @@ export class InteractiveShell {
     console.log(`  ${this.findingBadge(f)}  ${chalk.gray(`[${f.source}]`)}  ${chalk.gray(refs)}`);
     if (f.file || f.endpoint) console.log(`  ${chalk.gray('where:')} ${f.endpoint ?? `${f.file}:${f.line ?? '?'}`}`);
     if (f.evidence) console.log(`  ${chalk.gray('evidence:')} ${f.evidence}`);
+    if (f.proof) for (const line of IssuePresenter.proofLines(f.proof)) console.log(`  ${chalk.gray(line)}`);
     console.log(`  ${chalk.gray('what:')} ${f.description}`);
     console.log(`  ${chalk.gray('fix:')} ${f.recommendation}\n`);
   }
@@ -362,7 +364,7 @@ export class InteractiveShell {
         continue;
       }
       const ctx = { target: this.state.target };
-      const v = await Verifier.verify(r.finding, ctx).catch(() => ({ status: 'unknown' as const }));
+      const v = await Verifier.verify(r.finding, ctx).catch(() => ({ status: 'inconclusive' as const }));
       if (v.status === 'still-present') {
         console.log(`  ${chalk.yellow('!')} applied but still detected  ${r.finding.title}`);
         continue;
@@ -411,8 +413,9 @@ export class InteractiveShell {
 
   /**
    * Re-run the check for a finding. `appliedChange` = we just edited something,
-   * so an "unknown" result is treated as fixed-but-unverified; a standalone
-   * `verify` leaves an unknown/failed finding open.
+   * so an "inconclusive" static result is treated as fixed-but-unverified; a
+   * standalone `verify`, or an inconclusive live (dynamic/active) result, leaves
+   * the finding open: a live fix needs proof.
    */
   private async verifyAndMark(f: Finding, appliedChange: boolean): Promise<void> {
     const spinner = ora('Verifying the fix…').start();
@@ -422,21 +425,24 @@ export class InteractiveShell {
         ? { baseUrl: this.state.dynamic.baseUrl, routes: this.state.graph?.routes ?? [] }
         : undefined,
     };
-    const res = await Verifier.verify(f, ctx).catch((err) => ({ status: 'unknown' as const, detail: (err as Error).message }));
+    const res: VerifyResult = await Verifier.verify(f, ctx).catch((err) => ({ status: 'inconclusive' as const, detail: (err as Error).message }));
 
     if (res.status === 'fixed') {
-      spinner.succeed('Verified — the issue is gone. ✓');
+      spinner.succeed(`Verified — the issue is gone. ✓${res.detail ? ` ${res.detail}` : ''}`);
       this.markFinding(f, 'fixed');
     } else if (res.status === 'still-present') {
       spinner.warn(`Not fixed yet — ${(res.detail ?? 'the check still fails').replace(/\.$/, '')}. Leaving it open.`);
+      if (res.proof) for (const line of IssuePresenter.proofLines(res.proof)) console.log(`  ${chalk.gray(line)}`);
       if (appliedChange && f.source === 'dynamic') {
         logger.info('Tip: restart your running app so it picks up the code change, then `verify` again.');
       }
     } else {
-      spinner.info(`Could not auto-verify — ${res.detail ?? 'no check available'}.`);
-      if (appliedChange) {
+      spinner.info(`Inconclusive — ${(res.detail ?? 'no check available').replace(/\.$/, '')}.`);
+      if (appliedChange && f.source !== 'dynamic') {
         this.markFinding(f, 'fixed');
         logger.info('Marked fixed (change applied, but not automatically verified).');
+      } else if (appliedChange) {
+        logger.info('Left open: a live finding is only marked fixed with proof. Restart your app, then `verify` again.');
       }
     }
     this.printScore();

@@ -106,9 +106,11 @@ npx deployready@latest config                            # show the active confi
 | `--fail-on <severity>` | exit non-zero if findings at/above `critical \| warning \| info \| none` exist |
 | `--baseline <file>` | gate only on findings **not** in the baseline file (existing issues are grandfathered) |
 | `--write-baseline <file>` | write the current findings to a baseline file and exit `0` (accept current state) |
-| `--active` | run **active** authenticated authorization tests (needs `--token`; consented, loopback-only, GET-only) |
+| `--active` | run **active** authenticated authorization tests (needs `--token`; consented, loopback-only unless `--i-own-this-target`) |
 | `--token <jwt>` | bearer JWT for the active scan (your logged-in test user) |
 | `--token-b <jwt>` | a second user's JWT — enables tenant / IDOR isolation tests |
+| `--active-url <url>` | base URL for the active scan (default: the app found on localhost) |
+| `--i-own-this-target <host>` | confirm you own a non-loopback host so active probes may target it (repeatable, exact host) |
 | `-v, --verbose` | verbose debug output |
 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
@@ -193,8 +195,13 @@ npx deployready@latest analyze . --active --token "<your-JWT>" --token-b "<secon
 - **Broken tenant isolation** — swaps `org_id`/tenant to reach another tenant's data.
 - **Privilege escalation** — forges a `role: admin` claim and checks whether a forbidden route opens up.
 - **JWT not verified** — checks whether the server accepts a forged `alg:none` token.
+- **Unauthenticated write routes** — sends each discovered `DELETE`/`PATCH` route once with **no credentials**, aimed at a record id that cannot exist (`__deployready_probe_<random>__`), with no body. A `2xx` (when a random-path control does not also answer `2xx`) means the route handles writes for anonymous callers; `401`/`403` means auth is enforced; anything else is not reported.
 
-It is **opt-in and consented**, **loopback-only**, and **GET-only** (it never writes). Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
+It is **opt-in and consented** and **loopback-only**. The tampering checks are GET-only. The write-route probe never addresses real data: it only probes routes whose every path parameter can be filled with a non-existent id, skips routes without a parameter (e.g. `DELETE /api/session`), skips `PUT` (often an upsert, so it could create data), and never runs on a non-loopback host. Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
+
+Every live finding carries **proof**: a copy-pasteable `curl` command (your tokens appear only as `$TOKEN` / `$TOKEN_B`), the status, a truncated response and the control request that shows the endpoint otherwise works, all redacted. It appears in `show`, the terminal report, the markdown/HTML reports and `--json`. `verify` reports `fixed` only with proof (the attack fails **and** a control request still works); otherwise it says `inconclusive` and why.
+
+To run active probes against a host you own that is not on your machine (e.g. staging), name it explicitly: `--active-url https://staging.example.com --i-own-this-target staging.example.com` (repeatable; or `"ownedTargets": ["staging.example.com"]` in your config). Only that exact host is allowed — no wildcards or subdomains — and the write-route probe still stays loopback-only.
 
 ### Route discovery (on by default, nothing guessed)
 

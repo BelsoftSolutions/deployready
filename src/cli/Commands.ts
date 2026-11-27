@@ -92,6 +92,13 @@ export function buildProgram(): Command {
     .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
+    .option(
+      '--i-own-this-target <host>',
+      'confirm you own this non-loopback host so active probes may target it (repeatable; exact host only)',
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[],
+    )
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
@@ -129,6 +136,8 @@ export function buildProgram(): Command {
             accessToken: opts.supabaseAccessToken,
             crossUser: opts.supabaseCrossUser,
           },
+          activeUrl: opts.activeUrl as string | undefined,
+          ownedHosts: opts.iOwnThisTarget as string[],
         };
         let report = await Orchestrator.analyze(path, analyzeOpts);
         const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;

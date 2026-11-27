@@ -120,5 +120,7 @@ function ciFinding(f: Finding): Record<string, unknown> {
     endpoint: f.endpoint,
     owasp: f.owasp,
     cwe: f.cwe,
+    // Reproducible evidence for live findings (redacted when it was built).
+    ...(f.proof ? { proof: f.proof } : {}),
   };
 }
