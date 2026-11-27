@@ -25,6 +25,7 @@ import { renderTokenHelp } from '../active/tokenHelp';
 import { runAnalyzeFix } from '../mcp/analyzeFix';
 import { startMcpServer } from '../mcp/server';
 import { badgeMarkdown, badgeSvg } from '../ui/badge';
+import { toSarif } from '../ui/Sarif';
 
 const VERSION = getVersion();
 
@@ -66,6 +67,7 @@ export function buildProgram(): Command {
     .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
     .option('--open', 'open the HTML dashboard in your browser after the scan (implies --html)', false)
     .option('--json', 'print a machine-readable JSON report to stdout (implies --yes)', false)
+    .option('--sarif <file>', 'write a SARIF 2.1.0 report (for GitHub code scanning) to this file')
     .option(
       '--fail-on <severity>',
       'exit non-zero (code 2) if findings at/above this severity exist: critical | warning | info | none',
@@ -150,6 +152,11 @@ export function buildProgram(): Command {
           fs.writeFileSync(opts.writeBaseline, body);
           logger.success(`Wrote baseline with ${report.summary.total} finding(s) to ${opts.writeBaseline}.`);
           return;
+        }
+
+        if (opts.sarif) {
+          fs.writeFileSync(opts.sarif, JSON.stringify(toSarif(report, VERSION), null, 2) + '\n');
+          if (!opts.json) logger.success(`Wrote SARIF report to ${opts.sarif}`);
         }
 
         // Gate on new findings only when a baseline is supplied.

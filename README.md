@@ -148,7 +148,17 @@ npx deployready@latest analyze . --no-ai --no-dynamic --write-baseline .deployre
 npx deployready@latest analyze . --no-ai --no-dynamic --baseline .deployready-baseline.json --fail-on warning  # in CI
 ```
 
-A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
+**GitHub Action:** gate pull requests, get a sticky PR comment and code-scanning alerts (SARIF) with one step. Needs `security-events: write` and `pull-requests: write`:
+
+```yaml
+permissions: { contents: read, security-events: write, pull-requests: write }
+steps:
+  - uses: actions/checkout@v4
+  - uses: BelsoftSolutions/deployready@v0.4.0
+    with: { fail-on: critical }
+```
+
+Details in [`docs/GITHUB-ACTION.md`](docs/GITHUB-ACTION.md); a full example is in [`docs/github-action-example.yml`](docs/github-action-example.yml). Locally, `--sarif <file>` writes a SARIF 2.1.0 report.
 
 ### Fix in one command (`--fix`)
 
