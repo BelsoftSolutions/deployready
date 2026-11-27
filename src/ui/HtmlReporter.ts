@@ -11,6 +11,7 @@
 import type { Finding, Proof, ScanReport, Severity } from '../types';
 import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { isNote, isUnverified } from '../analysis/ScoreCalculator';
+import { buildFixPrompt } from '../agent/fixPrompt';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, normalFindings } from './commonPathSection';
 
 const SITE = 'https://www.deployready.dev/';
@@ -90,6 +91,18 @@ export class HtmlReporter {
 
 <script>
 (function(){
+  document.querySelectorAll('.copy-prompt').forEach(function(b){b.addEventListener('click',function(){
+    var t=b.getAttribute('data-prompt')||'';
+    var done=function(){var o=b.textContent;b.textContent='Copied';setTimeout(function(){b.textContent=o},1500)};
+    var fallback=function(){
+      var a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');
+      a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();
+      var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+      document.body.removeChild(a);
+      if(ok){done()}else{window.prompt('Copy this fix prompt:',t)}
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fallback)}else{fallback()}
+  })});
   var btns=document.querySelectorAll('.f');
   btns.forEach(function(b){b.addEventListener('click',function(){
     btns.forEach(function(x){x.classList.remove('active')});b.classList.add('active');
@@ -175,6 +188,7 @@ function findingCard(f: Finding): string {
   ${f.evidence ? `<pre class="f-ev">${esc(f.evidence)}</pre>` : ''}
   ${f.proof ? proofBlock(f.proof) : ''}
   <p class="f-fix"><strong>Fix:</strong> ${esc(f.recommendation)}</p>
+  <button type="button" class="copy-prompt" data-prompt="${esc(buildFixPrompt(f))}">Copy fix prompt</button>
 </article>`;
 }
 
@@ -247,6 +261,7 @@ main{max-width:980px;margin:0 auto;padding:28px}
 .f-proof dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:4px 0}.f-proof dt{color:#888}.f-proof dd{margin:0;color:#cbd5e1}
 .f-proof dd pre{margin:0;white-space:pre-wrap;word-break:break-all;font-size:12px}
 .f-fix{margin:6px 0 0;color:#a7f3d0;font-size:14px}
+.copy-prompt{margin-top:10px;background:#1a1a1a;color:#cbd5e1;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}.copy-prompt:hover{border-color:${ACCENT};color:${ACCENT}}
 .probe{margin-top:28px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px}
 .probe h2{margin:0 0 6px;font-size:16px}
 .p-meta{color:#888;font-size:13px;margin:4px 0 12px}.p-meta code{color:${ACCENT}}.p-warn{color:#f59e0b;font-size:13px}

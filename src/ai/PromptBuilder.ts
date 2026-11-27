@@ -77,17 +77,21 @@ export class PromptBuilder {
    * before sending (this is the only place code leaves the machine, and only for
    * the single snippet around an issue the user chose to fix).
    */
-  static buildFixPrompt(finding: Finding, snippet: string): BuiltPrompt {
+  static buildFixPrompt(finding: Finding, snippet: string, readOnlyContext?: string): BuiltPrompt {
     const system = `You are a senior security engineer fixing ONE issue in a code snippet.
 First write a single short sentence explaining the fix.
 Then output the COMPLETE corrected snippet inside one fenced code block (triple backticks). Output nothing after the code block.
 Rules: change only what is needed to fix the issue; preserve surrounding lines and indentation;
-return a full replacement for the snippet you were given; never invent secrets.`;
+return a full replacement for the snippet marked "to fix"; never invent secrets.
+If a READ-ONLY context block is given (the file's imports), use it to understand the code but do NOT repeat or modify it: it is not part of the replaced range.`;
+    const context = readOnlyContext
+      ? `READ-ONLY context (the file's imports; do not include in your answer):\n\`\`\`\n${readOnlyContext}\n\`\`\`\n\n`
+      : '';
     const user = `Issue: ${finding.title}
 Severity: ${finding.severity}${finding.owasp ? ` (${finding.owasp})` : ''}
 Recommendation: ${finding.recommendation}
 
-Code snippet to fix:
+${context}Code snippet to fix (the whole enclosing unit; return it complete):
 \`\`\`
 ${snippet}
 \`\`\``;

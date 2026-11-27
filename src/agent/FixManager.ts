@@ -8,7 +8,7 @@
  */
 import * as path from 'path';
 import { parse } from '@babel/parser';
-import type { ParserPlugin } from '@babel/parser';
+import { PARSER_PLUGINS } from './context';
 import { FileEditor } from './FileEditor';
 import type { Snippet } from './FileEditor';
 import { LINE_FIXERS, fixLine } from './lineFixers';
@@ -35,15 +35,6 @@ export interface ApplyResult {
 }
 
 const JS_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
-
-const PARSER_PLUGINS: ParserPlugin[] = [
-  'typescript',
-  'jsx',
-  'decorators-legacy',
-  'classProperties',
-  'topLevelAwait',
-  'importAssertions',
-];
 
 const AUTO_FIXABLE = new Set(['env-not-ignored']);
 
@@ -115,15 +106,15 @@ export class FixManager {
     return Boolean(finding.file && finding.line);
   }
 
-  /** Read the snippet around the finding for an AI rewrite. */
+  /** Read the enclosing unit (plus read-only imports) around the finding for an AI rewrite. */
   static async snippetFor(finding: Finding, editor: FileEditor): Promise<Snippet> {
     if (!finding.file || !finding.line) throw new Error('This finding has no file/line to fix.');
-    return editor.snippet(finding.file, finding.line);
+    return editor.fixContext(finding.file, finding.line);
   }
 
   /** Ask the model for a corrected snippet (sends the redacted snippet). */
   static async aiSuggest(finding: Finding, snippet: Snippet, router: ModelRouter): Promise<FixSuggestion> {
-    return router.suggestFix(finding, snippet.text);
+    return router.suggestFix(finding, snippet.text, snippet.imports);
   }
 
   /**

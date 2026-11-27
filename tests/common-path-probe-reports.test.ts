@@ -102,7 +102,7 @@ describe('the four outputs render the opt-in probe section', () => {
     const page = HtmlReporter.render(report);
     expectSection(page);
     expect(page).toContain(`<h2>🔎 ${COMMON_PATH_TITLE}</h2>`);
-    for (const t of guessedTitles(report)) expect(count(page, t)).toBe(1);
+    for (const t of guessedTitles(report)) expect(count(page.replace(/ data-prompt="[^"]*"/g, ""), t)).toBe(1);
     expect(page).toMatch(/<td><code>\/\.env\.local<\/code><\/td><td>404<\/td><td>not found<\/td>/);
     expect(page).toMatch(/<td><code>\/\.env<\/code><\/td><td>200<\/td><td>found<\/td>/);
   });
