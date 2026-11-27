@@ -15,9 +15,12 @@ import {
   toCiJson,
   EXIT,
   serializeBaseline,
-  readBaseline,
-  newFindings,
+  parseBaseline,
+  compareToBaseline,
+  gatedFindings,
+  describeComparison,
   summarize,
+  type BaselineComparison,
 } from '../core/CiGate';
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
@@ -81,6 +84,7 @@ export function buildProgram(): Command {
       '--write-baseline <file>',
       'write the current findings to a baseline file and exit 0 (accept current state)',
     )
+    .option('--strict-baseline', 'also fail (exit 2) when the baseline has stale suppressions (entries with no matching finding)', false)
     .option(
       '--probe-common-paths',
       'opt in to the common-path probe: also request a fixed, printed list of well-known paths (/.env, /.git/config, ...) on your local app; see docs/COMMON-PATH-PROBE.md',
@@ -148,7 +152,10 @@ export function buildProgram(): Command {
 
         // Accept the current findings as the baseline, then stop (no gating).
         if (opts.writeBaseline) {
-          const body = serializeBaseline(report.findings);
+          const previous = fs.existsSync(opts.writeBaseline)
+            ? parseBaseline(fs.readFileSync(opts.writeBaseline, 'utf8'))
+            : undefined;
+          const body = serializeBaseline(report.findings, { root: report.target, previous });
           fs.writeFileSync(opts.writeBaseline, body);
           logger.success(`Wrote baseline with ${report.summary.total} finding(s) to ${opts.writeBaseline}.`);
           return;
@@ -161,20 +168,21 @@ export function buildProgram(): Command {
 
         // Gate on new findings only when a baseline is supplied.
         let gateSummary = report.summary;
+        let cmp: BaselineComparison | undefined;
         if (opts.baseline) {
           const baseline = fs.existsSync(opts.baseline)
-            ? readBaseline(fs.readFileSync(opts.baseline, 'utf8'))
-            : new Set<string>();
-          const fresh = newFindings(report.findings, baseline);
-          gateSummary = summarize(fresh);
+            ? parseBaseline(fs.readFileSync(opts.baseline, 'utf8'))
+            : { version: 2, entries: [], warnings: [] };
+          cmp = compareToBaseline(report.findings, baseline, { root: report.target });
+          gateSummary = summarize(gatedFindings(cmp));
           if (!opts.json) {
-            const suppressed = report.summary.total - gateSummary.total;
-            logger.info(`Baseline: ${suppressed} known finding(s) grandfathered; gating on ${gateSummary.total} new.`);
+            for (const w of cmp.warnings) logger.warn(w);
+            logger.info(`Baseline: ${cmp.known.length} known finding(s) grandfathered.\n${describeComparison(cmp).join('\n')}`);
           }
         }
 
         if (opts.json) {
-          const body = toCiJson(report, failOn);
+          const body = toCiJson(report, failOn, cmp);
           if (fixOutcome) body.fix = fixOutcome.fix;
           process.stdout.write(JSON.stringify(body, null, 2) + '\n');
         }
@@ -184,6 +192,9 @@ export function buildProgram(): Command {
           logger.error(
             `Gate failed: ${scope} at or above "${failOn}" (${gateSummary.critical} critical, ${gateSummary.warning} warning, ${gateSummary.info} info).`,
           );
+          process.exitCode = EXIT.GATE;
+        } else if (opts.strictBaseline && cmp && cmp.stale.length > 0) {
+          logger.error(`Gate failed: ${cmp.stale.length} stale baseline suppression(s) (--strict-baseline). Re-run with --write-baseline.`);
           process.exitCode = EXIT.GATE;
         }
       });

@@ -44,6 +44,14 @@ function buildSummary(report, opts) {
     `| ${s.critical} | ${s.warning} | ${s.info} |`,
     '',
   );
+  const b = report.baseline;
+  if (b && typeof b === 'object') {
+    const n = (x) => (Array.isArray(x) ? x.length : 0);
+    lines.push(
+      `Baseline: ${n(b.new)} new, ${n(b.escalated)} escalated, ${n(b.reopened)} reopened, ${n(b.expired)} expired, ${n(b.stale)} stale (${Number(b.known) || 0} known, suppressed).`,
+      '',
+    );
+  }
   const findings = (Array.isArray(report.findings) ? report.findings : [])
     .filter((f) => !f.unverified && !f.note)
     .slice()

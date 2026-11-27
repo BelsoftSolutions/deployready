@@ -1,6 +1,6 @@
 import { IssueAggregator } from '../src/analysis/IssueAggregator';
 import { ScoreCalculator } from '../src/analysis/ScoreCalculator';
-import { newFindings, serializeBaseline, readBaseline, shouldFail, summarize, toCiJson } from '../src/core/CiGate';
+import { compareToBaseline, gatedFindings, parseBaseline, serializeBaseline, shouldFail, summarize, toCiJson } from '../src/core/CiGate';
 import { runCommonPathProbe } from '../src/dynamic/commonPaths/prober';
 import { PROBE_PATHS } from '../src/dynamic/commonPaths/signatures';
 import { ExportManager } from '../src/ui/ExportManager';
@@ -180,14 +180,15 @@ describe('score and gate treat guessed findings like any finding of their capped
 
   it('the baseline grandfathers a known guessed finding and gates on a new one', async () => {
     const known = await buildReport({ '/.git/config': ROUTES['/.git/config']! });
-    const baseline = readBaseline(serializeBaseline(known.findings));
-    expect(baseline.has('common-path-exposure::/.git/config')).toBe(true);
-    expect(newFindings(known.findings, baseline).filter((f) => f.guessed)).toEqual([]);
+    const baseline = parseBaseline(serializeBaseline(known.findings));
+    expect(baseline.entries.some((e) => e.rule === 'common-path-exposure')).toBe(true);
+    const same = compareToBaseline(known.findings, baseline);
+    expect(same.new).toEqual([]);
 
     const later = await buildReport({ '/.git/config': ROUTES['/.git/config']!, '/.npmrc': ROUTES['/.npmrc']! });
-    const fresh = newFindings(later.findings, baseline).filter((f) => f.guessed);
-    expect(fresh.map((f) => f.endpoint)).toEqual(['/.npmrc']);
-    expect(shouldFail(summarize(newFindings(later.findings, baseline)), 'critical')).toBe(true);
-    expect(shouldFail(summarize(newFindings(known.findings, baseline)), 'critical')).toBe(false);
+    const c = compareToBaseline(later.findings, baseline);
+    expect(c.new.filter((f) => f.guessed).map((f) => f.endpoint)).toEqual(['/.npmrc']);
+    expect(shouldFail(summarize(gatedFindings(c)), 'critical')).toBe(true);
+    expect(shouldFail(summarize(gatedFindings(same)), 'critical')).toBe(false);
   });
 });

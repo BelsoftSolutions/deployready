@@ -129,6 +129,7 @@ npx deployready@latest config                            # show the active confi
 | `--json` | print a machine-readable JSON report (implies `--yes`) |
 | `--fail-on <severity>` | exit non-zero if findings at/above `critical \| warning \| info \| none` exist |
 | `--baseline <file>` | gate only on findings **not** in the baseline file (existing issues are grandfathered) |
+| `--strict-baseline` | with `--baseline`, also fail on stale suppressions (entries with no matching finding) |
 | `--write-baseline <file>` | write the current findings to a baseline file and exit `0` (accept current state) |
 | `--active` | run **active** authenticated authorization tests (needs `--token`; consented, loopback-only unless `--i-own-this-target`) |
 | `--token <jwt>` | bearer JWT for the active scan (your logged-in test user) |
@@ -151,6 +152,8 @@ drowning in pre-existing debt:
 npx deployready@latest analyze . --no-ai --no-dynamic --write-baseline .deployready-baseline.json   # once
 npx deployready@latest analyze . --no-ai --no-dynamic --baseline .deployready-baseline.json --fail-on warning  # in CI
 ```
+
+Baseline v2 (diff-friendly, sorted JSON, safe to commit) identifies a finding by rule, path, endpoint, enclosing function/route, a normalized line context (string contents replaced by a length class, so no secret or secret hash is stored) and an occurrence index. Moving code does not re-fail the build; a second secret in the same file, an escalation (warning to critical), a resolved issue that comes back, or an expired suppression all do. Each entry carries `severity`, `acceptedAt`, `reason`, `owner` and optional `expiresAt` (edit these by hand; `--write-baseline` preserves them). The gate prints new / escalated / reopened / expired / stale counts; `--strict-baseline` also fails on stale suppressions. Old v1 baselines still load (with a warning) until you re-run `--write-baseline`. See [`docs/BASELINE.md`](docs/BASELINE.md).
 
 **GitHub Action:** gate pull requests, get a sticky PR comment and code-scanning alerts (SARIF) with one step. Needs `security-events: write` and `pull-requests: write`:
 
