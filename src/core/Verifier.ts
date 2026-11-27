@@ -17,7 +17,9 @@
  * - active findings (JWT / escalation / IDOR / tenant): re-run the active check
  *   on the same endpoint with the user's tokens. `fixed` needs the attack to be
  *   refused AND the legitimate request (your own token, or the owner's for
- *   IDOR/tenant) to still work. Without tokens in this session: inconclusive.
+ *   IDOR/tenant) to still work. For IDOR/tenant "refused" means the semantic
+ *   verdict is `verified-denied` (none of the owner's data in the body, whatever
+ *   the status code), not merely a 401/403/404. Without tokens: inconclusive.
  * - ai findings: inferred, not mechanically checkable → inconclusive.
  */
 import { VulnerabilityDetector } from '../analysis/VulnerabilityDetector';
@@ -321,11 +323,12 @@ export class Verifier {
       (x): x is Extract<ActiveObservation, { kind: 'cross' }> => x.kind === 'cross' && x.rule === finding.rule && x.endpoint === ep,
     );
     if (tries.length === 0) {
-      return inconclusive(`No cross-identity request could be built for ${ep}${baselineNote}.`);
+      const untested = seen.find((x): x is Extract<ActiveObservation, { kind: 'untested' }> => x.kind === 'untested' && x.endpoint === ep);
+      return inconclusive(`No cross-identity request could be ${untested ? `sent for ${ep} (${untested.reason})` : `built for ${ep}${baselineNote}`}.`);
     }
     for (const t of tries) {
-      if (t.outcome !== 'denied' && t.outcome !== 'own-data') {
-        return inconclusive(`Requesting ${t.tamperedPath} as the test user got HTTP ${t.trigger}, which neither refuses nor clearly allows access.`);
+      if (t.verdict !== 'verified-denied') {
+        return inconclusive(`Requesting ${t.tamperedPath} as the test user got HTTP ${t.trigger}, verdict ${t.verdict}: ${t.reason}`);
       }
       if (!is2xx(t.control)) {
         return inconclusive(

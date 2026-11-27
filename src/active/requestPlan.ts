@@ -9,9 +9,14 @@
  * swaps in the second identity's value to test isolation. Routes whose params we
  * can't fill, and pattern/wildcard routes, are skipped: no value or path is ever
  * invented.
+ *
+ * Safety level (default read-only): routes on the `unsafeRoutes` denylist and
+ * GET routes whose path suggests a side effect (logout, export, webhook, ...)
+ * are skipped with a reason, because a GET is never assumed to be harmless.
  */
 import type { Route, SkippedRoute } from '../types';
 import type { HttpRequestSpec, PathParam } from './types';
+import { DEFAULT_SAFETY_LEVEL, routeSkipReason, type SafetyLevel } from './safety';
 
 const PARAM_RE = /^(?::(.+)|\{(.+)\})$/; // :name or {name}
 const TENANT_PARAM_RE = /^(?:org|organization|tenant|team|company|workspace)/i;
@@ -72,7 +77,14 @@ export interface ActivePlan {
   log: string[];
 }
 
-export function planActiveRequests(routes: Route[], claims: Record<string, unknown>): ActivePlan {
+export interface PlanOptions {
+  safetyLevel?: SafetyLevel;
+  unsafeRoutes?: readonly string[];
+}
+
+export function planActiveRequests(routes: Route[], claims: Record<string, unknown>, opts: PlanOptions = {}): ActivePlan {
+  const level = opts.safetyLevel ?? DEFAULT_SAFETY_LEVEL;
+  const unsafe = opts.unsafeRoutes ?? [];
   const seen = new Set<string>();
   const requests: HttpRequestSpec[] = [];
   const skipped: SkippedRoute[] = [];
@@ -92,6 +104,11 @@ export function planActiveRequests(routes: Route[], claims: Record<string, unkno
       skip(resolved.reason);
       continue;
     }
+    const unsafeReason = routeSkipReason(level, method, route.path, unsafe, resolved.path);
+    if (unsafeReason) {
+      skip(unsafeReason);
+      continue;
+    }
     if (seen.has(resolved.path)) continue;
     seen.add(resolved.path);
     const filled = resolved.filled.length ? `; filled ${resolved.filled.join(', ')}` : '';
@@ -105,6 +122,6 @@ export function planActiveRequests(routes: Route[], claims: Record<string, unkno
   return { requests, skipped, log };
 }
 
-export function buildActiveRequests(routes: Route[], claims: Record<string, unknown>): HttpRequestSpec[] {
-  return planActiveRequests(routes, claims).requests;
+export function buildActiveRequests(routes: Route[], claims: Record<string, unknown>, opts: PlanOptions = {}): HttpRequestSpec[] {
+  return planActiveRequests(routes, claims, opts).requests;
 }

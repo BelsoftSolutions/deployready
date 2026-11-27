@@ -225,6 +225,30 @@ export interface AppConfig {
   probeCommonPaths: boolean;
   /** Non-loopback hosts the user owns; active probes may target them (like --i-own-this-target). */
   ownedTargets?: string[];
+  /** Active-scan safety and verdict settings (see README, "Active testing"). */
+  active?: ActiveConfigSection;
+  /** Alias of `active.unsafeRoutes`. */
+  unsafeRoutes?: string[];
+  /** Alias of `active.disposableEnvironment`. */
+  disposableEnvironment?: boolean;
+}
+
+/** Active-scan safety levels, least to most invasive. */
+export type SafetyLevel = 'passive' | 'read-only' | 'controlled-active' | 'stateful';
+
+/** The `"active"` section of the config file. */
+export interface ActiveConfigSection {
+  safetyLevel?: SafetyLevel;
+  /** Route denylist: exact paths or globs (`*` = any characters), optionally prefixed by a method (`GET /api/export*`). */
+  unsafeRoutes?: string[];
+  /** Fields the verdict engine ignores (key names or dotted paths), on top of the volatile ones it learns. */
+  ignoredFields?: string[];
+  /** Routes that are public by design: cross-identity reads there are reported as intentionally-public. */
+  publicRoutes?: string[];
+  /** Hard cap on active requests per run (default 200). */
+  maxRequests?: number;
+  /** Required for the stateful level: the target holds only disposable test data. */
+  disposableEnvironment?: boolean;
 }
 
 /** A single tool result returned by an AI handler. */
