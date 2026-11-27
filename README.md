@@ -31,8 +31,10 @@ claude mcp add deployready -- npx -y deployready@latest mcp
 Run `npx deployready@latest` with no arguments to open the guided interactive session instead.
 
 <p align="center">
-  <img src="docs/scan-demo.svg" alt="Terminal output of DeployReady scanning a small Express app: SQL injection, hardcoded AWS key, eval() and a committed .env, score 39/100" width="720">
+  <img src="docs/scan-demo.svg" alt="Animated terminal recording of DeployReady 0.4.0 scanning a deliberately vulnerable Flask app: 3 critical and 1 warning (score 48/100), analyze --fix applies 2 safe fixes (score 60/100), then a fix prompt for the hardcoded SECRET_KEY is printed" width="720">
 </p>
+
+<p align="center"><sub>A real run on <a href="benchmark/corpus/vibe/flask-debug-sqli-tp"><code>benchmark/corpus/vibe/flask-debug-sqli-tp</code></a> (paths shortened, repeated lines elided). Only the two findings with a safe deterministic fix are changed; the rest are left for you or your coding agent.</sub></p>
 
 ## What it checks, and what it doesn't
 
