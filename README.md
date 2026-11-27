@@ -109,7 +109,7 @@ deployready › exit
 ```bash
 npx deployready@latest init                              # first-time setup (pick model, store key)
 npx deployready@latest analyze ./my-app                  # single non-interactive scan, prints results
-npx deployready@latest analyze . --no-ai --no-dynamic    # static only, fully offline
+npx deployready@latest analyze . --no-ai --no-dynamic --offline  # static only, fully offline (--offline skips dependency audits)
 npx deployready@latest report ./my-app                   # scan and export the markdown report
 npx deployready@latest badge ./my-app                    # print a markdown score badge
 npx deployready@latest config                            # show the active config (secrets never printed)
@@ -124,6 +124,8 @@ npx deployready@latest config                            # show the active confi
 | `--no-dynamic` | skip live localhost testing |
 | `--no-ai` | skip AI analysis (local results only) |
 | `--aggressive` | enable aggressive tests (rate-limit burst) |
+| `--no-deps` / `--offline` | skip dependency-audit engines / skip every engine that uses the network |
+| `--engines <list>` / `--semgrep-config <rules>` | choose engines (`npm-audit,osv-scanner,pip-audit,semgrep`); Semgrep is opt-in and needs your rules ([docs/ENGINES.md](docs/ENGINES.md)) |
 | `--export` | write `deployready-report.md` |
 | `--html` / `--open` | write an HTML dashboard / and open it in your browser |
 | `--json` | print a machine-readable JSON report (implies `--yes`) |
@@ -300,6 +302,7 @@ To report a vulnerability in DeployReady itself, see [SECURITY.md](SECURITY.md).
 - All terminal output and any AI payload pass through a central **secret redactor**.
 - Dynamic testing is **loopback-only** and **GET-only** by default; aggressive tests require explicit consent. It only requests routes your code (or your OpenAPI/Swagger file) defines, plus up to 25 same-origin paths your running app itself advertises in pages it already served (links, `Link:` headers, and a `robots.txt`/`sitemap.xml`/OpenAPI document only if your project or one of those responses points at it; one level deep, never logout/delete-style links) — it never guesses paths like `/admin` or `/.env`, and never invents ids for routes with path parameters (those are listed as "could not check"). Use `--verbose` to see every request decision.
 - File scanning is confined to the project root, with symlink/traversal protection and size caps.
+- **Dependency audits contact a registry.** If a lockfile exists, `analyze` runs `npm audit` (and OSV-Scanner / pip-audit if you have them installed), which sends dependency names and versions, never source code, to the npm registry / OSV / PyPI. Use `--offline` to skip them, `--no-deps` to turn dependency engines off. Semgrep is opt-in and needs your own rules. See [docs/ENGINES.md](docs/ENGINES.md).
 
 ## Configuration
 

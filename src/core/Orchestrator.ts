@@ -34,6 +34,7 @@ import { firebaseStep } from '../firebase';
 import { assertActiveTarget, parseOwnedHosts } from '../active/scope';
 import { planMutationProbes, runMutationProbes } from '../active/mutationProbe';
 import { assertLoopback } from '../dynamic/httpClient';
+import { runEngines, dedupeAgainstNative, type EngineStepOptions } from '../adapters';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ScanReport } from '../types';
 
 export interface AnalyzeOptions {
@@ -72,6 +73,8 @@ export interface AnalyzeOptions {
   commonPathDelayMs?: number;
   /** Supabase module: static checks always run; `live` enables the ownership-gated probes. */
   supabase?: SupabaseOptions;
+  /** External engine adapters (npm audit, OSV-Scanner, pip-audit, Semgrep); see docs/ENGINES.md. */
+  engines?: EngineStepOptions;
 }
 
 interface ProbeDecision {
@@ -128,9 +131,14 @@ export class Orchestrator {
     const sb = await supabaseStep(projectPath, opts);
     const fb = await firebaseStep(projectPath, opts);
 
+    // ---- 2d. External engines (installed + applicable only; failures are reported, never silent) ----
+    const eng = await runEngines(projectPath, opts.engines ?? {});
+    const deduped = dedupeAgainstNative([...staticFindings, ...sb.staticFindings, ...fb.staticFindings], eng.findings);
+    if (!opts.json) for (const r of eng.runs) if (r.status === 'error') logger.warn(`Engine ${r.id} incomplete: ${r.reason}`);
+
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
-      [...staticFindings, ...sb.staticFindings, ...fb.staticFindings],
+      [...deduped.native, ...deduped.engine],
       [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
     );
 
@@ -146,6 +154,7 @@ export class Orchestrator {
       findings: agg.findings,
       score: agg.score,
       summary: agg.summary,
+      engineRuns: eng.runs,
     };
 
     // ---- 5. Optional AI analysis ----

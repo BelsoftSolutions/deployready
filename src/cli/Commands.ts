@@ -100,6 +100,10 @@ export function buildProgram(): Command {
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
     .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
+    .option('--no-deps', 'skip dependency-vulnerability engines (npm/pnpm audit, OSV-Scanner, pip-audit)')
+    .option('--engines <list>', 'comma-separated engines to run (npm-audit, osv-scanner, pip-audit, semgrep, all); semgrep runs only when named; see docs/ENGINES.md')
+    .option('--offline', 'skip engines that contact a network service (they send package names/versions, never source code)', false)
+    .option('--semgrep-config <path-or-registry>', 'rules for the opt-in semgrep engine (never defaulted; metrics are off)')
     .option(
       '--i-own-this-target <host>',
       'confirm you own this non-loopback host so active probes may target it (repeatable; exact host only)',
@@ -135,6 +139,7 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          engines: { noDeps: !opts.deps, engines: opts.engines as string | undefined, offline: opts.offline as boolean, semgrepConfig: opts.semgrepConfig as string | undefined },
           supabase: {
             live: opts.supabase,
             url: opts.supabaseUrl,

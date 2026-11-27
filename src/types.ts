@@ -8,7 +8,7 @@ export type Severity = 'critical' | 'warning' | 'info';
 export type Category = 'security' | 'performance' | 'architecture' | 'config';
 
 /** Where a finding originated. Used for dedup precedence and reporting. */
-export type FindingSource = 'static' | 'dynamic' | 'ai';
+export type FindingSource = 'static' | 'dynamic' | 'ai' | `engine:${string}`;
 
 /** A single issue surfaced by any analyzer. The atomic unit of a report. */
 export interface Finding {
@@ -202,6 +202,8 @@ export interface ScanReport {
   };
   /** Optional narrative analysis from the AI layer. */
   aiSummary?: string;
+  /** Outcome of each external engine adapter (ran / skipped / error) with coverage. */
+  engineRuns?: import('./adapters/types').EngineRunSummary[];
 }
 
 export type AiModel = 'claude' | 'openai' | 'ollama' | 'claude-cli' | 'codex-cli';
