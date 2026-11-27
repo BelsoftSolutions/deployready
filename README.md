@@ -96,6 +96,7 @@ npx deployready@latest config                            # show the active confi
 | Flag | Effect |
 |---|---|
 | `-y, --yes` | auto-approve all prompts (non-interactive) |
+| `--fix` | apply the safe deterministic fixes (backed up), re-scan, and report the new score; works with `--json` and `--fail-on` (asks once unless `--yes`/`--json`) |
 | `--no-dynamic` | skip live localhost testing |
 | `--no-ai` | skip AI analysis (local results only) |
 | `--aggressive` | enable aggressive tests (rate-limit burst) |
@@ -126,6 +127,59 @@ npx deployready@latest analyze . --no-ai --no-dynamic --baseline .deployready-ba
 ```
 
 A ready-to-copy GitHub Action is in [`docs/github-action-example.yml`](docs/github-action-example.yml).
+
+### Fix in one command (`--fix`)
+
+```bash
+npx deployready@latest analyze . --no-ai --no-dynamic --fix --yes         # apply safe fixes, re-scan, print the new score
+npx deployready@latest analyze . --no-ai --no-dynamic --fix --json --fail-on critical
+```
+
+`--fix` only applies deterministic fixes (for example adding `.env` to `.gitignore`, or swapping a weak hash for SHA-256). Every change is backed up first. With `--json`, the report gains a `fix` block (`applied`, `skipped`, `scoreBefore`, `scoreAfter`) and `--fail-on` gates on the post-fix result.
+
+## Use it from your coding agent (MCP)
+
+`deployready mcp` is a local stdio [MCP](https://modelcontextprotocol.io) server. Your own coding agent (Claude Code, Cursor, Codex, Windsurf) scans, fixes, and has DeployReady verify, in a loop. Nothing leaves your machine, and the server never calls an AI model itself.
+
+| Tool | What it does |
+|---|---|
+| `scan(path?, dynamic?)` | findings (id, rule, severity, file, line, evidence, proof) plus the score |
+| `get_finding(id)` | full detail, fix guidance (recommendation, OWASP, CWE) and the whole file with the line marked |
+| `apply_safe_fixes(path?)` | runs the deterministic fixes; returns applied/skipped with backup paths |
+| `verify(id)` | re-checks one finding and returns DeployReady's status as-is |
+| `score(path?)` | re-scans; score plus a ready/not-ready verdict (ready = no open critical findings) |
+
+The loop: `scan` -> `apply_safe_fixes` -> fix the rest with the agent's own edits (using `get_finding`) -> `verify` each -> `score`.
+
+**Claude Code**
+
+```bash
+claude mcp add deployready -- npx -y deployready@latest mcp
+```
+
+A ready-made Claude Code skill that teaches the loop is in [`skills/deployready/SKILL.md`](skills/deployready/SKILL.md) (copy it to `.claude/skills/deployready/`).
+
+**Cursor** (`.cursor/mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "deployready": { "command": "npx", "args": ["-y", "deployready@latest", "mcp"] }
+  }
+}
+```
+
+**Any other MCP client** (Codex, Windsurf, ...): add the same server to its `mcpServers` config.
+
+```json
+{
+  "mcpServers": {
+    "deployready": { "command": "npx", "args": ["-y", "deployready@latest", "mcp", "/path/to/project"] }
+  }
+}
+```
+
+The optional trailing path sets the default project for tool calls (default: the current directory).
 
 ### Active (authenticated) testing — "try to hack it"
 
