@@ -1,0 +1,10 @@
+{
+  "description": "Safe twin of flask-tp: after loading the note, the handler aborts unless note.user_id == current_user.id",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

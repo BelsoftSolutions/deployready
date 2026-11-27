@@ -21,7 +21,7 @@ export interface UnauthRoute {
 }
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const ADMIN_PATH_RE = /(?:^|\/)admin(?:$|[/_-])/i;
+export const ADMIN_PATH_RE = /(?:^|\/)admin(?:$|[/_-])/i;
 const PUBLIC_POST_RE =
   /(?:^|\/)(?:log-?in|log-?out|sign-?in|sign-?up|sign-?out|register|auth|oauth|token|refresh|session|webhooks?|callback|contact|subscribe|newsletter|forgot[-_]?password|reset[-_]?password|verify|health|graphql|\[\.\.\.nextauth\])(?:$|[/_.-])/i;
 
@@ -55,16 +55,25 @@ const HANDLER_WINDOW = 40;
 const ROUTE_START_RE =
   /^\s*(?:@[\w.]+\.(?:get|post|put|patch|delete|route|api_route)\s*\(|(?:app|router|api|server|\w+Router)\.(?:get|post|put|patch|delete|all|route)\s*\()/i;
 
-/** Source lines of the route's handler: its decorators, then until the next route declaration. */
-function handlerSource(route: Route, source: string): string {
-  const lines = source.split('\n');
-  const start = route.line! - 1;
+/**
+ * Line range [from, to) of the route's handler: its decorators, then until the next route
+ * declaration (at most `window` lines from the route line). `line` is 1-based.
+ */
+export function handlerRange(line: number, lines: string[], window = HANDLER_WINDOW): [number, number] {
+  const start = line - 1;
   let from = start;
   while (from > 0 && /^\s*@/.test(lines[from - 1]!)) from--;
   let to = start + 1;
   // Skip decorator lines that belong to this same handler, then stop at the next route.
   while (to < lines.length && /^\s*@/.test(lines[to]!)) to++;
-  while (to < lines.length && to - start < HANDLER_WINDOW && !ROUTE_START_RE.test(lines[to]!)) to++;
+  while (to < lines.length && to - start < window && !ROUTE_START_RE.test(lines[to]!)) to++;
+  return [from, to];
+}
+
+/** Source lines of the route's handler: its decorators, then until the next route declaration. */
+function handlerSource(route: Route, source: string): string {
+  const lines = source.split('\n');
+  const [from, to] = handlerRange(route.line!, lines);
   return lines.slice(from, to).join('\n');
 }
 

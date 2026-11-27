@@ -65,9 +65,12 @@ function loadDirCases(kind: Extract<CaseKind, 'static' | 'parser'>): BenchCase[]
   });
 }
 
-/** Vibe-coded app cases: findings + route guards + unsupported labels in one project, optional strict mode. */
-function loadVibeCases(): BenchCase[] {
-  const base = path.join(CORPUS_ROOT, 'vibe');
+/**
+ * Vibe-coded app cases: findings + route guards + unsupported labels in one project, optional strict mode.
+ * `corpus/vibe` ids are bare; other folders with the same format (`corpus/idor`) are prefixed `<folder>/`.
+ */
+function loadVibeCases(folder = 'vibe'): BenchCase[] {
+  const base = path.join(CORPUS_ROOT, folder);
   if (!fs.existsSync(base)) return [];
   const ids = fs
     .readdirSync(base, { withFileTypes: true })
@@ -79,7 +82,7 @@ function loadVibeCases(): BenchCase[] {
     const dir = path.join(base, id);
     const spec = loadExpect(dir);
     return {
-      id,
+      id: folder === 'vibe' ? id : `${folder}/${id}`,
       kind: 'vibe' as const,
       description: spec.description,
       knownGap: spec.knownGap,
@@ -119,5 +122,5 @@ function loadVibeCases(): BenchCase[] {
 }
 
 export function corpusCases(): BenchCase[] {
-  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases()];
+  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases(), ...loadVibeCases('idor')];
 }

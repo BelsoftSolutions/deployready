@@ -30,6 +30,7 @@ export type IssueClass =
 const DR_CLASS: Record<string, IssueClass> = {
   'sql-injection': 'sqli', 'py-sql-fstring': 'sqli',
   'missing-auth-route': 'missing-auth',
+  'idor-missing-ownership-check': 'idor',
   'jwt-hardcoded-secret': 'hardcoded-secret', 'flask-hardcoded-secret-key': 'hardcoded-secret', 'possible-hardcoded-secret': 'hardcoded-secret',
   'cors-wildcard': 'cors',
   'tls-verification-disabled': 'tls', 'py-requests-noverify': 'tls',

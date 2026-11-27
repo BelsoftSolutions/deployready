@@ -1,0 +1,11 @@
+{
+  "description": "Flask + Flask-SQLAlchemy: @login_required, but notes are read/deleted by <int:note_id> with no owner check",
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": true,
+      "file": "app.py",
+      "note": "Note.query.get_or_404(note_id) with no user_id check"
+    }
+  ]
+}

@@ -9,6 +9,10 @@ const requireAuth = (req, res, next) => {
   catch { res.sendStatus(401); }
 };
 
+app.get('/api/orders', requireAuth, async (req, res) => {
+  res.json(await db.orders.findAll({ where: { userId: req.user.id } }));
+});
+
 // Any logged-in user can read or edit any order just by changing the id
 app.get('/api/orders/:id', requireAuth, async (req, res) => {
   const order = await db.orders.findByPk(req.params.id);

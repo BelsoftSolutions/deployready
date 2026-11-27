@@ -11,4 +11,6 @@ Small projects shaped like Cursor/Lovable/Bolt/v0 output (Next.js + Supabase, Ex
 - `strict: true` counts any finding whose rule is not mentioned in `expected` as a false positive. Use it on hard negatives.
 - `knownGap` documents a current detector weakness so the run stays green; it is reported as GAP.
 
+`corpus/idor/<case>/` uses the same format (ids are reported as `idor/<case>`): broken object-level authorization cases for `idor-missing-ownership-check` in Express+Prisma/pg/Mongoose, Next.js route handlers + Supabase, FastAPI+SQLAlchemy and Flask, each vulnerable case with safe twins (scoped query, explicit owner check, admin guard, public catalog, RLS-scoped client).
+
 `corpus/` is excluded from `benchmark/tsconfig.json`, so the sample code needs no dependencies. `BASELINE.md` holds the output on the base commit.

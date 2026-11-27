@@ -31,8 +31,14 @@ Semgrep and the LLM; DeployReady is always run live).
 | Tool | TP | FP | FN | Precision | Recall | Extra mapped | Other alerts | All alerts on -tn cases |
 |---|---|---|---|---|---|---|---|---|
 | DeployReady 0.4.0 | 16 | 0 | 1 | 1.00 | 0.94 | 0 | 0 | 0 |
+| DeployReady + `idor-missing-ownership-check` (team/idor) | 17 | 0 | 0 | 1.00 | 1.00 | 0 | 0 | 0 |
 | Semgrep OSS 1.187.0 (community rules) | 6 | 0 | 11 | 1.00 | 0.35 | 0 | 8 | 5 |
 | LLM (haiku, 1 run) | 17 | 13 | 0 | 0.57 | 1.00 | 12 | 57 | 73 |
+
+Update (team/idor): the static rule `idor-missing-ownership-check` now catches the one label DeployReady missed (`express-idor-tp`), still with
+0 alerts on the `-tn` cases. `express-idor-tp/server.js` gained a user-scoped list route (`findAll({ where: { userId: req.user.id } })`), which
+the rule uses as evidence that records have owners; the saved Semgrep/LLM outputs predate that 3-line addition and were not re-run.
+The per-class table below is the original run (DeployReady idor is now 1/0/0).
 
 ## Per class (TP/FP/FN)
 

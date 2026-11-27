@@ -1,0 +1,10 @@
+{
+  "description": "Safe: the route uses the signed-in user's Supabase client, so RLS (auth.uid() = user_id) scopes .eq('id', ...) to the owner",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Safe twin of express-prisma-tp: every lookup by :id is scoped to req.user.id",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "idor-missing-ownership-check",
+      "present": false
+    }
+  ]
+}
