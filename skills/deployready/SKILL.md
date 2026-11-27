@@ -44,4 +44,4 @@ Edit the remaining findings by hand, then re-run the last command to confirm.
 - Never hide a finding by deleting the check, silencing the scanner or editing ignore files to dodge it.
 - A leaked secret must be rotated, not only removed from the code. Tell the user to rotate it.
 - Do not claim the app is secure. Say what was fixed, what DeployReady verified, and what is still open.
-- Don't touch files outside the project. Backups from `apply_safe_fixes` are the `.bak.*` files it reports; leave them for the user to delete.
+- Don't touch files outside the project. Backups from `apply_safe_fixes` go to `.deployready/backups/` (gitignored); leave them for the user to delete.

@@ -168,8 +168,9 @@ npx deployready@latest analyze . --no-ai --no-dynamic --fix --json --fail-on cri
 | `scan(path?, dynamic?)` | findings (id, rule, severity, file, line, evidence, proof) plus the score |
 | `get_finding(id)` | full detail, fix guidance (recommendation, OWASP, CWE) and the whole file with the line marked |
 | `apply_safe_fixes(path?)` | runs the deterministic fixes; returns applied/skipped with backup paths |
-| `verify(id)` | re-checks one finding and returns DeployReady's status as-is |
+| `verify(id)` | re-checks one finding: `fixed`, `still-present` or `inconclusive`, with the reason |
 | `score(path?)` | re-scans; score plus a ready/not-ready verdict (ready = no open critical findings) |
+| `supabase_check(path?, live?, crossUser?)` | Supabase checks; live checks only for a local or proven-owned project, credentials from env only (see docs/SUPABASE.md) |
 
 The loop: `scan` -> `apply_safe_fixes` -> fix the rest with the agent's own edits (using `get_finding`) -> `verify` each -> `score`.
 
@@ -261,7 +262,7 @@ Choose these in `init` (or in the interactive menu under "Set up or change the A
 - **Login status** is read from the CLI itself (`claude auth status`, `codex login status`). If the CLI is installed but not logged in, DeployReady offers to run the CLI's own login command (`claude auth login` / `codex login`) in your terminal. You sign in inside that tool: DeployReady never sees, reads, copies or stores your token or the CLI's auth files.
 - **Your plan's rules apply, not the API terms.** Data is handled under the data policy of your own plan and counts against your plan's usage allowance. The consent prompt says so before anything is sent.
 - **Same data as the API providers:** only the redacted structured findings report (or, for `fix`, one redacted snippet you confirm first). Never your source files.
-- **Text in, text out.** The CLI is started with its tools disabled, from an empty temporary folder, with a minimal environment, and its answer is treated as untrusted text. It is never asked to edit your files. When you accept a fix, DeployReady applies it with its own editor: a backup (`<file>.bak.<timestamp>`) is written first, the path is confined to your project and the result is syntax-checked.
+- **Text in, text out.** The CLI is started with its tools disabled, from an empty temporary folder, with a minimal environment, and its answer is treated as untrusted text. It is never asked to edit your files. When you accept a fix, DeployReady applies it with its own editor: a backup is written to `.deployready/backups/` first, the path is confined to your project and the result is syntax-checked.
 - AI findings stay marked unverified and never change your score or the CI gate.
 - **Codex can be switched off.** To disable the Codex provider, set `"codexEnabled": false` in `~/.deployready/config.json`; it then refuses to run and sends nothing. The Claude provider has no such switch.
 - These providers are meant for interactive, local use. Each call uses your own plan allowance.
