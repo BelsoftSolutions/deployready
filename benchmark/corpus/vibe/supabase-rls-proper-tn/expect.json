@@ -1,0 +1,10 @@
+{
+  "description": "Hard negative: every table has RLS enabled with owner-scoped policies",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ]
+}
