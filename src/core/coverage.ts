@@ -8,6 +8,7 @@
  */
 import * as path from 'path';
 import { redact } from '../utils/redact';
+import { ADAPTERS, type EngineRunSummary, type EngineStepOptions } from '../adapters';
 import type { CoverageArea, CoverageKind, CoverageState, ScanReport } from '../types';
 
 export interface CoverageEntry {
@@ -20,6 +21,7 @@ const LABEL: Record<CoverageKind, string> = {
   static: 'static',
   secrets: 'secrets',
   dependencies: 'dependencies',
+  engines: 'engines (SAST)',
   'supabase-static': 'supabase (static)',
   'supabase-live': 'supabase (live)',
   firebase: 'firebase',
@@ -35,6 +37,7 @@ export const COVERAGE_KINDS: CoverageKind[] = [
   'static',
   'secrets',
   'dependencies',
+  'engines',
   'dynamic',
   'active',
   'supabase-static',
@@ -46,8 +49,9 @@ export const COVERAGE_KINDS: CoverageKind[] = [
 const DEFAULTS: Record<Exclude<CoverageKind, 'static' | 'secrets'>, CoverageEntry> = {
   dependencies: {
     state: 'untested',
-    reason: 'DeployReady does not audit dependencies in this release; run npm audit / pip-audit / composer audit.',
+    reason: 'No dependency engine ran (npm audit, OSV-Scanner, pip-audit); see docs/ENGINES.md.',
   },
+  engines: { state: 'untested', reason: 'Opt-in SAST engines (--engines semgrep) not run.' },
   'supabase-static': { state: 'untested', reason: 'Supabase checks did not run.' },
   'supabase-live': { state: 'untested', reason: 'Opt-in (--supabase); not run.' },
   firebase: { state: 'untested', reason: 'Firebase checks did not run.' },
@@ -117,7 +121,12 @@ export function buildCoverage(report: Pick<ScanReport, 'graph'>, rec: CoverageRe
   const out: CoverageArea[] = [];
   const staticEntry = rec.get('static');
   const langs = scannedLanguages(report);
-  if (staticEntry && staticEntry.state !== 'passed') {
+  if (staticEntry && staticEntry.state === 'inconclusive' && langs.length > 0) {
+    // Partial static run (unreadable files, route discovery error): keep per-language areas, mark them.
+    for (const lang of langs) {
+      out.push(area('static', { state: 'inconclusive', reason: staticEntry.reason }, `static-${lang}`, `static (${LANG_LABEL[lang] ?? lang})`));
+    }
+  } else if (staticEntry && staticEntry.state !== 'passed') {
     out.push(area('static', staticEntry));
   } else if (langs.length === 0) {
     out.push(
@@ -165,6 +174,8 @@ export function coverageSummary(areas: CoverageArea[]): string {
   }
   for (const a of areas) {
     if (a.kind === 'static' || a.state === 'not-applicable') continue;
+    // Opt-in SAST engines that were not asked for stay in the coverage table, not the headline.
+    if (a.kind === 'engines' && a.state === 'untested' && !a.requested) continue;
     parts.push(`${a.label} ${SYMBOL[a.state]}`);
   }
   return parts.join(' · ');
@@ -172,4 +183,40 @@ export function coverageSummary(areas: CoverageArea[]): string {
 
 export function coverageSymbol(state: CoverageState): string {
   return SYMBOL[state];
+}
+
+const isDependencyEngine = (id: string): boolean => ADAPTERS.find((a) => a.id === id)?.capabilities.includes('dependencies') ?? false;
+const isSastEngine = (id: string): boolean => ADAPTERS.find((a) => a.id === id)?.capabilities.includes('sast') ?? false;
+
+/**
+ * Record the `dependencies` and `engines` areas from the engine runs: failed when any engine
+ * errored, passed when one ran clean, untested (with the engines' reasons) otherwise. An engine
+ * the user named in --engines makes the area requested, so a miss there matters.
+ */
+export function recordEngineCoverage(rec: CoverageRecorder, runs: EngineRunSummary[], o: EngineStepOptions = {}): void {
+  const named = new Set((o.engines ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean));
+  const unknown = runs.filter((r) => !isDependencyEngine(r.id) && !isSastEngine(r.id));
+  const one = (kind: 'dependencies' | 'engines', rs: EngineRunSummary[], none: string): void => {
+    const requested = rs.some((r) => named.has(r.id)) || undefined;
+    const errors = rs.filter((r) => r.status === 'error');
+    const ran = rs.filter((r) => r.status === 'ran');
+    const extra = requested ? { requested: true } : {};
+    if (errors.length) {
+      rec.set(kind, 'failed', errors.map((r) => r.reason ?? `${r.id} errored`).join('; '), extra);
+    } else if (ran.length) {
+      rec.set(kind, 'passed', ran.map((r) => `${r.id}${r.version ? ` ${r.version}` : ''} ran (${r.findings} finding(s))`).join('; '), extra);
+    } else if (rs.length) {
+      rec.set(kind, 'untested', rs.map((r) => `${r.id}: ${r.reason ?? r.status}`).join('; '), extra);
+    } else {
+      rec.set(kind, 'untested', none);
+    }
+  };
+  one(
+    'dependencies',
+    runs.filter((r) => isDependencyEngine(r.id)),
+    o.noDeps
+      ? 'Skipped (--no-deps).'
+      : 'No dependency engine applied (no lockfile/manifest it reads, or engine not installed); see docs/ENGINES.md.',
+  );
+  one('engines', [...runs.filter((r) => isSastEngine(r.id)), ...unknown], 'Opt-in SAST engines (--engines semgrep) not run.');
 }

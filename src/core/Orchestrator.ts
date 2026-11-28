@@ -11,7 +11,7 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { CodeParser } from '../parser/CodeParser';
 import { FileWalker } from '../utils/FileWalker';
-import { VulnerabilityDetector } from '../analysis/VulnerabilityDetector';
+import { VulnerabilityDetector, type StaticScanIssues } from '../analysis/VulnerabilityDetector';
 import { IssueAggregator } from '../analysis/IssueAggregator';
 import { LocalhostDetector } from '../dynamic/LocalhostDetector';
 import { DynamicTester, skippedScanNote } from '../dynamic/DynamicTester';
@@ -38,7 +38,7 @@ import { runEngines, dedupeAgainstNative, type EngineStepOptions } from '../adap
 import { allowsMutationProbes, assertSafetyAllowed, resolveActivePolicy, type ActivePolicy } from '../active/safety';
 import { previewActivePlan } from '../active/dryRun';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ReleasePolicy, ScanReport } from '../types';
-import { CoverageRecorder, buildCoverage } from './coverage';
+import { CoverageRecorder, buildCoverage, recordEngineCoverage } from './coverage';
 import { parseReleasePolicy, withRelease } from './releaseState';
 
 export interface AnalyzeOptions {
@@ -111,7 +111,9 @@ export class Orchestrator {
     const spinner = ora('Parsing codebase…').start();
     const graph = await CodeParser.analyze(projectPath);
     spinner.text = 'Scanning for static vulnerabilities…';
-    const staticFindings = await VulnerabilityDetector.scan(projectPath);
+    const staticIssues: StaticScanIssues = { unreadable: [] };
+    const staticFindings = await VulnerabilityDetector.scan(projectPath, staticIssues);
+    Orchestrator.recordStaticIssues(cov, staticIssues);
     spinner.succeed(
       `Static analysis done — ${graph.fileCount} files, ${graph.routes.length} routes, ${staticFindings.length} findings.`,
     );
@@ -148,7 +150,8 @@ export class Orchestrator {
     const sb = await supabaseStep(projectPath, opts);
     const fb = await firebaseStep(projectPath, opts);
     if (sb.coverage) {
-      cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason);
+      const rls = staticIssues.rlsFiles && sb.coverage.static.state === 'passed' ? ` RLS replayed over ${staticIssues.rlsFiles} SQL migration file(s).` : '';
+      cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason + rls);
       cov.set('supabase-live', sb.coverage.live.state, sb.coverage.live.reason, { requested: sb.coverage.live.requested });
     }
     if (fb.coverage) cov.set('firebase', fb.coverage.state, fb.coverage.reason);
@@ -157,6 +160,7 @@ export class Orchestrator {
     const eng = await runEngines(projectPath, opts.engines ?? {});
     const deduped = dedupeAgainstNative([...staticFindings, ...sb.staticFindings, ...fb.staticFindings], eng.findings);
     if (!opts.json) for (const r of eng.runs) if (r.status === 'error') logger.warn(`Engine ${r.id} incomplete: ${r.reason}`);
+    recordEngineCoverage(cov, eng.runs, opts.engines);
 
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
@@ -206,6 +210,18 @@ export class Orchestrator {
     }
 
     return report;
+  }
+
+  /** Unreadable files or a failed route discovery make the static area (and secrets, for files) partial. */
+  private static recordStaticIssues(cov: CoverageRecorder, issues: StaticScanIssues): void {
+    const parts: string[] = [];
+    if (issues.unreadable.length) {
+      const list = issues.unreadable.slice(0, 5).join(', ') + (issues.unreadable.length > 5 ? ', …' : '');
+      parts.push(`${issues.unreadable.length} file(s) could not be read (${list})`);
+      cov.set('secrets', 'inconclusive', `Secret detection skipped ${issues.unreadable.length} unreadable file(s) (${list}).`);
+    }
+    if (issues.routeAuthError) parts.push(`route discovery failed, so route-auth/IDOR checks did not run (${issues.routeAuthError})`);
+    if (parts.length) cov.set('static', 'inconclusive', `Static scan partial: ${parts.join('; ')}.`);
   }
 
   /** Release policy: the option wins, then config `releasePolicy`, then the defaults. Never throws. */
@@ -426,6 +442,7 @@ export class Orchestrator {
       policy = resolveActivePolicy(config, { safetyLevel: opts.safetyLevel });
     } catch (err) {
       logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
+      skip(`Active safety settings rejected: ${(err as Error).message}`);
       return [];
     }
 
@@ -483,6 +500,7 @@ export class Orchestrator {
         assertSafetyAllowed(policy, app.baseUrl, owned);
       } catch (err) {
         logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
+        skip(`Safety level "${policy.safetyLevel}" not allowed here: ${(err as Error).message}`);
         return [];
       }
     }
@@ -504,6 +522,15 @@ export class Orchestrator {
         maxRequests: policy.maxRequests,
       });
       for (const line of dry.lines) logger.info(line);
+      // A preview sends nothing: chosen on purpose, so untested but not a requested area that went missing.
+      cov.set(
+        'active',
+        'untested',
+        opts.dryRun
+          ? `Dry run (--dry-run): ${plan.requests.length} request(s) planned at safety level "${policy.safetyLevel}", none sent.`
+          : `Safety level "passive": the plan was previewed, no request was sent.`,
+        { requested: false },
+      );
       return [];
     }
     const target = app!;
@@ -555,7 +582,7 @@ export class Orchestrator {
       if (mutation.targets.length) findings.push(...(await runMutationProbes(mutation.targets, adapter, { baseUrl: target.baseUrl })));
       const summary = [...verdicts].map(([v, c]) => `${c} ${v}`).join(', ');
       spinner.succeed(`Active scan done — ${findings.length} access-control finding(s)${summary ? ` (cross-identity checks: ${summary})` : ''}.`);
-      cov.set('active', 'passed', `Probed ${requests.length} endpoint(s) on ${target.baseUrl} with the test identity${summary ? ` (cross-identity checks: ${summary})` : ''}.`, { requested: true });
+      cov.set('active', 'passed', `Probed ${requests.length} endpoint(s) on ${target.baseUrl} with the test identity at safety level "${policy.safetyLevel}"${summary ? ` (cross-identity checks: ${summary})` : ''}.`, { requested: true });
       return findings;
     } catch (err) {
       spinner.fail(`Active scan failed: ${(err as Error).message}`);

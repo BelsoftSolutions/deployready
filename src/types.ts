@@ -226,6 +226,7 @@ export type CoverageKind =
   | 'static'
   | 'secrets'
   | 'dependencies'
+  | 'engines'
   | 'supabase-static'
   | 'supabase-live'
   | 'firebase'

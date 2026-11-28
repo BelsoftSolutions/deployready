@@ -315,3 +315,71 @@ describe('outputs carry the release line and the score disclaimer', () => {
     expect(aiOnly).toContain('No confirmed findings in the areas tested.');
   });
 });
+
+describe('engine coverage (dependencies / engines areas from report.engineRuns)', () => {
+  const { recordEngineCoverage } = require('../src/core/coverage');
+  const run = (id: string, status: string, extra: Record<string, unknown> = {}) => ({
+    id, status, findings: 0, durationMs: 1, coverage: { checked: [], skipped: [], errors: [] }, ...extra,
+  });
+  const areaFor = (runs: unknown[], o: Record<string, unknown> = {}) => {
+    const r = new CoverageRecorder();
+    recordEngineCoverage(r, runs, o);
+    return { dep: r.get('dependencies'), eng: r.get('engines') };
+  };
+
+  it('passed when a dependency engine ran clean', () => {
+    expect(areaFor([run('npm-audit', 'ran', { version: '10.0.0', findings: 2 })]).dep).toMatchObject({ state: 'passed' });
+  });
+  it('failed when one errored (even if another ran)', () => {
+    const { dep } = areaFor([run('npm-audit', 'ran'), run('osv-scanner', 'error', { reason: 'osv-scanner failed: timeout' })]);
+    expect(dep).toMatchObject({ state: 'failed', reason: 'osv-scanner failed: timeout' });
+  });
+  it('untested with reasons when skipped (--offline) or nothing applied, and --no-deps says so', () => {
+    expect(areaFor([run('npm-audit', 'skipped', { reason: 'skipped: --offline' })]).dep).toMatchObject({ state: 'untested', reason: 'npm-audit: skipped: --offline' });
+    expect(areaFor([]).dep?.state).toBe('untested');
+    expect(areaFor([], { noDeps: true }).dep?.reason).toBe('Skipped (--no-deps).');
+  });
+  it('an engine named in --engines is requested, so its miss matters; unknown engines fail the engines area', () => {
+    const { eng } = areaFor([run('semgrep', 'error', { reason: 'semgrep is not installed' })], { engines: 'semgrep' });
+    expect(eng).toMatchObject({ state: 'failed', requested: true });
+    expect(areaFor([run('nope', 'error', { reason: 'unknown engine "nope"' })], { engines: 'nope' }).eng?.state).toBe('failed');
+    const areas = buildCoverage({ graph: graph() } as Pick<ScanReport, 'graph'>, (() => {
+      const r = new CoverageRecorder();
+      recordEngineCoverage(r, [run('semgrep', 'error', { reason: 'x' })], { engines: 'semgrep' });
+      return r;
+    })());
+    expect(assessRelease({ findings: [], coverage: areas }).state).toBe('insufficient-evidence');
+  });
+});
+
+describe('static scan issues are surfaced, not swallowed', () => {
+  it('unreadable files and a failed route discovery are collected', async () => {
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    const { VulnerabilityDetector } = require('../src/analysis/VulnerabilityDetector');
+    const { FileWalker } = require('../src/utils/FileWalker');
+    const { CodeParser } = require('../src/parser/CodeParser');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dr-static-issues-'));
+    fs.writeFileSync(path.join(dir, 'a.js'), 'const x = 1;\n');
+    fs.writeFileSync(path.join(dir, 'b.js'), 'const y = 2;\n');
+    const realRead = FileWalker.read.bind(FileWalker);
+    jest.spyOn(FileWalker, 'read').mockImplementation(((f: { relPath: string }) =>
+      f.relPath === 'b.js' ? Promise.reject(new Error('EACCES')) : realRead(f)) as never);
+    jest.spyOn(CodeParser, 'analyze').mockRejectedValue(new Error('parser exploded'));
+    try {
+      const issues = { unreadable: [] as string[] };
+      await VulnerabilityDetector.scan(dir, issues);
+      expect(issues.unreadable).toEqual(['b.js']);
+      expect((issues as { routeAuthError?: string }).routeAuthError).toBe('parser exploded');
+    } finally {
+      jest.restoreAllMocks();
+    }
+  });
+
+  it('an inconclusive static entry keeps per-language areas and makes the release review-required', () => {
+    const areas = cov((r) => r.set('static', 'inconclusive', 'Static scan partial: 1 file(s) could not be read (b.js).'));
+    expect(areas.find((a) => a.id === 'static-javascript')).toMatchObject({ state: 'inconclusive' });
+    expect(assessRelease({ findings: [], coverage: areas }).state).toBe('review-required');
+  });
+});

@@ -220,6 +220,26 @@ describe('reproduction (b): a scanner step that errors is never a pass', () => {
     expect(r.release?.state).toBe('insufficient-evidence');
   });
 
+  it('--dry-run: active previewed, nothing sent -> untested (by choice, not a missing required area)', async () => {
+    const token = dummyJwt({ sub: 'u1' });
+    const r = await Orchestrator.analyze(cleanProject(), { yes: true, json: true, noAi: true, noDynamic: true, active: true, token, dryRun: true });
+    expect(areaOf(r, 'active')).toMatchObject({ state: 'untested', mandatory: false });
+    expect(areaOf(r, 'active')?.reason).toMatch(/^Dry run \(--dry-run\)/);
+    expect(r.release?.state).toBe('ready');
+  });
+
+  it('static scan with an unreadable file: static + secrets inconclusive -> review-required', async () => {
+    const { FileWalker } = jest.requireActual('../src/utils/FileWalker');
+    const realRead = FileWalker.read.bind(FileWalker);
+    jest.spyOn(FileWalker, 'read').mockImplementation(((f: { relPath: string }) =>
+      f.relPath === 'broken.js' ? Promise.reject(new Error('EIO')) : realRead(f)) as never);
+    const r = await Orchestrator.analyze(cleanProject({ 'broken.js': 'x\n' }), { yes: true, json: true, noAi: true, noDynamic: true });
+    expect(areaOf(r, 'static')).toMatchObject({ state: 'inconclusive' });
+    expect(areaOf(r, 'static')?.reason).toContain('broken.js');
+    expect(areaOf(r, 'secrets')?.state).toBe('inconclusive');
+    expect(r.release?.state).toBe('review-required');
+  });
+
   it('active scan that ran is passed', async () => {
     const token = dummyJwt({ sub: 'u1' });
     const r = await Orchestrator.analyze(cleanProject(), { yes: true, json: true, noAi: true, active: true, token });

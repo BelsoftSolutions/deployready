@@ -161,7 +161,7 @@ Release: NOT READY — 2 confirmed critical · Coverage: static (JS/TS) ✓ · s
 ```
 
 - **Findings:** confirmed counts by severity (scored, not guessed, not accepted in a baseline).
-- **Coverage:** per area (static rules per language, secrets, dependencies, live/dynamic, active/authz, Supabase static/live, Firebase, AI analysis), each `passed` (the check ran to completion; its findings are counted above), `failed` (the scanner errored), `untested` (did not run, with the reason), `inconclusive` (ran but could not cover its target) or `not-applicable`. Dependency auditing is not part of this release and always shows `untested`.
+- **Coverage:** per area (static rules per language, secrets, dependencies, live/dynamic, active/authz, Supabase static/live, Firebase, AI analysis), each `passed` (the check ran to completion; its findings are counted above), `failed` (the scanner errored), `untested` (did not run, with the reason), `inconclusive` (ran but could not cover its target) or `not-applicable`. `dependencies` comes from the dependency engines (npm audit, OSV-Scanner, pip-audit): `passed` when one ran clean, `failed` when one errored, `untested` with the reason when none was installed/applicable or with `--offline`/`--no-deps`; `engines (SAST)` likewise for opt-in Semgrep. `--dry-run` / safety level `passive` leave active/authz `untested` (by choice, not required). Unreadable files or a failed route discovery make static (and secrets) `inconclusive`.
 - **Confidence:** confirmed vs. unverified/AI vs. suspected (guessed common-path hits).
 - **Verification:** fixed-verified (a re-check proved it: `verify` in MCP, or the re-scan after `--fix`), fixed-unverified (gone, but not proven), open.
 
@@ -183,7 +183,7 @@ Release: NOT READY — 2 confirmed critical · Coverage: static (JS/TS) ✓ · s
 }
 ```
 
-`blockOn` lists the severities that make a confirmed finding block; `requireAreas` takes area kinds (`static`, `secrets`, `dependencies`, `dynamic`, `active`, `supabase-static`, `supabase-live`, `firebase`, `ai`) or a per-language id such as `static-python`; `treatUnverifiedCriticalAs` is `review-required` or `not-ready` (never `ready`). Invalid entries are ignored with a warning.
+`blockOn` lists the severities that make a confirmed finding block; `requireAreas` takes area kinds (`static`, `secrets`, `dependencies`, `engines`, `dynamic`, `active`, `supabase-static`, `supabase-live`, `firebase`, `ai`) or a per-language id such as `static-python`; `treatUnverifiedCriticalAs` is `review-required` or `not-ready` (never `ready`). Invalid entries are ignored with a warning.
 
 **Grandfather existing issues (baseline):** adopt the current findings once, then fail the
 build only on *new* ones — so you can turn the gate on for an existing codebase without
