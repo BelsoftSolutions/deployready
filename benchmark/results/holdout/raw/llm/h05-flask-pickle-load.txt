@@ -1,0 +1,10 @@
+```json
+{"file": "app.py", "line": 9, "issue": "Critical: CWE-502 Insecure deserialization. pickle.loads() runs on attacker-controlled HTTP body data, so any client that can reach /api/import-session can execute arbitrary code on the server. Replace pickle with a safe format such as JSON, and validate the schema."}
+{"file": "app.py", "line": 7, "issue": "High: The /api/import-session endpoint has no authentication or authorization, so anyone who can reach the service can hit the vulnerable deserialization path in line 9."}
+{"file": "app.py", "line": 9, "issue": "Medium: request.get_data() reads the entire body with no size limit, so large payloads can exhaust memory (DoS). Set MAX_CONTENT_LENGTH in the Flask config."}
+{"file": "app.py", "line": 10, "issue": "Low: If the deserialized object is not a dict (e.g., a list or int), state.keys() raises an unhandled AttributeError, returning a 500 error and possibly leaking stack traces. Validate the type before use."}
+{"file": "app.py", "line": 14, "issue": "Medium: app.run(host=\"0.0.0.0\") binds the development server to all network interfaces. Combined with the unauthenticated, unsafe endpoint, this exposes the vulnerability to the entire network. Bind to 127.0.0.1 or run behind a production WSGI server with access controls."}
+{"file": "requirements.txt", "line": 1, "issue": "Informational: flask is pinned to 3.0.3 with no lockfile or hash pinning, and the pin may be outdated. Check it against current Flask security advisories and pin dependency hashes to prevent supply-chain tampering."}
+```
+
+The pickle deserialization on line 9 is the critical issue. Anyone who can send a POST request to this endpoint can run arbitrary code on the server, so this should be fixed before the code is exposed anywhere, and the endpoint should not be reachable from untrusted networks until then. I haven't checked the pinned Flask version against a vulnerability database, so the requirements.txt entry is only a prompt to do that check.

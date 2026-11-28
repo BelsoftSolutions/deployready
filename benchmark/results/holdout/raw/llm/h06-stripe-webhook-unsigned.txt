@@ -1,0 +1,41 @@
+```json
+{"file": "server.js", "line": 8, "issue": "Stripe webhook signature is never verified. The handler trusts req.body directly, so anyone who can reach the endpoint can forge a checkout.session.completed event and upgrade any user to 'pro'. Fix with stripe.webhooks.constructEvent(rawBody, req.headers['stripe-signature'], endpointSecret)."}
+{"file": "server.js", "line": 5, "issue": "app.use(express.json()) parses the body globally before the webhook route. Stripe signature verification needs the raw request bytes, so this blocks a correct fix. Use express.raw({ type: 'application/json' }) on the /webhooks/stripe route and keep JSON parsing elsewhere."}
+{"file": "server.js", "line": 11, "issue": "The user ID comes from client_reference_id in the unverified payload and is used directly in a database write. Combined with the missing signature check, an attacker controls which user gets upgraded. Trust only verified events and validate the ID before use."}
+{"file": "server.js", "line": 11, "issue": "The prisma.user.update call has no try/catch, and Express 4 does not catch rejections from async handlers. If the user ID is missing or unknown, Prisma throws, which can produce an unhandled promise rejection. On Node 15+ this crashes the process, so a single crafted event can take the server down (DoS). The request also never gets a response."}
+{"file": "server.js", "line": 9, "issue": "The handler upgrades the plan on checkout.session.completed without checking session.payment_status === 'paid'. Sessions using delayed payment methods can complete before funds clear, which grants 'pro' without payment."}
+{"file": "server.js", "line": 8, "issue": "No event ID is recorded and no idempotency check is performed. Replayed or duplicate deliveries are processed again, and the plan is never reconciled on cancellation or downgrade events. This is a lower-severity integrity and business-logic gap."}
+{"file": "server.js", "line": 16, "issue": "The server listens on all interfaces with no helmet, rate limiting, or TLS termination in the code. Rate limiting and TLS are typically handled at the edge, but nothing here enforces them. Also, the port is hardcoded with no error handling for listen failures."}
+{"file": "package.json", "line": 1, "issue": "express is pinned to 4.19.2, which is outdated. Upgrade to the latest 4.x patch release. Run npm audit to check for known advisories against the current versions."}
+{"file": "package.json", "line": 1, "issue": "stripe is pinned to 15.8.0 and @prisma/client to 5.14.0, both well behind current releases. Upgrade both and check their changelogs for security fixes and breaking changes, especially Stripe's webhook API."}
+{"file": "package.json", "line": 1, "issue": "No lockfile is included in the reviewed files, so transitive dependency versions cannot be verified or reproduced. Commit package-lock.json and run npm audit in CI."}
+```
+
+I reviewed only the two files you provided and did not run `npm audit` or check live advisories, so the dependency findings are version-based and should be confirmed against current CVE data.
+
+The most important fix is signature verification. A minimal version of the route:
+
+```js
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  let event
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET)
+  } catch (err) {
+    return res.status(400).send('Invalid signature')
+  }
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const s = event.data.object
+      if (s.payment_status === 'paid' && s.client_reference_id) {
+        await prisma.user.update({ where: { id: s.client_reference_id }, data: { plan: 'pro' } })
+      }
+    }
+    res.json({ received: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'processing failed' })
+  }
+})
+```
+
+This assumes `stripe` is initialized with `new Stripe(process.env.STRIPE_SECRET_KEY)` and that the webhook secret is set in the environment.

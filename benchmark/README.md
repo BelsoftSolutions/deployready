@@ -16,3 +16,9 @@ Small projects shaped like Cursor/Lovable/Bolt/v0 output (Next.js + Supabase, Ex
 `corpus/rls/<case>/` uses the same format (ids `rls/<case>`, all `strict`): Supabase migration histories for the migration-replay RLS model (`rls-not-enabled`, `rls-disabled`, `rls-permissive-policy`, `rls-no-policy`). `a01`-`a10` and `s01`-`s06` are our own reconstruction of an external audit's 10 insecure / 6 secure multi-tenant cases (the original corpus was not available); `v*` are further variations (renames, SET SCHEMA, quoted names, partitions, long histories, DO blocks, project config). Each `expect.json` also carries `groundTruth` probes; `PGHOST=... PGUSER=postgres npx tsx benchmark/rlsPgProof.ts` applies every case to a disposable PostgreSQL with Supabase-like roles and checks that anon / a signed-in user really can (or cannot) read or write another user's rows. All 38 labels were confirmed on PostgreSQL 16.
 
 `corpus/` is excluded from `benchmark/tsconfig.json`, so the sample code needs no dependencies. `BASELINE.md` holds the output on the base commit.
+
+## Holdout benchmark and runner
+
+`benchmark/holdout/` is a held-out corpus (46 cases) that must never be used for rule tuning; see `holdout/README.md` and `HOLDOUT-RESULTS.md`.
+`npx tsx benchmark/bench.ts --suite holdout|dev` reports TP/FP/TN/FN, precision, recall, F1, severity-weighted recall, scan time and peak memory per case, class and tool;
+the two suites are never merged. `npm run check:holdout` fails if anything under `src/` references the holdout.

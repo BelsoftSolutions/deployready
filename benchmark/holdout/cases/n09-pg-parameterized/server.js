@@ -1,0 +1,5 @@
+const express = require('express')
+const db = require('./db')
+const app = express()
+app.get('/search', async (req, res) => res.json((await db.search(String(req.query.q || ''), req.query.limit)).rows))
+app.listen(3000)

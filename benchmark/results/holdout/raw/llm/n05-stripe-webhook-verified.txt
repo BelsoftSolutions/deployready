@@ -1,0 +1,14 @@
+```json
+{"file": "server.js", "line": 13, "issue": "Fulfilment is not idempotent. Stripe redelivers events on retries and within the signature tolerance window, and the handler never checks event.id against already-processed events. Replayed or retried checkout.session.completed events can fulfil the same order more than once."}
+{"file": "server.js", "line": 14, "issue": "The fulfilment block is empty, so this is a placeholder. Once implemented, any database or fulfilment error here is unhandled inside an async Express handler. The request never gets a response, and on Node 15+ the unhandled rejection can crash the process."}
+{"file": "server.js", "line": 6, "issue": "The async route handler has no try/catch or error-handling middleware. Errors thrown after signature verification are not converted into a controlled response, and Express 4 does not catch rejected promises from async handlers."}
+{"file": "server.js", "line": 3, "issue": "STRIPE_SECRET_KEY is read from the environment without validation. If it is missing, the service starts in a broken state and fails at runtime instead of failing fast at startup."}
+{"file": "server.js", "line": 11, "issue": "Failed signature verifications are rejected without logging or metrics. Forged or misconfigured webhook attempts are invisible to operators."}
+{"file": "server.js", "line": 19, "issue": "express.json() is registered with no explicit size limit, so it uses the default body parser limit. Set an explicit limit and only mount it on routes that need it."}
+{"file": "server.js", "line": 20, "issue": "The server listens on all interfaces over plain HTTP with no security headers (e.g. helmet), no rate limiting, and no graceful shutdown or listen error handling. TLS and rate limiting are usually handled by a reverse proxy, so confirm that the deployment does this."}
+```
+
+Notes:
+- The webhook signature check on line 9 is implemented correctly. It uses the raw body via `express.raw` on line 6, which is registered before `express.json()` on line 19, so signature verification does not break on re-serialised JSON.
+- If `STRIPE_WEBHOOK_SECRET` is unset, `constructEvent` throws and every request is rejected with a 400. That fails closed, which is the correct behaviour.
+- The most important fix is idempotency on line 13. Record `event.id` in a durable store, inside the same transaction as the fulfilment, before acting on the event.

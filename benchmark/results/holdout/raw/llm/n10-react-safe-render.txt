@@ -1,0 +1,11 @@
+```json
+{"file": "src/Comments.jsx", "line": 8, "issue": "Stored XSS risk, defense-in-depth only: comment.body is rendered as raw HTML via dangerouslySetInnerHTML. Safety depends entirely on DOMPurify.sanitize with default config. A sanitizer bypass, a DOMPurify upgrade or config change, or a later edit that drops the sanitize call would make this stored XSS. Rendering the body as text, or through a markdown renderer with HTML disabled, avoids the sink."}
+{"file": "src/Comments.jsx", "line": 8, "issue": "Default DOMPurify policy permits style attributes and many formatting/embedding tags. Untrusted CSS can be used for UI redressing or content spoofing inside the comment. Consider an explicit ALLOWED_TAGS/ALLOWED_ATTR allowlist, and set FORBID_ATTR: ['style'] if styling is not needed."}
+{"file": "src/Comments.jsx", "line": 8, "issue": "Server-side rendering: DOMPurify requires a DOM. Where window is undefined (SSR or Node), DOMPurify reports isSupported=false and sanitize() may return the input unchanged, so unsanitized HTML would be emitted. Verify behavior for the DOMPurify version in use, and sanitize on the client only or use a server-side DOM implementation such as jsdom."}
+{"file": "src/Comments.jsx", "line": 2, "issue": "The DOMPurify version is not visible in this file. DOMPurify has had sanitizer bypass CVEs in the past, so the dependency should be pinned to a current release and checked with npm audit."}
+```
+
+Notes:
+- I reviewed only `src/Comments.jsx`. The `author` (line 7) and `title` (line 9) fields are rendered as React text nodes and are escaped, so they are not XSS sinks.
+- The main sink is sanitized, so I found no directly exploitable vulnerability in this file alone. The issues above are about how much depends on the sanitizer.
+- To confirm the SSR finding, check whether this component is rendered server-side and which DOMPurify version is installed. I can check `package.json` and the rendering setup if you share them.

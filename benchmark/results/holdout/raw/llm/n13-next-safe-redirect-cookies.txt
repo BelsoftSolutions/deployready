@@ -1,0 +1,9 @@
+```jsonl
+{"file": "app/login/callback/route.ts", "line": 7, "issue": "Open redirect bypass. The check only rejects strings starting with '//', but browsers and the WHATWG URL parser treat '\\' as '/' and strip tabs/newlines. Inputs like '/\\evil.com' or '/\t/evil.com' pass the check, then resolve to '//evil.com' in new URL(safe, origin), redirecting users to an attacker's site (phishing, token leakage)."}
+{"file": "app/login/callback/route.ts", "line": 9, "issue": "Redirect target is built from the unvalidated-after-parse value. Safety depends entirely on line 7. Fix by resolving first (const u = new URL(next, origin)) and redirecting only if u.origin === origin, or by allowlisting known paths."}
+{"file": "app/login/callback/route.ts", "line": 8, "issue": "Callback sets a session-like cookie for any request with no state, code, or other verification. If this route is meant to complete an OAuth/login flow, the missing state/PKCE check enables login CSRF and session fixation. Lower confidence: the rest of the auth flow is not in the provided files."}
+```
+
+Notes:
+- Line 8 is also a likely functional bug on Next.js 15 and later, where `cookies()` is async and must be awaited: `(await cookies()).set(...)`. This isn't a security issue, but it will fail at runtime.
+- The `secure: true` and `httpOnly: true` flags are appropriate.

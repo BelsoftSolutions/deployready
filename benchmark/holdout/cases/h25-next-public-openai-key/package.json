@@ -1,0 +1,1 @@
+{ "name": "chatbot", "private": true, "dependencies": { "next": "14.2.3", "openai": "4.47.1", "react": "18.3.1" } }

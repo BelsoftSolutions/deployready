@@ -2,5 +2,5 @@
   "extends": "../tsconfig.json",
   "compilerOptions": { "rootDir": "..", "noEmit": true },
   "include": ["./**/*.ts", "../src/**/*.ts"],
-  "exclude": ["../node_modules", "../dist", "../tests", "./parser-matrix", "./corpus"]
+  "exclude": ["../node_modules", "../dist", "../tests", "./parser-matrix", "./corpus", "./holdout/cases", "./results"]
 }

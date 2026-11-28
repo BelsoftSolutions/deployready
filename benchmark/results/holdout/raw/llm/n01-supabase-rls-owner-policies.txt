@@ -1,0 +1,11 @@
+```json
+{"file": "lib/supabase-server.ts", "line": 5, "issue": "The service-role client bypasses all RLS policies. Any server code that passes user-controlled input into queries on `admin` (for example, unvalidated filters, IDs, or table names) gets unrestricted database access. Scope its use to the cron paths and check ownership explicitly in any request-driven code."}
+{"file": "lib/supabase-server.ts", "line": 5, "issue": "The non-null assertions (`!`) on SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY hide missing configuration. If either variable is unset, the client is built with `undefined` and fails later in confusing ways. Validate both at startup and fail fast."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 12, "issue": "`orders.total_cents` has no CHECK constraint, so zero or negative totals can be stored. Add `check (total_cents >= 0)` or a stricter bound."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 16, "issue": "The insert policy lets any authenticated user create orders directly with a client-chosen `total_cents`. This bypasses server-side pricing and payment verification. Restrict inserts to trusted server code (for example, only the service role or a SECURITY DEFINER function that computes the total), or drop the client insert policy."}
+```
+
+Notes:
+- `lib/supabase-server.ts` does correctly import `server-only`, which prevents the admin client from being bundled into client components.
+- The `profiles` policies are scoped correctly with `auth.uid() = id` on both `using` and `with check`. Deletes are denied by default because no policy exists.
+- I reviewed only the two files provided and did not run any tools or tests. Non-security issues, such as the missing index on `orders.user_id`, are omitted.

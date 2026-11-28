@@ -1,0 +1,15 @@
+```json
+{"file": "firestore.rules", "line": 10, "issue": "Update rule checks only resource.data.authorId, not request.resource.data.authorId. An author can change authorId to another user's UID, transferring or spoofing ownership of the post. Fix: add request.resource.data.authorId == resource.data.authorId to the update condition."}
+{"file": "firestore.rules", "line": 10, "issue": "Update has no field restrictions, so the author can modify any field, including server-managed fields such as timestamps, counters, or moderation flags. Fix: use request.resource.data.diff(resource.data).affectedKeys() to limit which fields can change."}
+{"file": "firestore.rules", "line": 5, "issue": "Users can write any fields to their own profile with no schema validation. If other rules or code later trust fields like role or isAdmin, users can grant themselves privileges. Fix: validate allowed keys and types on write, and keep privileged fields out of client-writable documents."}
+{"file": "firestore.rules", "line": 5, "issue": "The users document is readable and writable by its owner with no size or type validation, so a client can store arbitrarily large or malformed data (cost and abuse risk). Fix: add request.resource.data.size() and type checks."}
+{"file": "firestore.rules", "line": 9, "issue": "Create only checks authorId. It does not validate any other field, so authenticated users can create posts with arbitrary content, size, or extra fields (abuse and storage-cost risk). Fix: validate required fields, types, and maximum lengths."}
+{"file": "firestore.rules", "line": 8, "issue": "Posts are publicly readable with allow read: if true, with no unauthenticated-access review. Any private or draft content in posts is exposed to anyone, including unauthenticated clients. Confirm this is intended, or restrict read access."}
+{"file": "firestore.rules", "line": 5, "issue": "Owner checks rely only on request.auth.uid and do not require a verified email (request.auth.token.email_verified). Accounts that are not verified, or that use unverified providers, get full write access to their profile. Consider requiring verification if the app depends on it."}
+```
+
+Notes:
+- `firebase.json` has no security issues. It only points to the rules file.
+- The default-deny behavior for collections not matched in the rules is correct, so no finding there.
+- The most important fix is line 10: lock `authorId` on update. Without that, the ownership check can be bypassed.
+- I reviewed the rules statically and did not test them with the Firebase emulator. Running `firebase emulators:exec` with rules unit tests would confirm the findings.

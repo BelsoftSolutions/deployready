@@ -1,0 +1,14 @@
+```json
+{"file": "server.js", "line": 7, "issue": "NoSQL injection / authentication bypass: req.body.email and req.body.password are passed directly into User.findOne without type checks. An attacker can send {\"email\": \"victim@example.com\", \"password\": {\"$ne\": null}} (or {\"$gt\": \"\"}) to match any user's record without knowing the password, and can use operators in the email field to target arbitrary accounts."}
+{"file": "server.js", "line": 7, "issue": "Plaintext password comparison in the query: the password is matched directly against a stored value, which implies passwords are stored unhashed or compared without a password-hashing function such as bcrypt or argon2. If the database is compromised, all credentials are exposed. (Based on this file alone; models/User.js was not provided, so this should be verified there.)"}
+{"file": "server.js", "line": 6, "issue": "No brute-force protection: the login endpoint has no rate limiting, account lockout, or CAPTCHA/backoff, allowing unlimited password guessing and credential stuffing."}
+{"file": "server.js", "line": 6, "issue": "No input validation: req.body is used without checking that email and password are strings. Missing or malformed bodies can cause unexpected query behavior or runtime errors."}
+{"file": "server.js", "line": 7, "issue": "Missing error handling: if User.findOne rejects (e.g., database outage), the async handler has no try/catch and no error middleware, so the request can hang or the process can crash on an unhandled rejection, which is an availability risk."}
+{"file": "server.js", "line": 9, "issue": "Token issuance is unverified: res.json returns user.issueToken() with no visible checks on token lifetime, signing secret, or algorithm. The implementation in models/User.js should be reviewed for expiry, a strong signing key, and algorithm pinning. The token is also returned in the body with no cookie flags or revocation mechanism visible here."}
+{"file": "server.js", "line": 11, "issue": "Plain HTTP server: app.listen(3000) serves over unencrypted HTTP, so credentials and tokens are exposed to network observers unless TLS is terminated by a proxy in front of it. No HTTPS enforcement or HSTS is configured."}
+```
+
+Notes:
+- The first finding is the most serious. It is exploitable with a single crafted JSON request.
+- `models/User.js` was not included, so the password storage and `issueToken` findings are inferences that need checking against that file.
+- The fix for the injection is to validate that `email` and `password` are strings (e.g., with a schema validator such as Joi or Zod) before querying. Then look up the user by email alone and compare the password with bcrypt/argon2 `compare`.

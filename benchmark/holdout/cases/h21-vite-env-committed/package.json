@@ -1,0 +1,1 @@
+{ "name": "dash", "private": true, "scripts": { "dev": "vite" }, "devDependencies": { "vite": "5.2.0" } }

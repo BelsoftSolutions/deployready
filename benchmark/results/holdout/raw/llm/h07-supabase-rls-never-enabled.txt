@@ -1,0 +1,24 @@
+```json
+{"file": "src/main.ts", "line": 3, "issue": "myOrders() selects every column from 'orders' with no user filter. Access control depends entirely on RLS, which the migration never enables, so any client holding the anon key can read all users' orders (including user_id and total_cents)."}
+{"file": "src/main.ts", "line": 2, "issue": "The client is built from VITE_* env vars, which Vite inlines into the public JS bundle. This is safe only if VITE_SUPABASE_ANON_KEY is the anon key. If a service_role key were ever set in that variable, it would be exposed and would bypass all RLS."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 1, "issue": "Table 'profiles' has no 'enable row level security' statement and no policies. Its full_name and phone PII can be read, and rows can be modified, by anyone with the anon key."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 8, "issue": "Table 'orders' has no 'enable row level security' statement and no policies. Anyone with the anon key can read, insert, update, and delete orders for all users."}
+{"file": "supabase/migrations/20240101000000_init.sql", "line": 10, "issue": "orders.user_id is nullable and has no ownership check. Even with RLS later enabled, rows with NULL user_id would be unowned, and without an insert policy tied to auth.uid(), a caller could create orders attributed to another user."}
+```
+
+**Fix:** Enable RLS on both tables and add owner-scoped policies, for example:
+
+```sql
+alter table public.profiles enable row level security;
+alter table public.orders enable row level security;
+
+create policy "own profile" on public.profiles
+  for all using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy "own orders" on public.orders
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table public.orders alter column user_id set not null;
+```
+
+I reviewed these files by reading them only and did not test against a live Supabase instance. The first two findings are the most serious, and the `myOrders` query is safe only once the policies above are in place.

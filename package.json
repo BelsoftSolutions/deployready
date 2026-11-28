@@ -37,6 +37,10 @@
     "coverage": "jest --coverage",
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p benchmark/tsconfig.json --noEmit",
     "benchmark": "tsx benchmark/run.ts",
+    "benchmark:holdout": "tsx benchmark/bench.ts --suite holdout",
+    "benchmark:dev": "tsx benchmark/bench.ts --suite dev",
+    "check:holdout": "tsx benchmark/checkHoldoutIsolation.ts",
+    "test:e2e": "jest --testMatch \"**/tests/e2e/**/*.e2e.ts\" --testTimeout=300000 --runInBand --coverage=false",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

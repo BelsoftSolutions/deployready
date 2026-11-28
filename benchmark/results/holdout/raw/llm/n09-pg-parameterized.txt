@@ -1,0 +1,14 @@
+```json
+{"file": "db.js", "line": 2, "issue": "Pool has no 'error' event listener. An error on an idle client is emitted as an unhandled 'error' event, which crashes the Node process."}
+{"file": "db.js", "line": 5, "issue": "Negative limit is not rejected. Number(limit) accepts values like -1, and Math.min keeps them, so Postgres raises 'LIMIT must not be negative'. This is a simple request-triggered error (see server.js:4 for the crash)."}
+{"file": "db.js", "line": 5, "issue": "The search term is wrapped in % without escaping ILIKE metacharacters (% and _), and there is no length cap. A leading wildcard prevents btree index use, so long or wildcard-heavy terms force full-table scans (resource exhaustion)."}
+{"file": "db.js", "line": 7, "issue": "byOwner runs SELECT * with no authorization check on ownerId. If it is exposed by a route, any caller can read any owner's documents (IDOR) with all columns returned. It is currently unused by server.js, but it is a latent access-control flaw."}
+{"file": "server.js", "line": 4, "issue": "The async route handler has no try/catch, and Express 4 does not forward promise rejections. Any DB error, such as the negative-limit case, becomes an unhandled promise rejection that crashes the process (DoS)."}
+{"file": "server.js", "line": 4, "issue": "/search has no authentication and no rate limiting, so anonymous clients can send unlimited queries to the database. The q parameter also has no maximum length."}
+{"file": "server.js", "line": 5, "issue": "The server listens on all interfaces over plain HTTP with no security headers (e.g. helmet). Express sends X-Powered-By by default, which discloses the framework. Low severity."}
+```
+
+Notes:
+- **No SQL injection found.** Both `term` and `limit` are passed as bind parameters (`$1`, `$2`), so the queries are not injectable.
+- Line numbers refer to the snippets as pasted. I reviewed the text only and did not run the code or check it against the repository.
+- The most important findings are the unhandled promise rejection in `server.js:4` (the process can be crashed by a bad request) and the missing limit validation in `db.js:5`, which together make the crash easy to trigger.

@@ -1,0 +1,31 @@
+```json
+{"file": "main.py", "line": 10, "issue": "OS command injection: host is interpolated into an f-string passed to subprocess.run with shell=True. A value like `127.0.0.1; cat /etc/passwd` runs arbitrary shell commands for any authenticated user."}
+{"file": "main.py", "line": 9, "issue": "Unvalidated host parameter: no type, format, or allowlist check (for example, IP or hostname validation). Values starting with '-' are parsed as ping options (argument injection), even if shell=True were removed."}
+{"file": "main.py", "line": 9, "issue": "Authorization is not enforced beyond authentication: any logged-in user can reach a diagnostics endpoint that executes system commands. Restrict it to an admin or operator role. The auth module was not provided, so its implementation could not be verified."}
+{"file": "main.py", "line": 10, "issue": "No timeout on subprocess.run: a hanging ping can block a worker indefinitely, allowing resource exhaustion through repeated requests."}
+{"file": "main.py", "line": 11, "issue": "Raw command stdout is returned directly to the client, which can expose internal network or DNS details. Return a constrained result instead."}
+{"file": "requirements.txt", "line": 1, "issue": "Outdated, unpinned-transitively dependencies: fastapi==0.111.0 pulls an older Starlette that has published advisories (for example, CVE-2024-47874, a multipart DoS). Upgrade and lock dependencies with hashes."}
+```
+
+**Suggested fix for the main issues:**
+
+```python
+import ipaddress
+import re
+import subprocess
+
+HOSTNAME_RE = re.compile(r"^(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
+
+@app.get("/api/diagnostics/ping")
+def ping(host: str, user=Depends(current_user)):
+    # require admin/operator role here, per your auth model
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        if not HOSTNAME_RE.fullmatch(host):
+            raise HTTPException(status_code=400, detail="invalid host")
+    out = subprocess.run(["ping", "-c", "1", host], capture_output=True, text=True, timeout=5)
+    return {"output": out.stdout}
+```
+
+Validating the host before it reaches the argument list stops both shell injection and option injection, since a valid hostname or IP cannot begin with `-`. The list form with `shell=False` removes the shell entirely, and the timeout bounds resource use.

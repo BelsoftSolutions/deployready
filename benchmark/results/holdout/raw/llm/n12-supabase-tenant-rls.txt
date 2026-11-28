@@ -1,0 +1,12 @@
+```json
+{"file": "supabase/migrations/20240301000000_tenants.sql", "line": 20, "issue": "Unqualified `id` in `m.org_id = id` in the 'members read org' policy. It resolves to organizations.id only because memberships has no `id` column. If one is added later, the predicate silently becomes `m.id` and can expose every organization to every user. Qualify it as `organizations.id`."}
+{"file": "supabase/migrations/20240301000000_tenants.sql", "line": 5, "issue": "memberships.role is unconstrained free text with default 'member'. There is no CHECK constraint, so invalid values like 'Admin' or 'owner' can be stored. The admin checks in the projects policies compare against the literal 'admin', so a bad value silently denies access, and any future policy that trusts role inherits the problem. Add CHECK (role in ('member', 'admin'))."}
+{"file": "supabase/migrations/20240301000000_tenants.sql", "line": 6, "issue": "The primary key (org_id, user_id) does not index user_id on its own. Every membership-based policy filters on user_id = auth.uid() (lines 18, 20, 22, 24), so lookups can become sequential scans as the table grows. This is a performance and availability risk. Add an index on memberships(user_id)."}
+{"file": "supabase/migrations/20240301000000_tenants.sql", "line": "14-16", "issue": "RLS is enabled but table privileges are not revoked. Supabase grants table privileges to anon and authenticated by default. The current policies block writes, but an explicit REVOKE ALL FROM anon (and from authenticated where writes are not intended) is defense in depth against a future policy mistake."}
+```
+
+No critical issues in this migration. The RLS design is sound: memberships are readable only by their owner, organizations and projects are readable only by members, and project writes require the admin role in the target org (`with check` also blocks moving a project into an org where the user is not an admin). Clients also cannot write to `memberships` or `organizations` because no write policies exist, so privilege escalation through role self-assignment is blocked.
+
+One functional gap, not a vulnerability: there is no INSERT or UPDATE policy on `memberships`, so org admins cannot add or change members through the API. Membership management will need to go through the service role or a SECURITY DEFINER function that checks the caller is an admin.
+
+I reviewed the SQL you pasted. I did not open the file on disk.

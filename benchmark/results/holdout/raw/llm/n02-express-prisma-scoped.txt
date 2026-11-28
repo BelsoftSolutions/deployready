@@ -1,0 +1,12 @@
+```json
+{"file": "server.js", "line": 14, "issue": "Authorization bypass when the token lacks an `id` claim: `req.user.id` is undefined, and Prisma ignores `undefined` filter fields, so `where: { id, ownerId: undefined }` matches any user's invoice. Reject tokens without a valid `id` before querying."}
+{"file": "server.js", "line": 20, "issue": "Same bypass in PATCH: with `ownerId: undefined`, `updateMany` can modify the `note` of any invoice. Validate `req.user.id` before the update."}
+{"file": "server.js", "line": 9, "issue": "JWT validation does not require an `exp` claim, so tokens issued without expiry remain valid indefinitely. Also missing are `issuer`/`audience` checks, so tokens minted for other services with the same secret would be accepted. Use `requiredClaims`/`maxAge` and set `issuer` and `audience`."}
+{"file": "server.js", "line": 9, "issue": "`.replace('Bearer ', '')` is unanchored and does not require the Bearer scheme, so raw tokens are accepted. Parse the header strictly (`/^Bearer (.+)$/`). `JWT_SECRET` is also never checked at startup; a missing secret only fails at request time."}
+{"file": "server.js", "line": 14, "issue": "`Number(req.params.id)` yields NaN for non-numeric input, and this async handler has no try/catch. On Express 4, the rejected Prisma promise leaves the request hanging or crashes the process via an unhandled rejection. Validate the id as a positive integer and wrap the handler in error handling."}
+{"file": "server.js", "line": 20, "issue": "Same unvalidated `Number(req.params.id)` and missing error handling in the async PATCH handler, enabling request hangs or process crashes."}
+{"file": "server.js", "line": 19, "issue": "`note` is taken from `req.body` without type or length validation. Arbitrary JSON objects, arrays, or very large strings can be written to the database. Require a string with a maximum length."}
+{"file": "server.js", "line": 24, "issue": "Server hardening is missing: no rate limiting on authenticated endpoints, no security headers (e.g., helmet), no explicit error handler (Express's default can leak stack traces outside production), and no TLS configuration. Add these, and consider binding to a specific host rather than all interfaces."}
+```
+
+Line numbers refer to the snippet as pasted. The authorization check on lines 14 and 20 is the most serious issue: it can allow access to other users' data whenever a validly signed token lacks an `id`. The other items are lower severity, but they are worth fixing before deployment.

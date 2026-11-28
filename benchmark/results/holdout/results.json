@@ -1,0 +1,3583 @@
+[
+ {
+  "tool": "deployready",
+  "suite": "holdout",
+  "total": {
+   "tp": 18,
+   "fp": 1,
+   "fn": 11,
+   "tn": 449,
+   "extra": 0,
+   "other": 3
+  },
+  "byClass": {
+   "client-secret-exposure": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "sqli": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "idor": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "command-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "unsafe-deserialization": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "webhook-signature-missing": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-missing": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-permissive": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-open-rules": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "other": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 3
+   },
+   "path-traversal": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "xss": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "ssrf": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "weak-password-hash": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "jwt-misconfig": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "mass-assignment": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-cookie": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "debug-mode": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "open-redirect": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "missing-auth": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "secret-committed": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "cors": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "hardcoded-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "tls-disabled": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "code-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "nosql-injection": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   }
+  },
+  "cases": [
+   {
+    "id": "h01-next-service-key-client",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 364,
+    "peakKb": 105400,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h02-next-prisma-raw-sqli",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 345,
+    "peakKb": 103348,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h03-express-prisma-idor",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 358,
+    "peakKb": 112376,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h04-fastapi-command-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 317,
+    "peakKb": 102000,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h05-flask-pickle-load",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 311,
+    "peakKb": 102688,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h06-stripe-webhook-unsigned",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 322,
+    "peakKb": 103688,
+    "alerts": 0,
+    "missed": [
+     "webhook-signature-missing (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h07-supabase-rls-never-enabled",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 104148,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h08-supabase-policy-using-true",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 365,
+    "peakKb": 110884,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h09-firebase-open-rules",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 2
+    },
+    "durationMs": 396,
+    "peakKb": 103308,
+    "alerts": 2,
+    "missed": [
+     "firebase-open-rules (firestore.rules)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h10-flask-path-traversal",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 360,
+    "peakKb": 101420,
+    "alerts": 0,
+    "missed": [
+     "path-traversal (app.py)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h11-react-dangerous-html",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 404,
+    "peakKb": 102784,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h12-fastapi-ssrf-fetch",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 377,
+    "peakKb": 101052,
+    "alerts": 0,
+    "missed": [
+     "ssrf (main.py)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h13-express-md5-passwords",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 399,
+    "peakKb": 103476,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h14-express-jwt-decode-only",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 467,
+    "peakKb": 102592,
+    "alerts": 0,
+    "missed": [
+     "jwt-misconfig (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h15-express-mass-assignment",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 411,
+    "peakKb": 103072,
+    "alerts": 0,
+    "missed": [
+     "mass-assignment (routes.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h16-express-session-cookie-weak",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 419,
+    "peakKb": 103008,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 2,
+    "weightTotal": 2
+   },
+   {
+    "id": "h17-flask-yaml-load-debug",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 387,
+    "peakKb": 101604,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 7,
+    "weightTotal": 7
+   },
+   {
+    "id": "h18-next-open-redirect",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 396,
+    "peakKb": 101908,
+    "alerts": 0,
+    "missed": [
+     "open-redirect (app/login/callback/route.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 2
+   },
+   {
+    "id": "h19-tenant-list-unscoped",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 422,
+    "peakKb": 102632,
+    "alerts": 0,
+    "missed": [
+     "idor (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h20-express-admin-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 388,
+    "peakKb": 106544,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h21-vite-env-committed",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 338,
+    "peakKb": 102628,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h22-express-cors-reflect-credentials",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 346,
+    "peakKb": 102908,
+    "alerts": 0,
+    "missed": [
+     "cors (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h23-python-hardcoded-creds",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 104584,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h24-node-tls-reject-off",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 103536,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h25-next-public-openai-key",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 375,
+    "peakKb": 103908,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h26-express-eval-input",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 391,
+    "peakKb": 102572,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h27-next-server-action-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 482,
+    "peakKb": 110252,
+    "alerts": 0,
+    "missed": [
+     "missing-auth (app/actions.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h28-express-nosql-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 451,
+    "peakKb": 102376,
+    "alerts": 0,
+    "missed": [
+     "nosql-injection (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "n01-supabase-rls-owner-policies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 452,
+    "peakKb": 102968,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n02-express-prisma-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 471,
+    "peakKb": 111884,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n03-fastapi-safe-subprocess",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 376,
+    "peakKb": 101536,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n04-flask-safe-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 349,
+    "peakKb": 101672,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n05-stripe-webhook-verified",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 418,
+    "peakKb": 102736,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n06-firebase-scoped-rules",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 405,
+    "peakKb": 101752,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n07-express-hardened",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 392,
+    "peakKb": 104104,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n08-env-example-only",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 398,
+    "peakKb": 102424,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n09-pg-parameterized",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 433,
+    "peakKb": 103796,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n10-react-safe-render",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 389,
+    "peakKb": 104820,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [
+     "xss src/Comments.jsx:8 [xss-sink]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n11-fastapi-ssrf-allowlist",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 380,
+    "peakKb": 102380,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n12-supabase-tenant-rls",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 433,
+    "peakKb": 102224,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n13-next-safe-redirect-cookies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 417,
+    "peakKb": 103460,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n14-next-server-action-authed",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 439,
+    "peakKb": 103600,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n15-python-env-secrets",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 379,
+    "peakKb": 102240,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n16-express-tenant-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 104608,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n17-express-safe-misc",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 330,
+    "peakKb": 103132,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n18-firebase-client-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 340,
+    "peakKb": 103452,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   }
+  ],
+  "positiveLabels": 29,
+  "negativeCases": 18,
+  "inconclusive": 0,
+  "sevWeightedRecall": 0.6382978723404256,
+  "negativesClean": 17,
+  "durationMs": {
+   "total": 17898,
+   "mean": 389.0869565217391,
+   "max": 482
+  },
+  "peakMb": {
+   "max": 109.7421875,
+   "mean": 101.33924932065217
+  }
+ },
+ {
+  "tool": "semgrep",
+  "suite": "holdout",
+  "total": {
+   "tp": 11,
+   "fp": 8,
+   "fn": 18,
+   "tn": 442,
+   "extra": 8,
+   "other": 6
+  },
+  "byClass": {
+   "client-secret-exposure": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 2,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "sqli": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "idor": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 2,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-cookie": {
+    "tp": 1,
+    "fp": 6,
+    "fn": 0,
+    "tn": 12,
+    "extra": 8,
+    "other": 0
+   },
+   "command-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "unsafe-deserialization": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "other": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 6
+   },
+   "webhook-signature-missing": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-missing": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-permissive": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-open-rules": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "path-traversal": {
+    "tp": 0,
+    "fp": 1,
+    "fn": 1,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "xss": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "ssrf": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "weak-password-hash": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "jwt-misconfig": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "mass-assignment": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "debug-mode": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "open-redirect": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "missing-auth": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 2,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "secret-committed": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "cors": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "hardcoded-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "tls-disabled": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "code-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "nosql-injection": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   }
+  },
+  "cases": [
+   {
+    "id": "h01-next-service-key-client",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 29823,
+    "peakKb": 173272,
+    "alerts": 0,
+    "missed": [
+     "client-secret-exposure (lib/supabase.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h02-next-prisma-raw-sqli",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 36214,
+    "peakKb": 172952,
+    "alerts": 0,
+    "missed": [
+     "sqli (app/api/search/route.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h03-express-prisma-idor",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 21407,
+    "peakKb": 171148,
+    "alerts": 1,
+    "missed": [
+     "idor (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h04-fastapi-command-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21540,
+    "peakKb": 172640,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h05-flask-pickle-load",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 29960,
+    "peakKb": 171208,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h06-stripe-webhook-unsigned",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 31640,
+    "peakKb": 171584,
+    "alerts": 1,
+    "missed": [
+     "webhook-signature-missing (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h07-supabase-rls-never-enabled",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21639,
+    "peakKb": 171524,
+    "alerts": 0,
+    "missed": [
+     "rls-missing (supabase/migrations/20240101000000_init.sql)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h08-supabase-policy-using-true",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20381,
+    "peakKb": 170188,
+    "alerts": 0,
+    "missed": [
+     "rls-permissive (supabase/migrations/20240201000000_notes.sql)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h09-firebase-open-rules",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20639,
+    "peakKb": 171252,
+    "alerts": 0,
+    "missed": [
+     "firebase-open-rules (firestore.rules)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h10-flask-path-traversal",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21197,
+    "peakKb": 171244,
+    "alerts": 0,
+    "missed": [
+     "path-traversal (app.py)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h11-react-dangerous-html",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 23471,
+    "peakKb": 170720,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h12-fastapi-ssrf-fetch",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 20307,
+    "peakKb": 171328,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h13-express-md5-passwords",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21883,
+    "peakKb": 170736,
+    "alerts": 0,
+    "missed": [
+     "weak-password-hash (auth.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h14-express-jwt-decode-only",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 20649,
+    "peakKb": 169744,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h15-express-mass-assignment",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 22604,
+    "peakKb": 171376,
+    "alerts": 0,
+    "missed": [
+     "mass-assignment (routes.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h16-express-session-cookie-weak",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21315,
+    "peakKb": 171464,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 2,
+    "weightTotal": 2
+   },
+   {
+    "id": "h17-flask-yaml-load-debug",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 21179,
+    "peakKb": 172464,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 7,
+    "weightTotal": 7
+   },
+   {
+    "id": "h18-next-open-redirect",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20316,
+    "peakKb": 169384,
+    "alerts": 0,
+    "missed": [
+     "open-redirect (app/login/callback/route.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 2
+   },
+   {
+    "id": "h19-tenant-list-unscoped",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 19244,
+    "peakKb": 170988,
+    "alerts": 1,
+    "missed": [
+     "idor (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h20-express-admin-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 19878,
+    "peakKb": 171148,
+    "alerts": 1,
+    "missed": [
+     "missing-auth (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h21-vite-env-committed",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20031,
+    "peakKb": 167520,
+    "alerts": 0,
+    "missed": [
+     "secret-committed (.env)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h22-express-cors-reflect-credentials",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 20071,
+    "peakKb": 171984,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h23-python-hardcoded-creds",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19764,
+    "peakKb": 171912,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h24-node-tls-reject-off",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20777,
+    "peakKb": 169564,
+    "alerts": 0,
+    "missed": [
+     "tls-disabled (lib/http.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h25-next-public-openai-key",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 19527,
+    "peakKb": 169464,
+    "alerts": 1,
+    "missed": [
+     "client-secret-exposure (components/Chat.tsx)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h26-express-eval-input",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 19756,
+    "peakKb": 169828,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h27-next-server-action-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20385,
+    "peakKb": 172956,
+    "alerts": 0,
+    "missed": [
+     "missing-auth (app/actions.ts)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "h28-express-nosql-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 20552,
+    "peakKb": 172264,
+    "alerts": 1,
+    "missed": [
+     "nosql-injection (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 3
+   },
+   {
+    "id": "n01-supabase-rls-owner-policies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19427,
+    "peakKb": 169364,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n02-express-prisma-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20864,
+    "peakKb": 171984,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:5 [express-check-csurf-middleware-usage]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n03-fastapi-safe-subprocess",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 18809,
+    "peakKb": 172032,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n04-flask-safe-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19607,
+    "peakKb": 172904,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n05-stripe-webhook-verified",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 18736,
+    "peakKb": 171028,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:4 [express-check-csurf-middleware-usage]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n06-firebase-scoped-rules",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19966,
+    "peakKb": 167996,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n07-express-hardened",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 21477,
+    "peakKb": 171652,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:8 [express-check-csurf-middleware-usage]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n08-env-example-only",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19763,
+    "peakKb": 170344,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n09-pg-parameterized",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19708,
+    "peakKb": 172240,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:3 [express-check-csurf-middleware-usage]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n10-react-safe-render",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 20161,
+    "peakKb": 170880,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n11-fastapi-ssrf-allowlist",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 19458,
+    "peakKb": 173948,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [
+     "ssrf main.py:15 [ssrf-requests]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n12-supabase-tenant-rls",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 19470,
+    "peakKb": 168832,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n13-next-safe-redirect-cookies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 41372,
+    "peakKb": 173024,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n14-next-server-action-authed",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 40036,
+    "peakKb": 172064,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n15-python-env-secrets",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 39284,
+    "peakKb": 170516,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n16-express-tenant-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 38966,
+    "peakKb": 170676,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:4 [express-check-csurf-middleware-usage]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n17-express-safe-misc",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 2,
+     "fn": 0,
+     "tn": 23,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 47546,
+    "peakKb": 171584,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [
+     "insecure-cookie server.js:4 [express-check-csurf-middleware-usage]",
+     "path-traversal server.js:10 [express-path-join-resolve-traversal]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n18-firebase-client-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 28300,
+    "peakKb": 171976,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   }
+  ],
+  "positiveLabels": 29,
+  "negativeCases": 18,
+  "inconclusive": 0,
+  "sevWeightedRecall": 0.39361702127659576,
+  "negativesClean": 11,
+  "durationMs": {
+   "total": 1099099,
+   "mean": 23893.456521739132,
+   "max": 47546
+  },
+  "peakMb": {
+   "max": 169.87109375,
+   "mean": 167.18113111413044
+  }
+ },
+ {
+  "tool": "llm",
+  "suite": "holdout",
+  "total": {
+   "tp": 28,
+   "fp": 19,
+   "fn": 1,
+   "tn": 433,
+   "extra": 31,
+   "other": 58
+  },
+  "byClass": {
+   "client-secret-exposure": {
+    "tp": 2,
+    "fp": 2,
+    "fn": 0,
+    "tn": 17,
+    "extra": 3,
+    "other": 0
+   },
+   "other": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 58
+   },
+   "sqli": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 1,
+    "other": 0
+   },
+   "idor": {
+    "tp": 2,
+    "fp": 3,
+    "fn": 0,
+    "tn": 15,
+    "extra": 5,
+    "other": 0
+   },
+   "command-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "missing-auth": {
+    "tp": 2,
+    "fp": 4,
+    "fn": 0,
+    "tn": 15,
+    "extra": 14,
+    "other": 0
+   },
+   "unsafe-deserialization": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "webhook-signature-missing": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "mass-assignment": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 2,
+    "other": 0
+   },
+   "rls-missing": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-permissive": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-open-rules": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "hardcoded-secret": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 1,
+    "other": 0
+   },
+   "path-traversal": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 1,
+    "other": 0
+   },
+   "xss": {
+    "tp": 1,
+    "fp": 2,
+    "fn": 0,
+    "tn": 16,
+    "extra": 2,
+    "other": 0
+   },
+   "ssrf": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 1,
+    "other": 0
+   },
+   "weak-password-hash": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "jwt-misconfig": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-cookie": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "debug-mode": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "code-injection": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 1,
+    "other": 0
+   },
+   "open-redirect": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "secret-committed": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "cors": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "tls-disabled": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   },
+   "nosql-injection": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 18,
+    "extra": 0,
+    "other": 0
+   }
+  },
+  "cases": [
+   {
+    "id": "h01-next-service-key-client",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 3
+    },
+    "durationMs": 15659,
+    "peakKb": 224848,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h02-next-prisma-raw-sqli",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 2
+    },
+    "durationMs": 8828,
+    "peakKb": 223768,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h03-express-prisma-idor",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 2
+    },
+    "durationMs": 17129,
+    "peakKb": 226336,
+    "alerts": 9,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h04-fastapi-command-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 2
+    },
+    "durationMs": 16869,
+    "peakKb": 230992,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h05-flask-pickle-load",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 9428,
+    "peakKb": 230832,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h06-stripe-webhook-unsigned",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 2
+    },
+    "durationMs": 17335,
+    "peakKb": 226224,
+    "alerts": 11,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h07-supabase-rls-never-enabled",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 2,
+     "other": 1
+    },
+    "durationMs": 12708,
+    "peakKb": 225396,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h08-supabase-policy-using-true",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 9614,
+    "peakKb": 225916,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h09-firebase-open-rules",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 3,
+     "other": 1
+    },
+    "durationMs": 7248,
+    "peakKb": 226384,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h10-flask-path-traversal",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 7995,
+    "peakKb": 230608,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h11-react-dangerous-html",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 6957,
+    "peakKb": 226128,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h12-fastapi-ssrf-fetch",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 11121,
+    "peakKb": 231292,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h13-express-md5-passwords",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 15971,
+    "peakKb": 225684,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h14-express-jwt-decode-only",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 1,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 9845,
+    "peakKb": 224560,
+    "alerts": 7,
+    "missed": [
+     "jwt-misconfig (server.js)"
+    ],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 4
+   },
+   {
+    "id": "h15-express-mass-assignment",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 2,
+     "other": 1
+    },
+    "durationMs": 10870,
+    "peakKb": 224488,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h16-express-session-cookie-weak",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 11989,
+    "peakKb": 225816,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 2,
+    "weightTotal": 2
+   },
+   {
+    "id": "h17-flask-yaml-load-debug",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 2,
+     "other": 1
+    },
+    "durationMs": 10727,
+    "peakKb": 230540,
+    "alerts": 9,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 7,
+    "weightTotal": 7
+   },
+   {
+    "id": "h18-next-open-redirect",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 8661,
+    "peakKb": 226408,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 2,
+    "weightTotal": 2
+   },
+   {
+    "id": "h19-tenant-list-unscoped",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 11192,
+    "peakKb": 224780,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h20-express-admin-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 10645,
+    "peakKb": 224628,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h21-vite-env-committed",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 3,
+     "other": 2
+    },
+    "durationMs": 9258,
+    "peakKb": 225648,
+    "alerts": 10,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h22-express-cors-reflect-credentials",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 10404,
+    "peakKb": 225312,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h23-python-hardcoded-creds",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 10259,
+    "peakKb": 226120,
+    "alerts": 5,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h24-node-tls-reject-off",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 9463,
+    "peakKb": 224520,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h25-next-public-openai-key",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 2
+    },
+    "durationMs": 11517,
+    "peakKb": 226656,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h26-express-eval-input",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 1
+    },
+    "durationMs": 8503,
+    "peakKb": 225928,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "h27-next-server-action-no-auth",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 2
+    },
+    "durationMs": 14781,
+    "peakKb": 224388,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "h28-express-nosql-injection",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 2,
+     "other": 1
+    },
+    "durationMs": 11878,
+    "peakKb": 225692,
+    "alerts": 9,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "n01-supabase-rls-owner-policies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 2,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 2
+    },
+    "durationMs": 17125,
+    "peakKb": 224560,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [
+     "client-secret-exposure lib/supabase-server.ts:5 [The service-role client bypasses all RLS policies. Any server code that passes u]",
+     "client-secret-exposure supabase/migrations/20240101000000_init.sql:16 [The insert policy lets any authenticated user create orders directly with a clie]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n02-express-prisma-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 17626,
+    "peakKb": 224212,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n03-fastapi-safe-subprocess",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 14453,
+    "peakKb": 230384,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n04-flask-safe-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 4,
+     "fn": 0,
+     "tn": 21,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 14601,
+    "peakKb": 231968,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [
+     "missing-auth app.py:12 [/api/config/import has no authentication or authorization. Any client that can r]",
+     "path-traversal app.py:18 [Path traversal is mitigated by secure_filename and send_from_directory, but the ]",
+     "code-injection app.py:22 [debug is enabled whenever FLASK_DEBUG=1. The Werkzeug debugger allows arbitrary ]",
+     "debug-mode app.py:22 [debug is enabled whenever FLASK_DEBUG=1. The Werkzeug debugger allows arbitrary ]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n05-stripe-webhook-verified",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 14541,
+    "peakKb": 224372,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n06-firebase-scoped-rules",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 10878,
+    "peakKb": 226348,
+    "alerts": 7,
+    "missed": [],
+    "falsePositives": [
+     "missing-auth firestore.rules:8 [Posts are publicly readable with allow read: if true, with no unauthenticated-ac]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n07-express-hardened",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 2,
+     "fn": 0,
+     "tn": 23,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 19871,
+    "peakKb": 224792,
+    "alerts": 11,
+    "missed": [],
+    "falsePositives": [
+     "xss server.js:21 [The access token is returned in the JSON response body, which encourages client-]",
+     "insecure-cookie server.js:15 [The session cookie is marked secure: true, but the server only listens on plain ]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n08-env-example-only",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 3
+    },
+    "durationMs": 13260,
+    "peakKb": 224372,
+    "alerts": 6,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n09-pg-parameterized",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 3,
+     "fn": 0,
+     "tn": 23,
+     "extra": 0,
+     "other": 2
+    },
+    "durationMs": 16563,
+    "peakKb": 224552,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [
+     "missing-auth db.js:7 [byOwner runs SELECT * with no authorization check on ownerId. If it is exposed b]",
+     "idor db.js:7 [byOwner runs SELECT * with no authorization check on ownerId. If it is exposed b]",
+     "missing-auth server.js:4 [/search has no authentication and no rate limiting, so anonymous clients can sen]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n10-react-safe-render",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 16218,
+    "peakKb": 225648,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [
+     "xss src/Comments.jsx:8 [Stored XSS risk, defense-in-depth only: comment.body is rendered as raw HTML via]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n11-fastapi-ssrf-allowlist",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 18977,
+    "peakKb": 230416,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [
+     "ssrf main.py:15 [SSRF via parser differential: the allowlist is checked on urlparse(url) (line 13]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n12-supabase-tenant-rls",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 21508,
+    "peakKb": 225536,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n13-next-safe-redirect-cookies",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 13085,
+    "peakKb": 226700,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [
+     "open-redirect app/login/callback/route.ts:7 [Open redirect bypass. The check only rejects strings starting with '//', but bro]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n14-next-server-action-authed",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 12564,
+    "peakKb": 226696,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [
+     "idor app/actions.ts:8 [Authorization depends on session.user.id, but the check only tests session?.user]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n15-python-env-secrets",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 10065,
+    "peakKb": 224540,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n16-express-tenant-scoped",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 2,
+     "fn": 0,
+     "tn": 23,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 14583,
+    "peakKb": 226132,
+    "alerts": 12,
+    "missed": [],
+    "falsePositives": [
+     "idor server.js:19 [Tenant-isolation depends on req.user.orgId being defined. If requireAuth ever se]",
+     "cors server.js:23 [app.listen(3000) binds to all interfaces with plain HTTP and no TLS, helmet secu]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n17-express-safe-misc",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 25,
+     "extra": 0,
+     "other": 1
+    },
+    "durationMs": 17262,
+    "peakKb": 226212,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "n18-firebase-client-config",
+    "negative": true,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 1,
+     "fn": 0,
+     "tn": 24,
+     "extra": 0,
+     "other": 2
+    },
+    "durationMs": 18999,
+    "peakKb": 225040,
+    "alerts": 8,
+    "missed": [],
+    "falsePositives": [
+     "hardcoded-secret src/firebase.js:8 [projectId is hardcoded to 'demo-app' while apiKey comes from the environment. Th]"
+    ],
+    "weightCaught": 0,
+    "weightTotal": 0
+   }
+  ],
+  "positiveLabels": 29,
+  "negativeCases": 18,
+  "inconclusive": 0,
+  "sevWeightedRecall": 0.9574468085106383,
+  "negativesClean": 7,
+  "durationMs": {
+   "total": 599033,
+   "mean": 13022.45652173913,
+   "max": 21508
+  },
+  "peakMb": {
+   "max": 226.53125,
+   "mean": 221.05069633152175
+  }
+ }
+]

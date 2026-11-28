@@ -1,0 +1,16 @@
+```jsonl
+{"file": "server.js", "line": 19, "issue": "Tenant-isolation depends on req.user.orgId being defined. If requireAuth ever sets orgId to undefined or null, Prisma drops the undefined filter, so deleteMany matches users across all tenants. Validate orgId in the middleware or fail closed here."}
+{"file": "server.js", "line": 19, "issue": "Admin can delete their own account (no check that req.params.id !== req.user.id), which can lock the org out of admin access. The DELETE is also irreversible, with no soft-delete, confirmation, or audit log."}
+{"file": "server.js", "line": 18, "issue": "Admin user-deletion endpoint has no rate limiting, so a compromised or malicious admin session can mass-delete users quickly."}
+{"file": "server.js", "line": 9, "issue": "Async handler with no try/catch. If prisma.project.findMany throws, the promise rejects unhandled and the request hangs. Express 4 does not catch async errors, which can cause unhandled rejections or process instability."}
+{"file": "server.js", "line": 13, "issue": "Async handler with no try/catch. A database error leaves the request hanging or crashes the process. Errors are also not converted to controlled responses."}
+{"file": "server.js", "line": 19, "issue": "Async handler with no try/catch. A failed deleteMany produces an unhandled rejection, and the response returns { ok: true } even if nothing was deleted or the operation failed."}
+{"file": "server.js", "line": 13, "issue": "req.params.id is passed to Prisma without format validation. If the id column is not a string, malformed input triggers Prisma validation errors that may leak schema or internal details to the client. Validate the id format first."}
+{"file": "server.js", "line": 9, "issue": "findMany returns every project in the org with no pagination or limit, which allows resource exhaustion and large responses as the data grows."}
+{"file": "server.js", "line": 15, "issue": "Returns the full project record with no field selection. If the model has internal or sensitive fields, they are exposed. Use select to limit the response."}
+{"file": "server.js", "line": 23, "issue": "app.listen(3000) binds to all interfaces with plain HTTP and no TLS, helmet security headers, or CORS policy. Credentials and tokens can be sniffed in transit, and clients can be attacked from browsers."}
+{"file": "server.js", "line": 23, "issue": "No global error-handling middleware is registered. Express's default handler may return stack traces in non-production environments, leaking internal paths and implementation details."}
+{"file": "server.js", "line": 6, "issue": "requireAuth is loaded from ./middleware/requireAuth, which was not provided. Its token validation, role assignment, and orgId population are unverified, and the security of every route depends on it."}
+```
+
+Scope: I reviewed only the `server.js` you pasted. The most important unverified dependency is `requireAuth` (line 6). Share that file and the Prisma schema to confirm the tenant-isolation and admin-role findings, since they depend on how `orgId` and `role` are set.

@@ -1,0 +1,13 @@
+```json
+{"file": "main.py", "line": 9, "issue": "SSRF: the user-supplied `url` query parameter is passed to `requests.get` without validating scheme, host, or resolved IP. Authenticated users can reach internal services, localhost, and cloud metadata endpoints such as 169.254.169.254."}
+{"file": "main.py", "line": 10, "issue": "SSRF via redirects: `requests.get` follows redirects by default, so an allowlisted or benign-looking URL can redirect to internal addresses. Any URL validation must also disable redirects or re-validate each hop."}
+{"file": "main.py", "line": 10, "issue": "DNS rebinding / TOCTOU: even if the host were checked before the request, the hostname could resolve to a different (internal) IP when `requests` connects. Validation must pin the resolved IP."}
+{"file": "main.py", "line": 11, "issue": "Response data disclosure: the first 2000 characters of the fetched body and the status code are returned to the caller. This turns the endpoint into a read channel for internal resources, and the body is not restricted by content type."}
+{"file": "main.py", "line": 10, "issue": "Resource exhaustion: `requests.get` without `stream=True` downloads the entire response into memory before truncation. `timeout=5` only limits socket inactivity, not total time, so a slow or very large response can exhaust memory or hold workers."}
+{"file": "main.py", "line": 9, "issue": "Missing authorization and rate limiting: `current_user` only establishes identity. Any authenticated user can make unlimited outbound requests, so the endpoint works as an open proxy and amplification vector. `current_user` is in `auth.py`, which was not provided, so its correctness could not be verified."}
+```
+
+Notes:
+- Line numbers refer to the file as pasted, with `import requests` on line 1.
+- I only reviewed `main.py`. The auth module was not provided, so the findings assume `current_user` correctly authenticates users.
+- A fix would validate the scheme (http/https only), resolve the hostname and reject private, loopback, link-local, and metadata ranges, connect to the validated IP, disable or re-validate redirects, stream the response with a size cap, and add per-user rate limits and an allowlist if the feature allows it.

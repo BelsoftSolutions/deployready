@@ -1,0 +1,15 @@
+```json
+{"file": "app/login/callback/route.ts", "line": 6, "issue": "Open redirect: NextResponse.redirect(next) sends the user to whatever URL is in the `next` query parameter. An attacker can craft a link such as /login/callback?next=https://evil.example to send users from a trusted login flow to a phishing or malware site."}
+{"file": "app/login/callback/route.ts", "line": 5, "issue": "Unvalidated user input: `next` is read from the query string and used without an allowlist or same-origin check. Absolute URLs, protocol-relative URLs (//evil.example), and backslash variants (/\\evil.example) are all accepted. The root cause is here."}
+{"file": "app/login/callback/route.ts", "line": 3, "issue": "No authentication or state validation in the callback as shown: the handler never checks an OAuth `code` or `state` parameter, so it can be triggered directly by any link or cross-site request. If this is an OAuth callback, it should verify `state` against a cookie or session to prevent login CSRF. This is based on the snippet only; the full auth flow may handle it elsewhere."}
+```
+
+**Suggested fix for the open redirect:** only accept relative paths that start with a single `/`, and resolve them against the request origin:
+
+```ts
+const raw = searchParams.get('next') ?? '/'
+const safe = raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : '/'
+return NextResponse.redirect(new URL(safe, request.url))
+```
+
+Alternatively, map `next` to a fixed set of allowed destinations.
