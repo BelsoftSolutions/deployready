@@ -203,7 +203,7 @@ Baseline v2 (diff-friendly, sorted JSON, safe to commit) identifies a finding by
 permissions: { contents: read, security-events: write, pull-requests: write }
 steps:
   - uses: actions/checkout@v4
-  - uses: BelsoftSolutions/deployready@v0.5.0
+  - uses: BelsoftSolutions/deployready@v0.6.0
     with: { fail-on: critical }
 ```
 
