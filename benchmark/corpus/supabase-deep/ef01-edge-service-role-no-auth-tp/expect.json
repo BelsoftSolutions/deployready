@@ -1,0 +1,7 @@
+{
+  "description": "verify_jwt = false on an Edge Function that deletes any account with the service-role key and never authenticates the caller",
+  "strict": true,
+  "expected": [
+    { "rule": "edge-function-no-auth", "present": true, "severity": "critical", "file": "supabase/functions/delete-account/index.ts" }
+  ]
+}

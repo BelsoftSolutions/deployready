@@ -1036,7 +1036,9 @@ class Replayer {
           if (cols && grant) t.columnGrants.push({ role: r, priv, columns: cols, loc });
           if (!grant) {
             // REVOKE on columns removes those column grants; a table-level REVOKE removes them all.
-            t.columnGrants = t.columnGrants.filter((g) => !(g.role === r && g.priv === priv && (!cols || g.columns.every((x) => cols.includes(x)))));
+            t.columnGrants = t.columnGrants
+              .map((g) => (g.role === r && g.priv === priv ? { ...g, columns: cols ? g.columns.filter((x) => !cols.includes(x)) : [] } : g))
+              .filter((g) => g.columns.length > 0);
           }
         }
         t.grants.set(r, set);
@@ -1275,7 +1277,8 @@ class Replayer {
       schema,
       name,
       materialized,
-      securityInvoker: invoker ?? (prev && !materialized ? prev.securityInvoker : false),
+      // CREATE OR REPLACE VIEW without WITH (...) resets the options (checked on PG16): security_invoker is lost.
+      securityInvoker: invoker ?? false,
       sources: this.querySources(query),
       callerScoped: callerScoped(query),
       loc: this.loc(st),

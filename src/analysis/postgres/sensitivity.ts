@@ -100,7 +100,7 @@ const PUBLIC_BUCKET_WORDS = new Set([
   'gallery', 'product', 'cdn', 'font', 'emoji', 'sticker', 'og', 'website', 'site', 'marketing', 'blog', 'post',
 ]);
 const SENSITIVE_BUCKET_WORDS = new Set([
-  ...SENSITIVE_WORDS, 'secure', 'kyc', 'id', 'contract', 'statement', 'backup', 'export', 'recording', 'voice', 'resume', 'cv',
+  ...SENSITIVE_WORDS, 'doc', 'secure', 'kyc', 'id', 'contract', 'statement', 'backup', 'export', 'recording', 'voice', 'resume', 'cv',
   'scan', 'payslip', 'report', 'confidential', 'internal', 'legal', 'license', 'verification', 'evidence', 'claim',
 ]);
 

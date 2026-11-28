@@ -48,6 +48,8 @@ export interface StaticResult {
   findings: Finding[];
   detected: DetectedSupabase;
   edgeFunctions?: EdgeFunctionCoverage;
+  /** The project's SQL files (for the drift comparison). */
+  sql?: SourceFile[];
 }
 
 export interface SourceFile {
@@ -212,7 +214,7 @@ export function scanSupabaseFiles(files: SourceFile[]): StaticResult {
   detected.migrationTables = [...tables];
   const edgeFunctions = edgeFunctionChecks(files, findings);
   if (edgeFunctions.configs) detected.configFiles = edgeFunctions.configs;
-  return { findings, detected, edgeFunctions: edgeFunctions.coverage };
+  return { findings, detected, edgeFunctions: edgeFunctions.coverage, sql: files.filter((f) => /\.sql$/i.test(f.relPath)) };
 }
 
 const TOML_RE = /(?:^|\/)supabase\/config\.toml$/;

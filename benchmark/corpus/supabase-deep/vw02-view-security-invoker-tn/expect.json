@@ -1,0 +1,28 @@
+{
+  "description": "Twin of vw01: the view is created with (security_invoker = true), so RLS applies to the caller",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "view-rls-bypass",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoice_list",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.invoice_list",
+        "open": false
+      }
+    ]
+  }
+}

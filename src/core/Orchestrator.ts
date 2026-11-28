@@ -156,9 +156,17 @@ export class Orchestrator {
     const sb = await supabaseStep(projectPath, opts);
     const fb = await firebaseStep(projectPath, opts);
     if (sb.coverage) {
-      const rls = staticIssues.rlsFiles && sb.coverage.static.state === 'passed' ? ` RLS replayed over ${staticIssues.rlsFiles} SQL migration file(s).` : '';
-      cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason + rls);
+      const rls =
+        staticIssues.rlsFiles && sb.coverage.static.state === 'passed'
+          ? ` RLS replayed over ${staticIssues.rlsFiles} SQL migration file(s); storage, SECURITY DEFINER function, view, trigger, Realtime and grant checks ran on the final state.`
+          : '';
+      if (staticIssues.sqlObjectsError && sb.coverage.static.state !== 'failed') {
+        cov.set('supabase-static', 'failed', `Supabase object checks (storage, functions, views, triggers, Realtime, grants) errored: ${staticIssues.sqlObjectsError}. RLS results still stand.`);
+      } else {
+        cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason + rls);
+      }
       cov.set('supabase-live', sb.coverage.live.state, sb.coverage.live.reason, { requested: sb.coverage.live.requested });
+      cov.set('supabase-drift', sb.coverage.drift.state, sb.coverage.drift.reason, { requested: sb.coverage.drift.requested });
     }
     if (fb.coverage) cov.set('firebase', fb.coverage.state, fb.coverage.reason);
 

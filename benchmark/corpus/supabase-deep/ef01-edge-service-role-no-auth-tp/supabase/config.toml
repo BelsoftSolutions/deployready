@@ -1,0 +1,4 @@
+project_id = "demo"
+
+[functions.delete-account]
+verify_jwt = false

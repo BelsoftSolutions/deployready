@@ -1,0 +1,22 @@
+{
+  "description": "A view created without security_invoker and fixed by a later ALTER VIEW ... SET (security_invoker = on)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "view-rls-bypass",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoice_list",
+        "open": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "description": "Twin of st03: the documents policies tie each file to its owner folder",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "storage-policy-permissive",
+      "present": false
+    },
+    {
+      "rule": "storage-bucket-public",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into storage.objects (bucket_id, name, owner_id) values ('documents', '00000000-0000-0000-0000-00000000000b/contract.pdf', '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from storage.objects where bucket_id = 'documents'",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "delete from storage.objects where bucket_id = 'documents'",
+        "open": false
+      }
+    ]
+  }
+}

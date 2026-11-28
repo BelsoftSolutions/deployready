@@ -1,0 +1,7 @@
+{
+  "description": "Twin of ef01: verify_jwt = false, but the function checks the caller with auth.getUser() and only deletes the caller's own account",
+  "strict": true,
+  "expected": [
+    { "rule": "edge-function-no-auth", "present": false }
+  ]
+}

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { VulnerabilityDetector } from '../src/analysis/VulnerabilityDetector';
 import { CodeParser } from '../src/parser/CodeParser';
+import { scanSupabaseStatic } from '../src/supabase/static';
 import {
   checkFindings,
   checkRoutes,
@@ -93,6 +94,8 @@ function loadVibeCases(folder = 'vibe'): BenchCase[] {
         const routeExp = spec.expected.filter(isRouteExpectation) as RouteExpectation[];
         const unsupportedExp = spec.expected.filter(isUnsupportedExpectation) as UnsupportedExpectation[];
         const findings = await VulnerabilityDetector.scan(dir);
+        // Supabase cases also run the Supabase static module (Edge Functions, key checks).
+        if (folder === 'supabase-deep') findings.push(...(await scanSupabaseStatic(dir)).findings);
         const checks = checkFindings(findings, findingExp);
         if (routeExp.length > 0) {
           const graph = await CodeParser.analyze(dir);
@@ -122,5 +125,5 @@ function loadVibeCases(folder = 'vibe'): BenchCase[] {
 }
 
 export function corpusCases(): BenchCase[] {
-  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases(), ...loadVibeCases('idor'), ...loadVibeCases('rls')];
+  return [...loadDirCases('static'), ...loadDirCases('parser'), ...loadVibeCases(), ...loadVibeCases('idor'), ...loadVibeCases('rls'), ...loadVibeCases('supabase-deep')];
 }

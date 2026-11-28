@@ -1,0 +1,7 @@
+{
+  "description": "Twin of ef01: a Stripe webhook with verify_jwt = false that verifies the Stripe signature before using the service role",
+  "strict": true,
+  "expected": [
+    { "rule": "edge-function-no-auth", "present": false }
+  ]
+}

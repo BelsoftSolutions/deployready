@@ -1,0 +1,30 @@
+{
+  "description": "Twin of fn03: the same helper with set search_path = '' and schema-qualified names",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "security-definer-search-path",
+      "present": false
+    },
+    {
+      "rule": "security-definer-rls-bypass",
+      "present": false
+    },
+    {
+      "rule": "security-definer-exposed",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "create temp table invoices (id int); insert into invoices select generate_series(1, 999); select (private.invoice_count() = 999)::int",
+        "open": false
+      }
+    ]
+  }
+}

@@ -439,7 +439,7 @@ interface WriteStmt {
   line: number;
 }
 
-/** INSERT / UPDATE statements in a function body, with target, columns written and text. */
+/** INSERT / UPDATE statements in a function body, with target, columns written and the whole statement text (an enclosing IF condition counts as input). */
 function bodyWrites(f: FunctionState): WriteStmt[] {
   const out: WriteStmt[] = [];
   for (const st of splitStatements(f.body, f.bodyLine - 1)) {
@@ -457,7 +457,7 @@ function bodyWrites(f: FunctionState): WriteStmt[] {
             if (v) cols.push(v);
           }
         }
-        out.push({ table: parts, columns: cols, text: st.text.slice(Math.max(0, t.start - toks[0]!.start)), line: st.line });
+        out.push({ table: parts, columns: cols, text: st.text, line: st.line });
       } else if (t.value === 'update' && !(toks[k - 1]?.type === 'word' && (toks[k - 1]!.value === 'do' || toks[k - 1]!.value === 'for'))) {
         const { parts, end } = nameAt(toks, k + 1);
         if (!parts || toks[end]?.value !== 'set') continue;
@@ -467,7 +467,7 @@ function bodyWrites(f: FunctionState): WriteStmt[] {
           if (v && toks[j + 1]?.type === 'op' && toks[j + 1]!.value === '=') cols.push(v);
           if (toks[j]!.type === 'word' && toks[j]!.value === 'where') break;
         }
-        out.push({ table: parts, columns: cols, text: st.text.slice(Math.max(0, t.start - toks[0]!.start)), line: st.line });
+        out.push({ table: parts, columns: cols, text: st.text, line: st.line });
       }
     }
   }
@@ -623,14 +623,13 @@ function grantChecks(model: DbModel, cfg: RlsProjectConfig, exposed: Set<string>
       });
       continue;
     }
-    // GRANT ... ON ALL TABLES IN SCHEMA s TO anon, on tables that had been locked down earlier, or outside `public`.
-    const schemas = g.schemas.filter((s) => exposed.has(s) && s !== 'public');
-    const relocked = g.relocked.filter((t) => alive(model, t) && exposed.has(t.schema));
-    if (!schemas.length && !relocked.length) continue;
-    const target = relocked.length ? relocked.map((t) => qn(t.schema, t.name)).slice(0, 5).join(', ') : `every table in ${schemas.join(', ')}`;
+    // GRANT ... ON ALL TABLES IN SCHEMA s TO anon that re-opens tables an earlier REVOKE locked down.
+    const relocked = g.relocked.filter((t) => alive(model, t) && exposed.has(t.schema) && writes.some((p) => hasPrivilege(t, 'anon', p as never)));
+    if (!relocked.length) continue;
+    const target = relocked.map((t) => qn(t.schema, t.name)).slice(0, 5).join(', ');
     out.push({
       rule: 'grant-all-tables-anon',
-      title: `Blanket GRANT gives anon ${writes.join('/').toUpperCase()} on ${relocked.length ? 'tables that were locked down' : `every table in ${schemas.join(', ')}`}`,
+      title: `Blanket GRANT gives anon ${writes.join('/').toUpperCase()} back on tables that were locked down (${target})`,
       severity: 'warning',
       file: g.loc.file,
       line: g.loc.line,
@@ -638,10 +637,8 @@ function grantChecks(model: DbModel, cfg: RlsProjectConfig, exposed: Set<string>
       object: `grant on all tables in schema ${g.schemas.join(', ')}`,
       description:
         `This GRANT ... ON ALL TABLES IN SCHEMA ${g.schemas.join(', ')} TO ${roles.join(', ')} hands anon (no sign-in) ${writes.join(', ')} on ${target}. ` +
-        (relocked.length
-          ? 'An earlier migration had revoked anon\'s privileges on these tables on purpose; this statement silently undoes that.'
-          : 'Only RLS now stands between anon and every row of those tables; one table without a policy is fully writable.'),
-      recommendation: `Grant only what each table needs, to the role that needs it, e.g. grant select on public.<table> to anon; grant insert, update on public.<table> to authenticated; and revoke the rest: revoke ${writes.join(', ')} on all tables in schema ${g.schemas.join(', ')} from anon;`,
+        "An earlier migration revoked anon's privileges on these tables on purpose; this statement silently undoes that, so only RLS now stands between anon and their rows.",
+      recommendation: `Grant per table, to the role that needs it (e.g. grant insert, update on public.<table> to authenticated;), and restore the lock-down: revoke ${writes.join(', ')} on ${target} from anon;`,
     });
   }
 
