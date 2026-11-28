@@ -30,6 +30,8 @@ import { decodeJwt } from '../active/jwt';
 import { planActiveRequests } from '../active/requestPlan';
 import { createActiveHttpAdapter } from '../active/httpAdapter';
 import { ACTIVE_RULES, runActiveScan, type ActiveObservation, type HttpFn } from '../active/runner';
+import { AUTHZ_RULES } from '../active/authzEngine';
+import { verifyAuthzFinding, type AuthzVerifyContext } from '../active/authzVerify';
 import { MUTATION_RULE, planMutationProbes, runMutationProbes, type MutationObservation } from '../active/mutationProbe';
 import type { Finding, Proof, Route } from '../types';
 
@@ -56,6 +58,8 @@ export interface VerifyContext {
     /** Injected transport (tests); defaults to the guarded real adapter. */
     http?: HttpFn;
   };
+  /** Re-checking authorization-matrix findings (identities + policy from .deployready.json). */
+  authz?: AuthzVerifyContext;
 }
 
 /**
@@ -99,6 +103,10 @@ export class Verifier {
     if (finding.source === 'static') return Verifier.verifyStatic(finding, ctx);
     if (finding.source === 'dynamic' && finding.rule === MUTATION_RULE) return Verifier.verifyMutation(finding, ctx);
     if (finding.source === 'dynamic' && ACTIVE_RULES.has(finding.rule)) return Verifier.verifyActive(finding, ctx);
+    if (finding.source === 'dynamic' && AUTHZ_RULES.has(finding.rule)) {
+      const base = ctx.authz ?? (ctx.active ?? ctx.dynamic ? { baseUrl: (ctx.active ?? ctx.dynamic)!.baseUrl, routes: (ctx.active ?? ctx.dynamic)!.routes, ...(ctx.active?.ownedHosts ? { ownedHosts: ctx.active.ownedHosts } : {}) } : undefined);
+      return verifyAuthzFinding(finding, ctx.target, base);
+    }
     if (finding.source === 'dynamic') return Verifier.verifyDynamic(finding, ctx);
     return inconclusive('AI-inferred finding — re-run `ai` or `scan` to re-check.');
   }

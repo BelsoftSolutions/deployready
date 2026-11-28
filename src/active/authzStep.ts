@@ -107,6 +107,7 @@ export async function runAuthzStep(
     cliTokenB: opts.tokenB,
     baseUrl,
     projectPath,
+    ownedHosts: owned,
     planOnly: preview,
   });
   for (const i of identities) if (i.unavailable) logger.warn(`Identity "${i.name}" is unavailable: ${i.unavailable}. Its cells are untested.`);

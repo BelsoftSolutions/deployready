@@ -12,6 +12,7 @@ import type { Finding, Proof, ScanReport, Severity } from '../types';
 import { SCORE_DISCLAIMER } from '../core/releaseState';
 import { coverageSymbol } from '../core/coverage';
 import { sanitizeReport } from './sanitize';
+import { AUTHZ_CSS, authzHtml } from '../active/authzReport';
 import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { isNote, isUnverified } from '../analysis/ScoreCalculator';
 import { buildFixPrompt } from '../agent/fixPrompt';
@@ -74,6 +75,7 @@ export class HtmlReporter {
   </section>
 
   ${renderCoverage(report)}
+  ${authzHtml(report.authz)}
 
   ${report.aiSummary ? `<section class="ai"><h2>🤖 AI Summary (unverified)</h2><p>${esc(report.aiSummary)}</p></section>` : ''}
 
@@ -251,7 +253,7 @@ main{max-width:980px;margin:0 auto;padding:28px}
 .hero-side h1{margin:0 0 4px;font-size:24px;font-family:ui-monospace,"JetBrains Mono",monospace}
 .release{margin:8px 0 0;font-weight:700;font-family:ui-monospace,monospace;font-size:13px}.release-ready,.release-ready-with-accepted-risks{color:#00ff88}.release-review-required{color:#f59e0b}.release-not-ready,.release-insufficient-evidence{color:#ef4444}
 .disclaimer{margin:4px 0 0;color:#888;font-size:12px}
-.coverage table{width:100%;border-collapse:collapse;font-size:13px}.coverage td,.coverage th{text-align:left;padding:4px 8px;border-bottom:1px solid #222}.cov-failed td{color:#ef4444}.cov-untested td,.cov-inconclusive td{color:#f59e0b}.cov-not-applicable td{color:#666}.req{font-size:11px;color:#888}
+.coverage table{width:100%;border-collapse:collapse;font-size:13px}.coverage td,.coverage th{text-align:left;padding:4px 8px;border-bottom:1px solid #222}.cov-failed td{color:#ef4444}.cov-untested td,.cov-inconclusive td{color:#f59e0b}.cov-not-applicable td{color:#666}.req{font-size:11px;color:#888}${AUTHZ_CSS}
 .target{margin:0;color:#cbd5e1;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all}
 .when{margin:2px 0 14px;color:#666;font-size:12px}
 .cards{display:flex;gap:12px}

@@ -26,6 +26,8 @@
  * Header values are never written to a report; proofs name them `$<NAME>_AUTH`.
  */
 import { decodeJwt } from './jwt';
+import { PlaywrightSessionProvider } from '../auth/provider';
+import { assertSessionName } from '../auth/session';
 
 /** What the engine needs from an identity. Implemented by static/env tokens here and by session providers elsewhere. */
 export interface IdentityProvider {
@@ -56,7 +58,10 @@ export interface IdentityConfig {
   token?: string;
   /** Name of an environment variable holding the bearer token. */
   tokenEnv?: string;
-  /** Login-session settings, handed to the registered session provider for `session.provider`. */
+  /**
+   * Saved login session: a name saved by `deployready auth record|login` (a string), or
+   * settings for a registered session provider ({ provider, ... }; `{ name, file }` for playwright).
+   */
   session?: SessionConfig;
   params?: Record<string, string | number>;
   objects?: Record<string, Record<string, string | number>>;
@@ -69,9 +74,36 @@ export interface SessionConfig {
 }
 
 /** Builds a session identity from its config; registered by the module that implements it. */
-export type SessionProviderFactory = (identity: IdentityConfig, ctx: { baseUrl?: string; projectPath?: string }) => Promise<IdentityProvider>;
+export type SessionProviderFactory = (
+  identity: IdentityConfig,
+  ctx: { baseUrl?: string; projectPath?: string; ownedHosts?: readonly string[] },
+) => Promise<IdentityProvider>;
 
-const sessionFactories = new Map<string, SessionProviderFactory>();
+/** Built-in: a session saved by `deployready auth record|login` (.deployready/sessions/<name>.json). */
+const playwrightFactory: SessionProviderFactory = async (identity, ctx) => {
+  if (!ctx.baseUrl) throw new Error('no target URL to produce session headers for');
+  const s = identity.session ?? {};
+  const sessionName = assertSessionName(typeof s.name === 'string' && s.name ? s.name : identity.name);
+  const p = new PlaywrightSessionProvider({
+    name: sessionName,
+    role: identity.role,
+    ...(identity.tenant ? { tenant: identity.tenant } : {}),
+    target: ctx.baseUrl,
+    ownedHosts: ctx.ownedHosts ?? [],
+    ...(ctx.projectPath ? { root: ctx.projectPath } : {}),
+    ...(typeof s.file === 'string' && s.file ? { sessionFile: s.file } : {}),
+  });
+  const problem = await p.check();
+  if (problem) throw new Error(problem);
+  return {
+    name: identity.name,
+    role: identity.role,
+    ...(identity.tenant ? { tenant: identity.tenant } : {}),
+    headers: () => p.headers(),
+  };
+};
+
+const sessionFactories = new Map<string, SessionProviderFactory>([['playwright', playwrightFactory]]);
 
 /** Register a provider for `session` identities (e.g. "playwright"). Re-registering replaces it. */
 export function registerSessionProvider(kind: string, factory: SessionProviderFactory): void {
@@ -81,6 +113,7 @@ export function registerSessionProvider(kind: string, factory: SessionProviderFa
 /** Test hook: forget registered session providers. */
 export function clearSessionProviders(): void {
   sessionFactories.clear();
+  sessionFactories.set('playwright', playwrightFactory);
 }
 
 export const ANONYMOUS_ROLE = 'anonymous';
@@ -121,7 +154,7 @@ export function parseIdentityConfigs(raw: unknown): { identities: IdentityConfig
       problems.push(`${at} must be an object.`);
       return;
     }
-    const e = entry as Record<string, unknown>;
+    const e = { ...(entry as Record<string, unknown>) };
     const name = typeof e.name === 'string' ? e.name.trim() : '';
     if (!NAME_RE.test(name)) {
       problems.push(`${at}.name must be 1-40 letters, digits, "-", "_" or "." (got ${JSON.stringify(e.name)}).`);
@@ -159,8 +192,16 @@ export function parseIdentityConfigs(raw: unknown): { identities: IdentityConfig
         return;
       }
     }
+    if (typeof e.session === 'string') {
+      try {
+        e.session = { provider: 'playwright', name: assertSessionName(e.session.trim()) };
+      } catch (err) {
+        problems.push(`${at}.session: ${(err as Error).message}`);
+        return;
+      }
+    }
     if (e.session !== undefined && (typeof e.session !== 'object' || e.session === null || Array.isArray(e.session))) {
-      problems.push(`${at}.session must be an object.`);
+      problems.push(`${at}.session must be a saved session name or an object.`);
       return;
     }
     const params = scalarMap(e.params, `${at}.params`, problems);
@@ -227,6 +268,8 @@ export interface ResolveIdentityOptions {
   cliTokenB?: string;
   baseUrl?: string;
   projectPath?: string;
+  /** Hosts the user declared ownership of (session headers are produced only for the target). */
+  ownedHosts?: readonly string[];
   /**
    * Plan only (--dry-run / passive): no login is performed and no credential is
    * read for sending; every configured identity gets a stub whose headers() throws.
@@ -283,10 +326,10 @@ export async function resolveIdentities(configs: IdentityConfig[], opts: Resolve
         continue;
       }
       try {
-        const p = await factory(c, { baseUrl: opts.baseUrl, projectPath: opts.projectPath });
+        const p = await factory(c, { baseUrl: opts.baseUrl, projectPath: opts.projectPath, ownedHosts: opts.ownedHosts });
         out.push({ ...base, provider: { ...p, params: p.params ?? c.params, objects: p.objects ?? c.objects } as IdentityProvider });
       } catch (err) {
-        out.push({ ...base, unavailable: `session login failed: ${(err as Error).message}` });
+        out.push({ ...base, unavailable: `session unusable: ${(err as Error).message}` });
       }
       continue;
     }

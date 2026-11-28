@@ -326,7 +326,16 @@ export function planAuthz(input: AuthzEngineInput): Planned {
   };
 
   for (const resource of policy.resources) {
-    const itemGet = resource.routes.find((r) => r.method === 'GET' && routeParams(r).length > 0 && !r.batchField && !routeParams(r).some((p) => ID_LIST_PARAM.test(p)));
+    // The item GET route doubles as the read-back / comparison request, so it must pass the same gates.
+    const itemGet = resource.routes.find(
+      (r) =>
+        r.method === 'GET' &&
+        routeParams(r).length > 0 &&
+        !r.batchField &&
+        !routeParams(r).some((p) => ID_LIST_PARAM.test(p)) &&
+        !matchRoutePattern(unsafe, r.method, r.path) &&
+        (r.sideEffectFree || safetyLevel === 'stateful' || !sideEffectReason(r.path)),
+    );
     const createRoute = resource.routes.find((r) => r.method === 'POST' && !r.batchField && itemGet && itemGet.path.startsWith(`${r.path}/`));
     const readBack = itemGet
       ? (w: Who, id?: string): Spec | null => fillRoute(itemGet, w, resource.name, id === undefined ? {} : { [lastParam(itemGet)!]: id })?.spec ?? null
@@ -1044,7 +1053,9 @@ export async function runAuthz(input: AuthzEngineInput, http: HttpFn): Promise<A
     return record(cc, 'inconclusive', `HTTP ${d.status}; the owner then got HTTP ${after.status}`);
   }
 
-  const others = (self: Who) => input.identities.map(who).filter((w) => w.provider && w.name !== self.name && w.role !== 'anonymous');
+  function others(self: Who): Who[] {
+    return input.identities.map(who).filter((w) => w.provider && w.name !== self.name && w.role !== 'anonymous');
+  }
 
   async function runMassUpdate(c: Case): Promise<void> {
     const readSpec = c.readBack!(c.actor);

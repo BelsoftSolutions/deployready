@@ -292,6 +292,7 @@ export function toCiJson(
     passed: !shouldFail(cmp ? summarize(gatedFindings(cmp)) : report.summary, failOn),
     ...(report.release ? { release: report.release } : {}),
     ...(report.coverage ? { coverage: report.coverage } : {}),
+    ...(report.authz ? { authz: report.authz } : {}),
     ...(opts.failOnReleaseState
       ? {
           failOnReleaseState: opts.failOnReleaseState,
