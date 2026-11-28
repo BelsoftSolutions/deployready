@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 import { applySafeFixes, fixableFindings } from './fixes';
 import type { SafeFixResult } from './fixes';
 import type { ScanReport } from '../types';
+import { withRelease } from '../core/releaseState';
 
 export interface AnalyzeFixOutcome {
   /** The report to gate and print: the re-scan if anything was applied, else the original. */
@@ -68,5 +69,11 @@ export async function runAnalyzeFix(
     open: false,
   });
   logger.success(`Re-scanned after ${result.applied.length} fix(es): score ${report.score} -> ${rescanned.score}.`);
-  return { report: rescanned, fix: { ...result, scoreBefore: report.score, scoreAfter: rescanned.score } };
+  // The re-scan re-runs the static check that produced each fixed finding: gone = fixed-verified.
+  const still = new Set(rescanned.findings.map((f) => f.id));
+  const fixedVerified = result.applied.filter((a) => !still.has(a.id)).length;
+  const verified = rescanned.release
+    ? withRelease(rescanned, { policy: rescanned.release.policy, policyWarnings: rescanned.release.policyWarnings, verification: { fixedVerified, fixedUnverified: 0 } })
+    : rescanned;
+  return { report: verified, fix: { ...result, scoreBefore: report.score, scoreAfter: rescanned.score } };
 }

@@ -130,6 +130,7 @@ npx deployready@latest config                            # show the active confi
 | `--html` / `--open` | write an HTML dashboard / and open it in your browser |
 | `--json` | print a machine-readable JSON report (implies `--yes`) |
 | `--fail-on <severity>` | exit non-zero if findings at/above `critical \| warning \| info \| none` exist |
+| `--fail-on-release-state <state>` | exit `2` if the [release state](#score-and-release-state) is at or worse than `ready-with-accepted-risks \| review-required \| not-ready \| insufficient-evidence`; exit `3` when it is `insufficient-evidence` |
 | `--baseline <file>` | gate only on findings **not** in the baseline file (existing issues are grandfathered) |
 | `--strict-baseline` | with `--baseline`, also fail on stale suppressions (entries with no matching finding) |
 | `--write-baseline <file>` | write the current findings to a baseline file and exit `0` (accept current state) |
@@ -142,11 +143,47 @@ npx deployready@latest config                            # show the active confi
 | `--dry-run` | list the active requests that would be sent, without sending any |
 | `-v, --verbose` | verbose debug output |
 
-**CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error).
+**CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error), and `3` (insufficient evidence: a required check errored or did not run; only with `--fail-on-release-state`). Without `--fail-on-release-state` the exit codes are exactly as before. When both gates fail, `--fail-on` wins (`2`).
 
 ```bash
 npx deployready@latest analyze . --no-ai --no-dynamic --fail-on critical
+npx deployready@latest analyze . --fail-on-release-state review-required   # also gate on unverified criticals and failed checks
 ```
+
+### Score and release state
+
+The **score** (0-100) is unchanged: it counts confirmed findings only, in the areas that ran. **A score of 100 means no confirmed findings in the areas tested, not that the app is secure.** An unverified AI critical, a skipped live test or a scanner step that crashed does not move it.
+
+So every report (terminal, HTML, markdown, `--json`, the MCP `score` tool and the GitHub Action summary) also carries a **release state** and the dimensions it is built from, in one line:
+
+```
+Release: NOT READY — 2 confirmed critical · Coverage: static (JS/TS) ✓ · secrets ✓ · dependencies – untested · live – untested · active/authz – untested · AI analysis – untested
+```
+
+- **Findings:** confirmed counts by severity (scored, not guessed, not accepted in a baseline).
+- **Coverage:** per area (static rules per language, secrets, dependencies, live/dynamic, active/authz, Supabase static/live, Firebase, AI analysis), each `passed` (the check ran to completion; its findings are counted above), `failed` (the scanner errored), `untested` (did not run, with the reason), `inconclusive` (ran but could not cover its target) or `not-applicable`. `dependencies` comes from the dependency engines (npm audit, OSV-Scanner, pip-audit): `passed` when one ran clean, `failed` when one errored, `untested` with the reason when none was installed/applicable or with `--offline`/`--no-deps`; `engines (SAST)` likewise for opt-in Semgrep. `--dry-run` / safety level `passive` leave active/authz `untested` (by choice, not required). Unreadable files or a failed route discovery make static (and secrets) `inconclusive`.
+- **Confidence:** confirmed vs. unverified/AI vs. suspected (guessed common-path hits).
+- **Verification:** fixed-verified (a re-check proved it: `verify` in MCP, or the re-scan after `--fix`), fixed-unverified (gone, but not proven), open.
+
+| State | When (default policy) |
+|---|---|
+| `ready` | nothing below applies. If no live area ran it reads **READY under limited coverage** |
+| `ready-with-accepted-risks` | as `ready`, but findings are accepted in the `--baseline` |
+| `review-required` | an unverified/AI or suspected critical (never hidden, never "ready"), an optional area that errored, or a required one that is inconclusive |
+| `not-ready` | a confirmed critical is open |
+| `insufficient-evidence` | a mandatory area errored or did not run: `static`/`secrets` (configurable), or an area you asked for with a flag (`--active`, `--supabase`, or the live test once a local server was found). Scanner failure is never a pass |
+
+`not-ready` takes precedence over `insufficient-evidence` (a confirmed critical is enough to say no). For `--fail-on-release-state`, `insufficient-evidence` ranks worst. The policy is configurable in `~/.deployready/config.json`:
+
+```json
+"releasePolicy": {
+  "blockOn": ["critical"],
+  "requireAreas": ["static", "secrets"],
+  "treatUnverifiedCriticalAs": "review-required"
+}
+```
+
+`blockOn` lists the severities that make a confirmed finding block; `requireAreas` takes area kinds (`static`, `secrets`, `dependencies`, `engines`, `dynamic`, `active`, `supabase-static`, `supabase-live`, `firebase`, `ai`) or a per-language id such as `static-python`; `treatUnverifiedCriticalAs` is `review-required` or `not-ready` (never `ready`). Invalid entries are ignored with a warning.
 
 **Grandfather existing issues (baseline):** adopt the current findings once, then fail the
 build only on *new* ones — so you can turn the gate on for an existing codebase without

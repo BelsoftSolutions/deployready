@@ -65,8 +65,8 @@ describe('toCiJson', () => {
 });
 
 describe('EXIT codes', () => {
-  it('uses 0/1/2', () => {
-    expect(EXIT).toEqual({ OK: 0, ERROR: 1, GATE: 2 });
+  it('uses 0/1/2, plus 3 for insufficient evidence (only with --fail-on-release-state)', () => {
+    expect(EXIT).toEqual({ OK: 0, ERROR: 1, GATE: 2, INSUFFICIENT_EVIDENCE: 3 });
   });
 });
 

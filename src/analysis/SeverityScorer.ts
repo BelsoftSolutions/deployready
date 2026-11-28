@@ -13,7 +13,9 @@ export class SeverityScorer {
     return findings.map((f) => {
       if (isNote(f) && !isUnverified(f)) return f;
       if (isUnverified(f)) {
-        return f.severity === 'info' && f.unverified === true ? f : { ...f, severity: 'info', unverified: true };
+        return f.severity === 'info' && f.unverified === true
+          ? f
+          : { ...f, severity: 'info', unverified: true, suggestedSeverity: f.suggestedSeverity ?? f.severity };
       }
       const severity: Severity = ALWAYS_CRITICAL.has(f.rule) ? 'critical' : f.severity;
       return severity === f.severity ? f : { ...f, severity };

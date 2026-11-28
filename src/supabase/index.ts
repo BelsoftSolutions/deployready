@@ -12,7 +12,7 @@ import { checkOwnership } from './guard';
 import { classifyKey, normalizeProjectUrl, projectRefFromUrl } from './keys';
 import { runLiveChecks, type TestUser } from './live';
 import { scanSupabaseStatic, type DetectedSupabase } from './static';
-import type { Finding } from '../types';
+import type { CoverageState, Finding } from '../types';
 
 export interface SupabaseOptions {
   /** Run the live (network) checks. */
@@ -50,6 +50,12 @@ export interface SupabaseRunResult {
   notes: string[];
   /** True when live checks were requested but the ownership gate refused. */
   refused?: boolean;
+  /** A Supabase project (URL, migrations or static findings) was found. */
+  detected?: boolean;
+  /** Live checks ran to the end. */
+  liveRan?: boolean;
+  /** Live checks were declined at the prompt. */
+  declined?: boolean;
 }
 
 export const ENV = {
@@ -91,7 +97,12 @@ export async function runSupabase(
 ): Promise<SupabaseRunResult> {
   const notes: string[] = [];
   const { findings: staticFindings, detected } = await scanSupabaseStatic(projectPath);
-  const result: SupabaseRunResult = { staticFindings, liveFindings: [], notes };
+  const result: SupabaseRunResult = {
+    staticFindings,
+    liveFindings: [],
+    notes,
+    detected: Boolean(detected.url || detected.migrationTables.length || staticFindings.length),
+  };
 
   if (!opts.live) {
     if (detected.url) {
@@ -150,6 +161,7 @@ export async function runSupabase(
 
   if (deps.confirm && !(await deps.confirm(origin, gate.mode ?? ''))) {
     notes.push('Skipping Supabase live checks by your choice.');
+    result.declined = true;
     return result;
   }
 
@@ -172,6 +184,7 @@ export async function runSupabase(
     crossUser,
   });
   result.liveFindings = live.findings;
+  result.liveRan = true;
   notes.push(...live.notes);
   notes.push(
     `Supabase live checks done: ${live.tablesChecked} table(s), ${http.sent} request(s), ${live.findings.length} finding(s). Read-only; no writes were made.`,
@@ -183,7 +196,7 @@ export async function runSupabase(
 export async function supabaseStep(
   projectPath: string,
   opts: { supabase?: SupabaseOptions; yes?: boolean; json?: boolean },
-): Promise<{ staticFindings: Finding[]; liveFindings: Finding[] }> {
+): Promise<{ staticFindings: Finding[]; liveFindings: Finding[]; coverage?: SupabaseCoverage }> {
   const say = (msg: string): void => (opts.json ? logger.stderr(msg) : logger.info(msg));
   try {
     const res = await runSupabase(projectPath, opts.supabase ?? {}, {
@@ -202,9 +215,46 @@ export async function supabaseStep(
           },
     });
     for (const n of res.notes) (res.refused ? logger.warn : say)(redact(n));
-    return { staticFindings: res.staticFindings, liveFindings: res.liveFindings };
+    return { staticFindings: res.staticFindings, liveFindings: res.liveFindings, coverage: supabaseCoverage(res, Boolean(opts.supabase?.live)) };
   } catch (err) {
-    logger.warn(`Supabase checks failed: ${redact((err as Error).message)}`);
-    return { staticFindings: [], liveFindings: [] };
+    const msg = redact((err as Error).message);
+    logger.warn(`Supabase checks failed: ${msg}`);
+    // A crashed step is never a pass: both areas report the error.
+    return {
+      staticFindings: [],
+      liveFindings: [],
+      coverage: {
+        static: { state: 'failed', reason: `Supabase checks errored: ${msg}` },
+        live: opts.supabase?.live
+          ? { state: 'failed', reason: `Supabase checks errored: ${msg}`, requested: true }
+          : { state: 'untested', reason: 'Opt-in (--supabase); not run.' },
+      },
+    };
   }
+}
+
+export interface SupabaseCoverage {
+  static: { state: CoverageState; reason: string };
+  live: { state: CoverageState; reason: string; requested?: boolean };
+}
+
+/** Coverage of the Supabase areas from one run's result. */
+export function supabaseCoverage(res: SupabaseRunResult, liveRequested: boolean): SupabaseCoverage {
+  const stat: SupabaseCoverage['static'] = res.detected
+    ? { state: 'passed', reason: 'Supabase migrations and client usage checked statically.' }
+    : { state: 'not-applicable', reason: 'No Supabase project detected.' };
+  let live: SupabaseCoverage['live'];
+  if (!liveRequested) {
+    live = res.detected
+      ? { state: 'untested', reason: 'Opt-in (--supabase); not run.' }
+      : { state: 'not-applicable', reason: 'No Supabase project detected.' };
+  } else if (res.liveRan) {
+    live = { state: 'passed', reason: 'Read-only live checks ran against the owned project.', requested: true };
+  } else if (res.declined) {
+    live = { state: 'untested', reason: 'Declined at the prompt.', requested: false };
+  } else {
+    const why = res.notes.find((n) => /skipped|refused/i.test(n)) ?? 'Live checks did not run.';
+    live = { state: 'untested', reason: why, requested: true };
+  }
+  return { static: stat, live };
 }
