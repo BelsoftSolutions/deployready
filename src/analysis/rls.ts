@@ -22,8 +22,12 @@
  * `missing` stays gated as before: it only fires when the project is clearly Supabase or enables
  * RLS somewhere else, so plain Postgres projects are not nagged.
  */
-import { alwaysTrueFor, findSelfCompares, type ColumnLookup, type Role } from './postgres/expr';
-import { replayMigrations, tableKey, type DbModel, type PolicyCommand, type PolicyState, type Privilege, type TableState } from './postgres/model';
+import type { Role } from './postgres/expr';
+import { replayMigrations, type DbModel, type PolicyCommand } from './postgres/model';
+import { apiReachable, DEFAULT_EXPOSED, onlyNonApiRoles, openings, type Opening } from './postgres/access';
+import { analyzeSupabaseObjects, type DeepIssue } from './postgres/deep';
+
+export type { DeepIssue } from './postgres/deep';
 import { classifyTable, type RlsProjectConfig, type Sensitivity } from './postgres/sensitivity';
 
 export type { RlsProjectConfig } from './postgres/sensitivity';
@@ -71,102 +75,32 @@ export interface RlsIssue {
   readOnly?: boolean;
 }
 
-const DEFAULT_EXPOSED = ['public', 'graphql_public'];
-const ROLES: Role[] = ['anon', 'authenticated'];
-const COMMANDS: Exclude<PolicyCommand, 'all'>[] = ['select', 'insert', 'update', 'delete'];
-/** Roles that bypass RLS or are not reachable through the API: policies only for them never expose data. */
-const NON_API_ROLES = new Set(['service_role', 'postgres', 'supabase_admin', 'supabase_auth_admin', 'supabase_storage_admin', 'dashboard_user']);
-
-function appliesTo(p: PolicyState, role: Role): boolean {
-  return p.roles.some((r) => r === 'public' || r === role);
-}
-
-function coversCommand(p: PolicyState, cmd: Exclude<PolicyCommand, 'all'>): boolean {
-  return p.command === 'all' || p.command === cmd;
-}
-
-/** The expression that decides access for `cmd`: USING for reads / existing rows, WITH CHECK for new rows. */
-function clauseFor(p: PolicyState, cmd: Exclude<PolicyCommand, 'all'>): { expr: PolicyState['using']; text: string; label: 'using' | 'with check'; present: boolean } {
-  if (cmd === 'insert') {
-    if (p.hasCheck) return { expr: p.check, text: p.checkText, label: 'with check', present: true };
-    // FOR ALL without WITH CHECK reuses USING for new rows
-    if (p.command === 'all' && p.hasUsing) return { expr: p.using, text: p.usingText, label: 'using', present: true };
-    return { expr: null, text: '', label: 'with check', present: false };
-  }
-  return { expr: p.using, text: p.usingText, label: 'using', present: p.hasUsing };
-}
-
-function hasPrivilege(t: TableState, role: Role, cmd: Privilege): boolean {
-  return Boolean(t.grants.get(role)?.has(cmd) || t.grants.get('public')?.has(cmd));
-}
-
-function apiReachable(t: TableState): boolean {
-  return ROLES.some((r) => COMMANDS.some((c) => hasPrivilege(t, r, c)));
-}
-
-function columnLookup(model: DbModel, schemaHint: string): ColumnLookup {
-  return (name, col) => {
-    const schema = name.length >= 2 ? name[name.length - 2]! : schemaHint;
-    const t = model.tables.get(tableKey(schema, name[name.length - 1]!)) ?? (name.length < 2 ? model.tables.get(tableKey('public', name[0]!)) : undefined);
-    if (!t?.columns) return null;
-    return t.columns.has(col);
-  };
-}
-
-interface Opening {
-  policy: PolicyState;
-  role: Role;
-  cmd: Exclude<PolicyCommand, 'all'>;
-  why: string;
-}
-
-/** Why `p` lets `role` through on every row, or null. */
-function openReason(model: DbModel, t: TableState, p: PolicyState, role: Role, cmd: Exclude<PolicyCommand, 'all'>): string | null {
-  const cl = clauseFor(p, cmd);
-  if (!cl.present) return null;
-  if (alwaysTrueFor(cl.expr, { role })) return `${cl.label} (${cl.text})`;
-  if (role === 'authenticated') {
-    const self = findSelfCompares(cl.expr, columnLookup(model, t.schema));
-    if (self.length) {
-      return `${cl.label} (${cl.text}): \`${self[0]!.text}\` compares ${self[0]!.column} with itself (the unqualified column resolves to the subquery's own table), so the subquery is true for every row`;
-    }
-  }
-  return null;
-}
-
-/** Restrictive policies that apply must all be TRUE too; one we cannot prove true closes the gap. */
-function restrictedAway(t: TableState, role: Role, cmd: Exclude<PolicyCommand, 'all'>): boolean {
-  for (const q of t.policies.values()) {
-    if (q.permissive || !appliesTo(q, role) || !coversCommand(q, cmd)) continue;
-    const cl = clauseFor(q, cmd);
-    if (!cl.present) continue;
-    if (!alwaysTrueFor(cl.expr, { role })) return true;
-  }
-  return false;
-}
-
-function openings(model: DbModel, t: TableState): Opening[] {
-  const out: Opening[] = [];
-  for (const role of ROLES)
-    for (const cmd of COMMANDS) {
-      if (!hasPrivilege(t, role, cmd)) continue;
-      if (restrictedAway(t, role, cmd)) continue;
-      for (const p of t.policies.values()) {
-        if (!p.permissive || !appliesTo(p, role) || !coversCommand(p, cmd)) continue;
-        const why = openReason(model, t, p, role, cmd);
-        if (why) out.push({ policy: p, role, cmd, why });
-      }
-    }
-  return out;
-}
-
-function onlyNonApiRoles(p: PolicyState): boolean {
-  return p.roles.length > 0 && p.roles.every((r) => NON_API_ROLES.has(r));
-}
-
 export function analyzeRls(files: SqlFile[], opts: RlsOptions = {}): RlsIssue[] {
-  const cfg = opts.config ?? {};
+  return analyzeRlsModel(replayMigrations(files), opts);
+}
+
+export interface SqlAnalysis {
+  model: DbModel;
+  rls: RlsIssue[];
+  /** Storage, functions, views, triggers, Realtime and grant issues (`postgres/deep.ts`). */
+  objects: DeepIssue[];
+  /** Set when the object checks crashed (the RLS results still stand). */
+  objectsError?: string;
+}
+
+/** Replay once, then run the RLS checks and the Supabase object checks on the same final state. */
+export function analyzeSql(files: SqlFile[], opts: RlsOptions = {}): SqlAnalysis {
   const model = replayMigrations(files);
+  const rls = analyzeRlsModel(model, opts);
+  try {
+    return { model, rls, objects: analyzeSupabaseObjects(model, { config: opts.config, supabase: opts.supabase }) };
+  } catch (err) {
+    return { model, rls, objects: [], objectsError: (err as Error).message || 'object checks failed' };
+  }
+}
+
+export function analyzeRlsModel(model: DbModel, opts: RlsOptions = {}): RlsIssue[] {
+  const cfg = opts.config ?? {};
   const exposed = new Set((cfg.exposedSchemas ?? DEFAULT_EXPOSED).map((s) => s.trim().replace(/"/g, '')));
   const rlsUsedElsewhere = model.rlsUsed;
   const gate = Boolean(opts.supabase) || rlsUsedElsewhere;

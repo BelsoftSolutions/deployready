@@ -16,6 +16,10 @@ export interface RlsProjectConfig {
   tenantColumns?: string[];
   /** Schemas the Data API exposes (default: `public`, `graphql_public`, or supabase/config.toml). */
   exposedSchemas?: string[];
+  /** Storage buckets meant to be world-readable (e.g. `avatars`). */
+  publicBuckets?: string[];
+  /** Storage buckets that hold private files regardless of their name. */
+  sensitiveBuckets?: string[];
 }
 
 export type Sensitivity = 'sensitive' | 'public' | 'unknown';
@@ -44,7 +48,7 @@ const TENANT_COLUMNS = [
   'org_id', 'organization_id', 'tenant_id', 'team_id', 'workspace_id', 'company_id',
 ];
 
-function words(name: string): string[] {
+export function words(name: string): string[] {
   return name
     .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .toLowerCase()
@@ -88,4 +92,39 @@ export function classifyTable(t: TableState, cfg: RlsProjectConfig): Sensitivity
   const tenant = tenantColumnsOf(t, cfg);
   if (tenant.length) return { level: 'sensitive', reason: `rows belong to a user or tenant (${tenant.join(', ')})` };
   return { level: 'unknown', reason: 'sensitivity unknown' };
+}
+
+/** Bucket names that are normally public: profile pictures, site assets. */
+const PUBLIC_BUCKET_WORDS = new Set([
+  'avatar', 'public', 'image', 'img', 'asset', 'media', 'logo', 'banner', 'thumbnail', 'thumb', 'icon', 'static', 'cover',
+  'gallery', 'product', 'cdn', 'font', 'emoji', 'sticker', 'og', 'website', 'site', 'marketing', 'blog', 'post',
+]);
+const SENSITIVE_BUCKET_WORDS = new Set([
+  ...SENSITIVE_WORDS, 'secure', 'kyc', 'id', 'contract', 'statement', 'backup', 'export', 'recording', 'voice', 'resume', 'cv',
+  'scan', 'payslip', 'report', 'confidential', 'internal', 'legal', 'license', 'verification', 'evidence', 'claim',
+]);
+
+export function classifyBucket(id: string, cfg: RlsProjectConfig): SensitivityVerdict {
+  const has = (list: string[] | undefined): boolean => Boolean(list?.some((x) => x.trim().toLowerCase() === id.toLowerCase()));
+  if (has(cfg.sensitiveBuckets)) return { level: 'sensitive', reason: 'listed in sensitiveBuckets' };
+  if (has(cfg.publicBuckets)) return { level: 'public', reason: 'listed in publicBuckets' };
+  const ws = words(id);
+  const hit = ws.find((w) => SENSITIVE_BUCKET_WORDS.has(w));
+  if (hit) return { level: 'sensitive', reason: `the bucket name suggests private files ("${hit}")` };
+  if (ws.some((w) => PUBLIC_BUCKET_WORDS.has(w))) return { level: 'public', reason: 'public assets by name' };
+  return { level: 'unknown', reason: 'sensitivity unknown' };
+}
+
+/** Columns whose value is a credential: never readable by API roles. */
+const SECRET_COLUMN_RE =
+  /^(?:password|password_hash|passwd|pwd|hashed_password|encrypted_password|secret|.*_secret|token|.*_token|api_key|apikey|.*_api_key|private_key|.*_private_key|otp|otp_code|totp_secret|mfa_secret|recovery_codes?|ssn|social_security_number|tax_id|national_id|card_number|cvv|iban|account_number|routing_number)$/;
+/** Personal data: readable by everyone is a privacy leak. */
+const PII_COLUMN_RE =
+  /^(?:email|email_address|phone|phone_number|mobile|address|street|street_address|postal_code|zip|zip_code|date_of_birth|dob|birthdate|birthday|ip|ip_address|last_ip|full_name|legal_name|salary|income|stripe_customer_id|customer_id)$/;
+
+export function columnSensitivity(col: string): 'secret' | 'pii' | null {
+  const c = col.toLowerCase();
+  if (SECRET_COLUMN_RE.test(c)) return 'secret';
+  if (PII_COLUMN_RE.test(c)) return 'pii';
+  return null;
 }

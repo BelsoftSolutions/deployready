@@ -39,6 +39,10 @@ export function parseRlsConfig(raw: unknown): RlsProjectConfig {
   const sens = strings(src.sensitiveTables);
   const ten = strings(src.tenantColumns);
   const exp = strings(src.exposedSchemas);
+  const pubB = strings(src.publicBuckets);
+  const sensB = strings(src.sensitiveBuckets);
+  if (pubB) cfg.publicBuckets = pubB;
+  if (sensB) cfg.sensitiveBuckets = sensB;
   if (pub) cfg.publicTables = pub;
   if (sens) cfg.sensitiveTables = sens;
   if (ten) cfg.tenantColumns = ten;

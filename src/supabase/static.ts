@@ -18,6 +18,7 @@ import { FileWalker, isEnvFile } from '../utils/FileWalker';
 import { makeFinding } from '../utils/finding';
 import { redact } from '../utils/redact';
 import { classifyKey, JWT_RE, SB_PUBLISHABLE_RE, SB_SECRET_RE, projectRefFromUrl } from './keys';
+import { analyzeEdgeFunctions, parseFunctionsToml } from './edgeFunctions';
 import type { Finding } from '../types';
 
 export interface DetectedSupabase {
@@ -28,11 +29,25 @@ export interface DetectedSupabase {
   anonKeySource?: string;
   /** Tables created in local SQL migrations (fallback table list for live checks). */
   migrationTables: string[];
+  /** SQL files under a supabase/ directory. */
+  sqlFiles?: number;
+  /** supabase/config.toml files read. */
+  configFiles?: number;
+}
+
+export interface EdgeFunctionCoverage {
+  /** verify_jwt = false functions whose code was read and checked. */
+  checked: number;
+  /** verify_jwt = false functions whose entrypoint was not in the project. */
+  missing: string[];
+  /** The Edge Function check crashed. */
+  error?: string;
 }
 
 export interface StaticResult {
   findings: Finding[];
   detected: DetectedSupabase;
+  edgeFunctions?: EdgeFunctionCoverage;
 }
 
 export interface SourceFile {
@@ -84,7 +99,7 @@ function hasServiceKeyLiteral(line: string): boolean {
   return false;
 }
 
-/** Pure core: scan already-read files. */
+/** Pure core: scan already-read files (supabase/config.toml files may be among them). */
 export function scanSupabaseFiles(files: SourceFile[]): StaticResult {
   const findings: Finding[] = [];
   const detected: DetectedSupabase = { migrationTables: [] };
@@ -135,8 +150,10 @@ export function scanSupabaseFiles(files: SourceFile[]): StaticResult {
 
     if (/\.sql$/i.test(f.relPath)) {
       for (const m of f.source.matchAll(CREATE_TABLE_RE)) tables.add(m[1]!);
+      if (/(?:^|\/)supabase\//.test(f.relPath)) detected.sqlFiles = (detected.sqlFiles ?? 0) + 1;
       continue;
     }
+    if (TOML_RE.test(f.relPath)) continue;
 
     if (isEnvFile(base)) {
       lines.forEach((raw, i) => {
@@ -193,7 +210,29 @@ export function scanSupabaseFiles(files: SourceFile[]): StaticResult {
     delete detected.anonKeySource;
   }
   detected.migrationTables = [...tables];
-  return { findings, detected };
+  const edgeFunctions = edgeFunctionChecks(files, findings);
+  if (edgeFunctions.configs) detected.configFiles = edgeFunctions.configs;
+  return { findings, detected, edgeFunctions: edgeFunctions.coverage };
+}
+
+const TOML_RE = /(?:^|\/)supabase\/config\.toml$/;
+
+/** `verify_jwt = false` Edge Functions, per supabase/config.toml. Never throws: a crash is reported in the coverage. */
+function edgeFunctionChecks(files: SourceFile[], findings: Finding[]): { coverage: EdgeFunctionCoverage; configs: number } {
+  const coverage: EdgeFunctionCoverage = { checked: 0, missing: [] };
+  let configs = 0;
+  try {
+    for (const toml of files.filter((f) => TOML_RE.test(f.relPath))) {
+      configs++;
+      const r = analyzeEdgeFunctions(toml.relPath, parseFunctionsToml(toml.source), files);
+      findings.push(...r.findings);
+      coverage.checked += r.checked;
+      coverage.missing.push(...r.missing);
+    }
+  } catch (err) {
+    coverage.error = (err as Error).message || 'Edge Function check failed';
+  }
+  return { coverage, configs };
 }
 
 /** Walk the project and run the static checks. */
@@ -205,6 +244,23 @@ export async function scanSupabaseStatic(root: string): Promise<StaticResult> {
       files.push({ relPath: w.relPath, source: await fs.readFile(w.absPath, 'utf8') });
     } catch {
       /* unreadable file: skip */
+    }
+  }
+  // supabase/config.toml is not a source file for the walker: read it (and any next to an Edge Function) directly.
+  const dirs = new Set<string>(['supabase']);
+  for (const f of files) {
+    const m = /^(.*?(?:^|\/)supabase)\/functions\//.exec(f.relPath);
+    if (m) dirs.add(m[1]!);
+  }
+  for (const d of dirs) {
+    const rel = `${d}/config.toml`;
+    if (files.some((f) => f.relPath === rel)) continue;
+    try {
+      const abs = path.join(root, ...rel.split('/'));
+      const st = await fs.stat(abs);
+      if (st.isFile() && st.size <= 512 * 1024) files.push({ relPath: rel, source: await fs.readFile(abs, 'utf8') });
+    } catch {
+      /* no config.toml */
     }
   }
   return scanSupabaseFiles(files);
