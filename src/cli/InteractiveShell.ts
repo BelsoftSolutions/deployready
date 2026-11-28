@@ -16,6 +16,7 @@ import { VulnerabilityDetector } from '../analysis/VulnerabilityDetector';
 import { IssueAggregator } from '../analysis/IssueAggregator';
 import { LocalhostDetector } from '../dynamic/LocalhostDetector';
 import { DynamicTester, skippedScanNote } from '../dynamic/DynamicTester';
+import { externalSendDecision } from '../ai/consent';
 import { ModelRouter } from '../ai/ModelRouter';
 import { sanitizeLine, sanitizeText } from '../utils/sanitize';
 import { setupCliProvider } from './cliSetup';
@@ -219,7 +220,11 @@ export class InteractiveShell {
     }
     const ready = await router.checkReady();
     if (ready.state !== 'ready') return logger.warn(`AI provider not ready: ${ready.message}`);
-    if (router.sendsExternally && this.config.warnBeforeExternalSend) {
+    // Interactive session: ask before every external send unless the user pre-approved it with
+    // config `allowExternalAi: true` (warnBeforeExternalSend: false no longer skips this).
+    const decision = externalSendDecision(router.sendsExternally, this.config, { interactive: true });
+    if (decision === 'approved') logger.info(`${router.consentNotice('report')} (pre-approved by allowExternalAi)`);
+    if (decision === 'ask') {
       logger.warn(router.consentNotice('report'));
       if (!(await this.confirm('Continue with AI analysis?', true))) return logger.info('Skipped AI analysis.');
     }
@@ -332,6 +337,7 @@ export class InteractiveShell {
       if (!(await this.confirm('Ask the AI model to propose a code fix for this snippet?', true))) {
         return this.offerManualMark(f);
       }
+      // Source code leaves the machine here: always ask in the shell, even when allowExternalAi is set.
       if (router.sendsExternally) {
         logger.warn(router.consentNotice('snippet'));
         if (!(await this.confirm('Send the snippet and get a proposed fix?', true))) return this.offerManualMark(f);

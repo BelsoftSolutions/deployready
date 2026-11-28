@@ -62,10 +62,11 @@ export function buildProgram(): Command {
     .command('analyze')
     .description('Run a single non-interactive scan and print results')
     .argument('[path]', 'path to the project', '.')
-    .option('-y, --yes', 'auto-approve all prompts (non-interactive)', false)
+    .option('-y, --yes', 'auto-approve prompts (non-interactive); never approves sending data to an external AI provider, see --allow-external-ai', false)
     .option('--fix', 'apply safe deterministic fixes (with backups), then re-scan and report the new score', false)
     .option('--no-dynamic', 'skip live localhost testing')
     .option('--no-ai', 'skip AI analysis (local results only)')
+    .option('--allow-external-ai', 'allow sending the redacted report to an external AI provider (API or claude/codex CLI) without a prompt; needed for AI in --yes/--json/CI runs', false)
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
     .option('--export', 'write deployready-report.md to the project root', false)
     .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
@@ -133,6 +134,7 @@ export function buildProgram(): Command {
           yes: opts.yes || opts.json, // JSON mode is non-interactive
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
+          allowExternalAi: opts.allowExternalAi === true,
           aggressive: opts.aggressive,
           probeCommonPaths: opts.probeCommonPaths as boolean | undefined, // undefined = not on the command line
           export: opts.export,
@@ -280,10 +282,12 @@ export function buildProgram(): Command {
   program
     .command('mcp')
     .description('Start the MCP server (stdio) so your coding agent can scan, fix and verify')
-    .argument('[path]', 'default project for tool calls', '.')
-    .action(async (path: string) => {
+    .argument('[path]', 'server root: tool calls may only use this directory and its subdirectories', '.')
+    .option('--allow-fixes', 'also expose apply_safe_fixes, which writes files (with backups) in the project', false)
+    .option('--allow-live', 'also expose tools that send requests: scan_live, supabase_check_live, live verify', false)
+    .action(async (path: string, opts: { allowFixes?: boolean; allowLive?: boolean }) => {
       await guard(async () => {
-        await startMcpServer(path);
+        await startMcpServer(path, { allowFixes: opts.allowFixes === true, allowLive: opts.allowLive === true });
       });
     });
 

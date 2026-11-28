@@ -147,7 +147,8 @@ describe('no canary reaches any output channel', () => {
     const files = new Set<string>();
     for (const f of scan.findings) {
       const d = await tools.getFinding({ id: f.id });
-      if (typeof d.file_content === 'string') files.add(f.file ?? '');
+      const repo = d.untrusted_repository_content as { file_content?: string } | undefined;
+      if (typeof repo?.file_content === 'string') files.add(f.file ?? '');
       out.push(JSON.stringify(d));
     }
     // get_finding really returned the whole file for the secret-bearing files.
@@ -169,9 +170,10 @@ describe('no canary reaches any output channel', () => {
     const tools = new DeployReadyTools(root);
     const scan = await tools.scan();
     const pem = scan.findings.find((f) => f.file === 'keys/server.pem')!;
-    const d = (await tools.getFinding({ id: pem.id })) as { file_content: string };
+    const d = (await tools.getFinding({ id: pem.id })) as { untrusted_repository_content: { file_content: string } };
     const original = fs.readFileSync(path.join(root, 'keys/server.pem'), 'utf8').split('\n');
-    expect(d.file_content.split('\n')).toHaveLength(original.length);
+    // Fenced by one BEGIN and one END marker line.
+    expect(d.untrusted_repository_content.file_content.split('\n')).toHaveLength(original.length + 2);
   });
 
   it('AI prompts: PromptBuilder, ModelRouter with a fake provider, CLI stdin', async () => {

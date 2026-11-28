@@ -21,6 +21,7 @@ import { ContextChunker } from './ContextChunker';
 import { ConfigManager } from '../config/ConfigManager';
 import { redact } from '../utils/redact';
 import { extractFix, type FixSuggestion } from './parseFix';
+import { externalSendDecision, type ExternalSendDecision } from './consent';
 import type { AiAnalysis, AppConfig, Finding, ScanReport } from '../types';
 
 interface Handler {
@@ -29,6 +30,9 @@ interface Handler {
 }
 
 export type { FixSuggestion } from './parseFix';
+
+export { EXTERNAL_AI_BLOCKED } from './consent';
+export type { ExternalSendDecision } from './consent';
 
 export class ModelRouter {
   constructor(
@@ -44,6 +48,14 @@ export class ModelRouter {
   /** True if data will leave the machine for this model (i.e. not Ollama). */
   get sendsExternally(): boolean {
     return this.config.model !== 'ollama';
+  }
+
+  /**
+   * Single consent rule for every external AI send (report or snippet). CLI providers (claude/codex
+   * CLIs) count as external: they forward the prompt to a hosted model.
+   */
+  externalSendDecision(ctx: { interactive: boolean; allowExternalAi?: boolean }): ExternalSendDecision {
+    return externalSendDecision(this.sendsExternally, this.config, ctx);
   }
 
   /** Whether a usable handler can be constructed (key present, etc.). */

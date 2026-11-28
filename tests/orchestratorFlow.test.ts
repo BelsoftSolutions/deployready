@@ -356,7 +356,7 @@ describe('Orchestrator: AI step gates', () => {
   it('an env API key alone is enough to attempt AI without a config file', async () => {
     mockConfig.exists.mockResolvedValue(false);
     process.env.ANTHROPIC_API_KEY = 'fake-test-key-not-real';
-    await Orchestrator.analyze(dir, { ...opts, yes: true });
+    await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     expect(mockRouter.constructed).toBe(1);
   });
 
@@ -377,32 +377,76 @@ describe('Orchestrator: AI step gates', () => {
     expect(r.aiSummary).toBeUndefined();
   });
 
-  it('asks before an external send and honours "no" (nothing is sent)', async () => {
-    mockPrompt.mockResolvedValueOnce({ ok: false });
-    const r = await Orchestrator.analyze(dir, opts);
-    expect(mockPrompt).toHaveBeenCalledTimes(1);
+  describe('interactive run (TTY, no --yes/--json, not CI)', () => {
+    const tty = process.stdin.isTTY;
+    const ci = process.env.CI;
+    const interactive = { noDynamic: true };
+    beforeEach(() => {
+      (process.stdin as { isTTY?: boolean }).isTTY = true;
+      delete process.env.CI;
+    });
+    afterEach(() => {
+      (process.stdin as { isTTY?: boolean }).isTTY = tty;
+      if (ci !== undefined) process.env.CI = ci;
+    });
+
+    it('asks before an external send and honours "no" (nothing is sent)', async () => {
+      mockPrompt.mockResolvedValueOnce({ ok: false });
+      const r = await Orchestrator.analyze(dir, interactive);
+      expect(mockPrompt).toHaveBeenCalledTimes(1);
+      expect(mockRouter.analyze).not.toHaveBeenCalled();
+      expect(r.aiSummary).toBeUndefined();
+      expect(r.findings.some((f) => f.source === 'ai')).toBe(false);
+    });
+
+    it('proceeds after an explicit "yes" and shows the privacy warning first', async () => {
+      mockPrompt.mockResolvedValueOnce({ ok: true });
+      mockLog.warn.mockClear();
+      const r = await Orchestrator.analyze(dir, interactive);
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('STRUCTURED findings report'));
+      expect(mockRouter.analyze).toHaveBeenCalledTimes(1);
+      expect(r.aiSummary).toBe('AI says hi');
+    });
+
+    it('warnBeforeExternalSend: false no longer skips the consent prompt', async () => {
+      mockConfig.load.mockResolvedValue({ model: 'claude', warnBeforeExternalSend: false, defaultPorts: [] });
+      mockPrompt.mockResolvedValueOnce({ ok: false });
+      await Orchestrator.analyze(dir, interactive);
+      expect(mockPrompt).toHaveBeenCalledTimes(1);
+      expect(mockRouter.analyze).not.toHaveBeenCalled();
+    });
+  });
+
+  // A-7 reproduction: before the fix, --yes / --json sent the report to the external provider unasked.
+  it.each([
+    ['--yes', { yes: true }],
+    ['--json', { json: true }],
+    ['--yes --json', { yes: true, json: true }],
+  ])('%s alone never sends to an external provider: AI is skipped with a note', async (_label, extra) => {
+    const r = await Orchestrator.analyze(dir, { noDynamic: true, ...extra });
+    expect(mockPrompt).not.toHaveBeenCalled();
     expect(mockRouter.analyze).not.toHaveBeenCalled();
-    expect(r.aiSummary).toBeUndefined();
-    expect(r.findings.some((f) => f.source === 'ai')).toBe(false);
+    expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('--allow-external-ai'));
+    const note = r.findings.find((f) => f.rule === 'ai-skipped-no-consent');
+    expect(note).toMatchObject({ note: true, severity: 'info' });
+    expect(r.summary.notes).toBe(1);
   });
 
-  it('proceeds after an explicit "yes" and shows the privacy warning first', async () => {
-    mockPrompt.mockResolvedValueOnce({ ok: true });
-    mockLog.warn.mockClear();
-    const r = await Orchestrator.analyze(dir, opts);
-    expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('STRUCTURED findings report'));
-    expect(mockRouter.analyze).toHaveBeenCalledTimes(1);
-    expect(r.aiSummary).toBe('AI says hi');
-  });
-
-  it('--yes bypasses the prompt', async () => {
+  it('warnBeforeExternalSend: false is not consent in a non-interactive run', async () => {
+    mockConfig.load.mockResolvedValue({ model: 'claude', warnBeforeExternalSend: false, defaultPorts: [] });
     await Orchestrator.analyze(dir, { ...opts, yes: true });
+    expect(mockRouter.analyze).not.toHaveBeenCalled();
+  });
+
+  it('--allow-external-ai sends without a prompt, after printing where the data goes', async () => {
+    await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     expect(mockPrompt).not.toHaveBeenCalled();
     expect(mockRouter.analyze).toHaveBeenCalledTimes(1);
+    expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('pre-approved'));
   });
 
-  it('does not prompt when the user disabled the warning in config', async () => {
-    mockConfig.load.mockResolvedValue({ model: 'claude', warnBeforeExternalSend: false, defaultPorts: [] });
+  it('config allowExternalAi: true is the persistent opt-in', async () => {
+    mockConfig.load.mockResolvedValue({ model: 'claude', allowExternalAi: true, warnBeforeExternalSend: true, defaultPorts: [] });
     await Orchestrator.analyze(dir, opts);
     expect(mockPrompt).not.toHaveBeenCalled();
     expect(mockRouter.analyze).toHaveBeenCalledTimes(1);
@@ -418,7 +462,7 @@ describe('Orchestrator: AI step gates', () => {
   it('a model failure keeps the local results and the original score', async () => {
     mockRouter.analyze.mockRejectedValue(new Error('Claude API request failed: rate limited (too many requests)'));
     const without = await Orchestrator.analyze(dir, { ...opts, noAi: true });
-    const r = await Orchestrator.analyze(dir, { ...opts, yes: true });
+    const r = await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     expect(mockSpinner.fail).toHaveBeenCalledWith('AI analysis failed: Claude API request failed: rate limited (too many requests)');
     expect(r.score).toBe(without.score);
     expect(r.findings).toEqual(without.findings);
@@ -427,14 +471,14 @@ describe('Orchestrator: AI step gates', () => {
 
   it('an empty model reply leaves aiSummary unset', async () => {
     mockRouter.analyze.mockResolvedValue({ summary: '', findings: [] });
-    const r = await Orchestrator.analyze(dir, { ...opts, yes: true });
+    const r = await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     expect(r.aiSummary).toBeUndefined();
     expect(r.findings.map((f) => f.rule)).toEqual(['eval-use']);
   });
 
   it('uses only the dropped-findings note as the summary when the model gave none', async () => {
     mockRouter.analyze.mockResolvedValue({ summary: '', findings: [aiFinding('ghost.js')] });
-    const r = await Orchestrator.analyze(dir, { ...opts, yes: true });
+    const r = await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     expect(r.aiSummary).toBe('1 AI finding(s) dropped: referenced file not found');
     expect(mockLog.warn).toHaveBeenCalledWith('1 AI finding(s) dropped: referenced file not found');
     expect(r.findings.some((f) => f.source === 'ai')).toBe(false);
@@ -444,7 +488,7 @@ describe('Orchestrator: AI step gates', () => {
     fs.writeFileSync(path.join(dir, 'app.js'), 'x');
     mockRouter.analyze.mockResolvedValue({ summary: 'S', findings: [aiFinding('app.js')] });
     const without = await Orchestrator.analyze(dir, { ...opts, noAi: true });
-    const r = await Orchestrator.analyze(dir, { ...opts, yes: true });
+    const r = await Orchestrator.analyze(dir, { ...opts, yes: true, allowExternalAi: true });
     const ai = r.findings.find((f) => f.source === 'ai');
     expect(ai).toMatchObject({ severity: 'info', unverified: true, file: 'app.js' });
     expect(r.score).toBe(without.score);

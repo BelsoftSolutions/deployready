@@ -222,6 +222,11 @@ export interface AppConfig {
   /** codex-cli is a normal provider; set to false to switch it off. User-level config only. */
   codexEnabled?: boolean;
   warnBeforeExternalSend: boolean;
+  /**
+   * Pre-approve sending the redacted report/snippet to an external AI provider (API or claude/codex
+   * CLI) without a prompt, including non-interactive runs. Off by default; `--yes` never implies it.
+   */
+  allowExternalAi?: boolean;
   defaultPorts: number[];
   /** Opt-in common-path probe (see docs/COMMON-PATH-PROBE.md). Off by default; never written as true by init. */
   probeCommonPaths: boolean;
