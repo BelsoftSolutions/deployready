@@ -135,13 +135,13 @@ npx deployready@latest config                            # show the active confi
 | `--baseline <file>` | gate only on findings **not** in the baseline file (existing issues are grandfathered) |
 | `--strict-baseline` | with `--baseline`, also fail on stale suppressions (entries with no matching finding) |
 | `--write-baseline <file>` | write the current findings to a baseline file and exit `0` (accept current state) |
-| `--active` | run **active** authenticated authorization tests (needs `--token`; consented, loopback-only unless `--i-own-this-target`) |
+| `--active` | run **active** authenticated authorization tests (needs `--token`, or identities + a policy in `.deployready.json`, see [docs/AUTHZ.md](docs/AUTHZ.md); consented, loopback-only unless `--i-own-this-target`) |
 | `--token <jwt>` | bearer JWT for the active scan (your logged-in test user) |
 | `--token-b <jwt>` | a second user's JWT — enables tenant / IDOR isolation tests |
 | `--active-url <url>` | base URL for the active scan (default: the app found on localhost) |
 | `--i-own-this-target <host>` | confirm you own a non-loopback host so active probes may target it (repeatable, exact host) |
 | `--safety-level <level>` | active-scan safety level: `passive`, `read-only` (default), `controlled-active` (adds the write-route probe), `stateful` (needs a disposable target) |
-| `--dry-run` | list the active requests that would be sent, without sending any |
+| `--dry-run` | list the active requests (or the authorization-matrix plan) that would be sent, without sending any |
 | `-v, --verbose` | verbose debug output |
 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error), and `3` (insufficient evidence: a required check errored or did not run; only with `--fail-on-release-state`). Without `--fail-on-release-state` the exit codes are exactly as before. When both gates fail, `--fail-on` wins (`2`).
@@ -203,7 +203,7 @@ Baseline v2 (diff-friendly, sorted JSON, safe to commit) identifies a finding by
 permissions: { contents: read, security-events: write, pull-requests: write }
 steps:
   - uses: actions/checkout@v4
-  - uses: BelsoftSolutions/deployready@v0.5.0
+  - uses: BelsoftSolutions/deployready@v0.6.0
     with: { fail-on: critical }
 ```
 
@@ -348,6 +348,24 @@ It is **opt-in and consented** and **loopback-only**. The tampering checks are G
 Every live finding carries **proof**: a copy-pasteable `curl` command (your tokens appear only as `$TOKEN` / `$TOKEN_B`), the status, a truncated response and the control request that shows the endpoint otherwise works, all redacted. It appears in `show`, the terminal report, the markdown/HTML reports and `--json`. `verify` reports `fixed` only with proof (the attack fails **and** a control request still works); otherwise it says `inconclusive` and why.
 
 To run active probes against a host you own that is not on your machine (e.g. staging), name it explicitly: `--active-url https://staging.example.com --i-own-this-target staging.example.com` (repeatable; or `"ownedTargets": ["staging.example.com"]` in your config). Only that exact host is allowed — no wildcards or subdomains — and the write-route probe still stays loopback-only.
+
+#### Authorization matrix (policy-driven, 0.6)
+
+Describe **who may do what** once, and DeployReady tests every (resource, identity, action) cell against your running app:
+
+```bash
+npx deployready@latest policy init .         # drafts active.policy in .deployready.json from your routes (marked "draft": true)
+# review it: fix the levels, add identities (tokenEnv / saved session / params), set "draft": false
+npx deployready@latest analyze . --active --dry-run   # prints the matrix plan, sends nothing
+npx deployready@latest analyze . --active             # read-only by default
+```
+
+- **Identities**: any number (`anonymous`, `user`, `user2`, `admin`, `other-tenant`, ...) under `active.identities`, each with a `role`, an optional `tenant`, and a credential: `tokenEnv` (preferred), `token`, or `session: "<name>"` saved with `deployready auth record|login`. `params` / `objects` name the identity's own record ids; ids are never invented. `--token` / `--token-b` still work and become two identities.
+- **Policy**: resources (route patterns + methods) × roles → `none | read | own | manage`, optionally `tenantScoped`.
+- **Tests**: anonymous access to non-public routes, BFLA (role on routes reserved for others), BOLA/IDOR and cross-tenant reads (including `?userId=` and nested `/orgs/:org/projects/:id`), list filtering, batch `ids` arrays, export/download routes, GraphQL introspection and query-by-id; at `stateful` only (disposable, loopback/owned target): cross-identity update/delete and mass assignment / role escalation, each proven by reading the record back.
+- **Verdicts** per cell: allowed-as-expected, denied-as-expected, **VIOLATION** (field-level proof, redacted, with a plain-English line such as *User "alice" could read invoices of "bob"*), inconclusive, untested. The matrix is in the JSON, markdown and HTML reports.
+
+Full reference: [docs/AUTHZ.md](docs/AUTHZ.md).
 
 ### Route discovery (on by default, nothing guessed)
 

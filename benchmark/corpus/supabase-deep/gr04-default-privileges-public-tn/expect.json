@@ -1,0 +1,22 @@
+{
+  "description": "Repeating Supabase's own default privileges in public changes nothing and is not reported",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "grant-default-privileges-anon",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": false
+      }
+    ]
+  }
+}

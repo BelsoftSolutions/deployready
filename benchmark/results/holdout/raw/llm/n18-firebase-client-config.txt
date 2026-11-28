@@ -1,0 +1,15 @@
+```jsonl
+{"file": "src/firebase.js", "line": 6, "issue": "No validation that VITE_FIREBASE_API_KEY is set. If the variable is missing at build time, initializeApp receives undefined and fails later with an unclear error. Fail fast on missing config."}
+{"file": "src/firebase.js", "line": 8, "issue": "projectId is hardcoded to 'demo-app' while apiKey comes from the environment. The two can point at different projects, and 'demo-app' looks like a placeholder. Auth and storage could target the wrong backend. Derive all config values from the same environment source."}
+{"file": "src/firebase.js", "line": 10, "issue": "Firebase Auth is initialized without any restriction on sign-up. If anonymous or open email/password sign-up is enabled, anyone can create an account, and storage.rules only checks request.auth != null. Confirm the sign-in providers in the console match the intended access model."}
+{"file": "src/firebase.js", "line": 4, "issue": "The comment says access is enforced by security rules, but App Check is not initialized. Without App Check, scripts or bots can call Storage with any valid auth token. Add App Check and enforce it for Storage, and restrict the API key to the required APIs and allowed domains in Google Cloud."}
+{"file": "storage.rules", "line": 5, "issue": "The write rule has no size limit (for example request.resource.size < N). Any authenticated user can upload very large files to their own path, which enables storage-cost abuse and quota exhaustion."}
+{"file": "storage.rules", "line": 5, "issue": "The write rule has no content-type or extension restriction. Users can upload HTML, SVG, or script files and share download URLs, which enables hosting of phishing or malicious content under the project's storage domain."}
+{"file": "storage.rules", "line": 5, "issue": "The rule does not check request.auth.token.email_verified. Unverified accounts, including ones created through open sign-up, get full read and write access to their folder."}
+{"file": "storage.rules", "line": 5, "issue": "The rule grants read, write (create, overwrite, and delete) to all paths under the user's folder. Consider separate rules that limit writes to specific paths and allowed operations, so an account cannot overwrite or delete arbitrary files in its own folder."}
+```
+
+Notes:
+- The rule at `storage.rules:5` does isolate users correctly: a user can access only `users/{uid}/...` where `uid` matches their own auth UID. The issues above are about abuse and hardening, not cross-user access.
+- Nothing in `src/firebase.js` is a secret. The web API key is public by design, so it is not flagged as a leak.
+- I reviewed only the content you pasted. I did not open the files in the working directory, so the line numbers refer to the pasted text.

@@ -1,0 +1,10 @@
+```json
+{"file": "main.py", "line": 15, "issue": "SSRF via parser differential: the allowlist is checked on urlparse(url) (line 13), but requests.get receives the raw, unvalidated `url` string. If requests/urllib3 parses the authority differently than urlparse (for example, backslashes, multiple '@' characters, or other malformed authorities), a URL can pass the hostname check and connect to a non-allowlisted host. Fix: build the outbound URL from the validated components, or validate with the same parser that performs the request."}
+{"file": "main.py", "line": 15, "issue": "Unbounded response read: requests.get without stream=True downloads the entire response body into memory before the 2000-character truncation on line 16. A large or slow response from an allowed host can exhaust server memory. Fix: use stream=True and read at most a fixed number of bytes with iter_content."}
+{"file": "main.py", "line": 13, "issue": "No port restriction: the check validates scheme and hostname only, so https://api.github.com:<any-port> is accepted. Fix: require parsed.port to be None or 443 and reject URLs with userinfo (parsed.username/password)."}
+{"file": "main.py", "line": 16, "issue": "Open relay and content disclosure: any authenticated user can fetch any path on the allowed hosts and receive the status and up to 2000 characters of the body. There is no path restriction, per-user rate limit, or quota, so the server can be used to amplify requests to third-party APIs and consume the operator's upstream quotas. Fix: restrict to specific path prefixes, add rate limiting, and return only the fields the feature needs."}
+```
+
+Notes:
+- I reviewed only the `main.py` you pasted. `auth.current_user` is imported from `auth.py`, which I did not see, so I could not verify the strength of the authentication on this endpoint.
+- The `allow_redirects=False` and `timeout=5` settings are good and reduce redirect-based SSRF and hanging-connection risks.

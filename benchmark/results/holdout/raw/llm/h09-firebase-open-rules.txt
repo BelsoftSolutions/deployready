@@ -1,0 +1,12 @@
+```json
+{"file": "firestore.rules", "line": 4, "issue": "Wildcard rule `match /{document=**} { allow read, write: if true; }` grants unauthenticated read AND write access to every document in the database. Anyone with the public project ID can read, modify, or delete all data. Replace with auth-scoped, per-collection rules (e.g., deny by default, allow reads/writes on `messages` only for authenticated users with validated fields)."}
+{"file": "firestore.rules", "line": 3, "issue": "Rules use `if true` with no authentication (`request.auth`), ownership, or input validation, so there is no access control or data-shape enforcement on writes (e.g., arbitrary content, size, or fields can be injected into `messages`)."}
+{"file": "src/app.js", "line": 2, "issue": "`apiKey: 'AIzaSyD-example-public-web-key'` is hardcoded in client-side source. Firebase web API keys are not secrets and are expected to be public, but combined with the open rules above they enable anyone to read and write the database. Hardcoding config is acceptable only once rules are locked down, and keys should be restricted in Google Cloud Console (HTTP referrer and API restrictions)."}
+{"file": "src/app.js", "line": 4, "issue": "`messages()` reads the entire `messages` collection with `getDocs` and no `where`/`limit`, and there is no authentication check before the query. This exposes all message documents to any caller and can incur large read costs (denial-of-wallet risk) if the collection grows; add query limits and auth-gated access."}
+{"file": "firebase.json", "line": 1, "issue": "Firebase config only references the rules file and does not enforce deployment of stricter rules or an App Check configuration. Without App Check, requests from any client (including scripts outside the app) are accepted by Firestore; enable App Check to reduce abuse of the open database."}
+```
+
+Notes:
+- The most serious issue is the `if true` wildcard rule in `firestore.rules`, which makes the entire database world-readable and world-writable. Fix this before any other change.
+- The `apiKey` itself is not a secret, so the finding there is about rules and restrictions, not key exposure.
+- Lines are approximate to the file contents as provided; the `firestore.rules` wildcard is on line 4, and the `if true` condition is on the same line.

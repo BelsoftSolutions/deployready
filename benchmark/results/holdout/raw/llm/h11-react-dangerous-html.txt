@@ -1,0 +1,5 @@
+```jsonl
+{"file": "src/Comments.jsx", "line": 7, "issue": "Stored/reflected XSS: comment.body is rendered via dangerouslySetInnerHTML without sanitization. Any HTML or script in a comment (e.g. <img src=x onerror=...>) runs in every visitor's browser, enabling session theft, actions on behalf of users, and defacement. Fix by rendering body as text ({comment.body}), or if rich text is required, sanitize with DOMPurify before insertion and enforce a restrictive Content-Security-Policy."}
+```
+
+No issues found in `package.json`. The React versions are pinned and the dependency list is minimal. Run `npm audit` against a lockfile to check for known advisories in the dependency tree, since this review covered only the two files provided.

@@ -1,0 +1,1 @@
+{ "name": "saas", "dependencies": { "express": "4.19.2", "stripe": "15.8.0", "@prisma/client": "5.14.0" } }

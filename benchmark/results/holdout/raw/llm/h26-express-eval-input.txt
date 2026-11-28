@@ -1,0 +1,11 @@
+```json
+{"file": "server.js", "line": 7, "issue": "Remote code execution: `eval(req.body.expression)` runs attacker-controlled input as JavaScript on the server. Anyone who passes requireAuth (or any caller, if auth is weak) can execute arbitrary code, read files and environment variables, and take over the host. Replace eval with a safe expression parser (e.g., mathjs with restricted scope) or a hand-written arithmetic parser."}
+{"file": "server.js", "line": 7, "issue": "No input validation: `req.body.expression` is not checked for type or length. A non-string value or an oversized expression can cause errors or CPU exhaustion (e.g., a long-running loop or deeply nested input) that blocks the single Node.js event loop."}
+{"file": "server.js", "line": 6, "issue": "Authentication depends on the unreviewed `./requireAuth` module. If it is missing, misconfigured, or fails open, the eval endpoint is reachable without credentials. Verify that requireAuth rejects unauthenticated requests and that it is not bypassed by any other route."}
+{"file": "server.js", "line": 7, "issue": "Unhandled errors: a syntax error or runtime exception from eval is passed to Express's default error handler, which can leak stack traces and internal paths to the client. Wrap the logic in try/catch and return a generic error message."}
+{"file": "server.js", "line": 10, "issue": "The server listens on port 3000 on all network interfaces with plain HTTP and no rate limiting. Credentials and results are sent unencrypted, and the endpoint can be abused without throttling. Bind to localhost or put it behind a TLS-terminating reverse proxy, and add rate limiting (e.g., express-rate-limit)."}
+```
+
+Notes:
+- The main issue is line 7. Since `eval` executes arbitrary code, it should be removed rather than patched with filtering. Blocklists and regex filters around `eval` are routinely bypassed.
+- I could only review the code provided. `requireAuth.js` was not included, so the authentication finding is a dependency to verify, not a confirmed flaw.

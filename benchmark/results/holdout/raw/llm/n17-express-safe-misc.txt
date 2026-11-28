@@ -1,0 +1,11 @@
+```json
+{"file": "server.js", "line": 16, "issue": "Fixed output path '/tmp/out.png' in shared /tmp. A local user can pre-create a symlink at that path so the server process overwrites an arbitrary file. Concurrent requests also race on the same output file and can return or write the wrong result. Use a per-request temp directory (fs.mkdtemp) or stream the output instead."}
+{"file": "server.js", "line": 16, "issue": "convert runs with no timeout, memory/size limits, or input validation. Any authenticated user can trigger expensive conversions (DoS), and untrusted image content in the reports directory is passed to ImageMagick, which has a history of delegate/parser RCE bugs. Add a timeout, restrict ImageMagick coders via policy.xml, and check that the target exists and is a regular file with an expected image extension."}
+{"file": "server.js", "line": 9, "issue": "res.sendFile follows symlinks. The startsWith check on line 11 validates the lexical path only, so a symlink inside reports/ can serve files outside the directory. Compare fs.realpath(file) against realpath(REPORTS) instead."}
+{"file": "server.js", "line": 20, "issue": "The server listens on all interfaces over plain HTTP with no TLS, no rate limiting, and no security headers. Credentials and session tokens used by requireAuth travel in cleartext. Bind to 127.0.0.1 if a reverse proxy handles access, or terminate TLS here, and add rate limiting (e.g., express-rate-limit) and helmet."}
+```
+
+Notes:
+- Line 10–11 is sound as written. `path.basename` removes traversal sequences such as `../`, and the `startsWith(REPORTS + path.sep)` check rejects anything that still escapes. The `execFile` array form avoids shell injection on line 16.
+- I could not verify `requireAuth` because `./requireAuth` was not in the files you sent. Both protected routes depend on it, so its implementation should be reviewed next.
+- This review is from reading the code only. I did not run the server or test any of these issues.

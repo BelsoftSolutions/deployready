@@ -38,6 +38,10 @@ import { assertLoopback } from '../dynamic/httpClient';
 import { runEngines, dedupeAgainstNative, type EngineStepOptions } from '../adapters';
 import { allowsMutationProbes, assertSafetyAllowed, resolveActivePolicy, type ActivePolicy } from '../active/safety';
 import { previewActivePlan } from '../active/dryRun';
+import { authzSettings, loadProjectActiveConfig, mergeActiveConfig } from '../active/projectConfig';
+import { runAuthzStep } from '../active/authzStep';
+import type { AuthzMatrix } from '../active/authzTypes';
+import type { AppConfig } from '../types';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ReleasePolicy, ScanReport } from '../types';
 import { CoverageRecorder, buildCoverage, recordEngineCoverage } from './coverage';
 import { parseReleasePolicy, withRelease } from './releaseState';
@@ -91,6 +95,8 @@ export interface AnalyzeOptions {
   activeRequested?: boolean;
   /** Release policy override; default: config `releasePolicy`, then the built-in policy. */
   releasePolicy?: Partial<ReleasePolicy>;
+  /** `--firebase-emulator`: prove Firebase rules with the user-installed Firebase Emulator Suite (localhost only). */
+  firebaseEmulator?: boolean;
   /** External engine adapters (npm audit, OSV-Scanner, pip-audit, Semgrep); see docs/ENGINES.md. */
   engines?: EngineStepOptions;
 }
@@ -146,8 +152,11 @@ export class Orchestrator {
 
     // ---- 2b. Active (authenticated) authorization testing, opt-in + consent ----
     let activeFindings: Finding[] = [];
+    let authz: AuthzMatrix | undefined;
     if (opts.active) {
-      activeFindings = await Orchestrator.runActive(graph, opts, cov);
+      const step = await Orchestrator.activeStep(projectPath, graph, opts, cov);
+      activeFindings = step.findings;
+      authz = step.authz;
     } else if (opts.activeRequested) {
       cov.set('active', 'untested', '--active was given without a --token; nothing was tested.', { requested: true });
     }
@@ -156,11 +165,20 @@ export class Orchestrator {
     const sb = await supabaseStep(projectPath, opts);
     const fb = await firebaseStep(projectPath, opts);
     if (sb.coverage) {
-      const rls = staticIssues.rlsFiles && sb.coverage.static.state === 'passed' ? ` RLS replayed over ${staticIssues.rlsFiles} SQL migration file(s).` : '';
-      cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason + rls);
+      const rls =
+        staticIssues.rlsFiles && sb.coverage.static.state === 'passed'
+          ? ` RLS replayed over ${staticIssues.rlsFiles} SQL migration file(s); storage, SECURITY DEFINER function, view, trigger, Realtime and grant checks ran on the final state.`
+          : '';
+      if (staticIssues.sqlObjectsError && sb.coverage.static.state !== 'failed') {
+        cov.set('supabase-static', 'failed', `Supabase object checks (storage, functions, views, triggers, Realtime, grants) errored: ${staticIssues.sqlObjectsError}. RLS results still stand.`);
+      } else {
+        cov.set('supabase-static', sb.coverage.static.state, sb.coverage.static.reason + rls);
+      }
       cov.set('supabase-live', sb.coverage.live.state, sb.coverage.live.reason, { requested: sb.coverage.live.requested });
+      cov.set('supabase-drift', sb.coverage.drift.state, sb.coverage.drift.reason, { requested: sb.coverage.drift.requested });
     }
     if (fb.coverage) cov.set('firebase', fb.coverage.state, fb.coverage.reason);
+    if (fb.emulatorCoverage) cov.set('firebase-emulator', fb.emulatorCoverage.state, fb.emulatorCoverage.reason, { requested: fb.emulatorCoverage.requested });
 
     // ---- 2d. External engines (installed + applicable only; failures are reported, never silent) ----
     const eng = await runEngines(projectPath, opts.engines ?? {});
@@ -171,7 +189,7 @@ export class Orchestrator {
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
       [...deduped.native, ...deduped.engine],
-      [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
+      [...dynamicFindings, ...activeFindings, ...sb.liveFindings, ...fb.liveFindings],
     );
 
     // ---- 4. Build report ----
@@ -187,6 +205,7 @@ export class Orchestrator {
       score: agg.score,
       summary: agg.summary,
       engineRuns: eng.runs,
+      ...(authz ? { authz } : {}),
     };
 
     // ---- 5. Optional AI analysis ----
@@ -418,13 +437,33 @@ export class Orchestrator {
   }
 
   /**
+   * Active step: the policy-driven authorization matrix when the project declares
+   * `active.policy` / identities (.deployready.json), else the token-based scan.
+   */
+  private static async activeStep(
+    projectPath: string,
+    graph: CodeGraph,
+    opts: AnalyzeOptions,
+    cov: CoverageRecorder,
+  ): Promise<{ findings: Finding[]; authz?: AuthzMatrix }> {
+    const project = await loadProjectActiveConfig(projectPath);
+    if (project.error) logger.warn(`Ignoring the project config: ${project.error}.`);
+    const config = mergeActiveConfig(await ConfigManager.load(), project);
+    const settings = authzSettings(config.active as Record<string, unknown> | undefined, project.file ?? 'the user config (~/.deployready/config.json)');
+    if (settings.policy || (settings.identities.length > 0 && !opts.token)) {
+      return runAuthzStep(projectPath, graph, opts, config, settings, cov);
+    }
+    return { findings: await Orchestrator.runActive(graph, opts, cov, config) };
+  }
+
+  /**
    * Active authorization testing: replays the user's own authenticated GET
    * requests with a tampered identity to prove access control holds. Opt-in
    * (`--active --token …`), consented, loopback-only unless an owned host is
    * declared, and bounded by the safety level (default read-only: GET only,
    * side-effect-looking and denylisted routes skipped) and a request budget.
    */
-  private static async runActive(graph: CodeGraph, opts: AnalyzeOptions, cov: CoverageRecorder = new CoverageRecorder()): Promise<Finding[]> {
+  private static async runActive(graph: CodeGraph, opts: AnalyzeOptions, cov: CoverageRecorder = new CoverageRecorder(), loaded?: AppConfig): Promise<Finding[]> {
     const skip = (reason: string): void => cov.set('active', 'untested', reason, { requested: true });
     if (!opts.token) {
       skip('--active was given without a --token; nothing was tested.');
@@ -442,7 +481,7 @@ export class Orchestrator {
       return [skippedScanNote('active-skipped', 0, [])];
     }
 
-    const config = await ConfigManager.load();
+    const config = loaded ?? (await ConfigManager.load());
     let policy: ActivePolicy;
     try {
       policy = resolveActivePolicy(config, { safetyLevel: opts.safetyLevel });

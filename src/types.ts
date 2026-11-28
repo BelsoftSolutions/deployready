@@ -210,6 +210,8 @@ export interface ScanReport {
   release?: ReleaseAssessment;
   /** Outcome of each external engine adapter (ran / skipped / error) with coverage. */
   engineRuns?: import('./adapters/types').EngineRunSummary[];
+  /** Policy-driven authorization matrix from the active scan (see src/active/authzEngine.ts). */
+  authz?: import('./active/authzTypes').AuthzMatrix;
 }
 
 // ---- Coverage + release state ---------------------------------------------------
@@ -229,7 +231,9 @@ export type CoverageKind =
   | 'engines'
   | 'supabase-static'
   | 'supabase-live'
+  | 'supabase-drift'
   | 'firebase'
+  | 'firebase-emulator'
   | 'dynamic'
   | 'active'
   | 'ai';
@@ -339,6 +343,10 @@ export interface ActiveConfigSection {
   maxRequests?: number;
   /** Required for the stateful level: the target holds only disposable test data. */
   disposableEnvironment?: boolean;
+  /** Named test identities for the authorization matrix (see src/active/identities.ts, docs/AUTHZ.md). */
+  identities?: unknown[];
+  /** Role/permission policy for the authorization matrix (see src/active/policy.ts, docs/AUTHZ.md). */
+  policy?: unknown;
 }
 
 /** A single tool result returned by an AI handler. */

@@ -1,0 +1,14 @@
+```json
+{"file": "components/Chat.tsx", "line": 5, "issue": "The NEXT_PUBLIC_ prefix makes Next.js inline the OpenAI API key into the client JavaScript bundle, so anyone who loads the page can read the key. Critical."}
+{"file": "components/Chat.tsx", "line": 6, "issue": "dangerouslyAllowBrowser: true makes the browser call the OpenAI API directly with the secret key. This is the mechanism that exposes the key in line 5 and should not be used with a secret credential."}
+{"file": "components/Chat.tsx", "line": 11, "issue": "The API request is made from the client with no server-side proxy, authentication, rate limiting, or spending cap. Anyone who obtains the key, or who can trigger this request, can run up unbounded API costs or use the key for other purposes."}
+{"file": "package.json", "line": 1, "issue": "next 14.2.3 is outdated and affected by known advisories, including CVE-2025-29927 (middleware authorization bypass, fixed in 14.2.25). openai 4.47.1 is also outdated. I have not verified the full advisory list for these versions; run `npm audit` against the lockfile to confirm."}
+```
+
+**Remediation:**
+- Remove `NEXT_PUBLIC_` and `dangerouslyAllowBrowser`. Move the OpenAI call into a server-side route handler (for example `app/api/chat/route.ts`) that reads `process.env.OPENAI_API_KEY`. The browser should call that route, not OpenAI.
+- Add authentication and per-user rate limiting to the route, and set a spending limit in the OpenAI dashboard.
+- Rotate the existing key. Assume it is compromised because the current bundle has shipped it to every visitor.
+- Upgrade `next` to at least 14.2.25 and update `openai` to a current release, then re-run `npm audit`.
+
+I reviewed only the two files you pasted. I did not run `npm audit` or inspect a lockfile, so the dependency findings are based on the version numbers alone.

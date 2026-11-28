@@ -1,0 +1,169 @@
+{
+  "tool": "deployready",
+  "version": "0.5.0",
+  "target": "/tmp/bench-h07-supabase-rls-never-enabled-XJpm1b/project",
+  "stack": "unknown",
+  "score": 60,
+  "scoreNote": "A score of 100 means no confirmed findings in the areas tested, not that the app is secure.",
+  "summary": {
+    "critical": 2,
+    "warning": 0,
+    "info": 0,
+    "total": 2,
+    "unverified": 0,
+    "notes": 0
+  },
+  "failOn": "none",
+  "passed": true,
+  "release": {
+    "state": "not-ready",
+    "limitedCoverage": true,
+    "reasons": [
+      "2 confirmed critical"
+    ],
+    "findings": {
+      "critical": 2,
+      "warning": 0,
+      "info": 0
+    },
+    "confidence": {
+      "confirmed": 2,
+      "unverified": 0,
+      "ai": 0,
+      "suspected": 0,
+      "unconfirmedBlocking": 0
+    },
+    "verification": {
+      "fixedVerified": 0,
+      "fixedUnverified": 0,
+      "open": 2
+    },
+    "accepted": 0,
+    "policy": {
+      "blockOn": [
+        "critical"
+      ],
+      "requireAreas": [
+        "static",
+        "secrets"
+      ],
+      "treatUnverifiedCriticalAs": "review-required"
+    },
+    "line": "Release: NOT READY — 2 confirmed critical · Coverage: static (JS/TS) ✓ · secrets ✓ · dependencies – untested · live – untested · active/authz – untested · supabase (static) ✓ · supabase (live) – untested · AI analysis – untested"
+  },
+  "coverage": [
+    {
+      "id": "static-javascript",
+      "kind": "static",
+      "label": "static (JS/TS)",
+      "state": "passed",
+      "reason": "Static rules ran on JS/TS files.",
+      "mandatory": true
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "label": "secrets",
+      "state": "passed",
+      "reason": "Secret detection ran on every scanned file.",
+      "mandatory": true
+    },
+    {
+      "id": "dependencies",
+      "kind": "dependencies",
+      "label": "dependencies",
+      "state": "untested",
+      "reason": "Skipped (--no-deps).",
+      "mandatory": false
+    },
+    {
+      "id": "engines",
+      "kind": "engines",
+      "label": "engines (SAST)",
+      "state": "untested",
+      "reason": "Opt-in SAST engines (--engines semgrep) not run.",
+      "mandatory": false
+    },
+    {
+      "id": "dynamic",
+      "kind": "dynamic",
+      "label": "live",
+      "state": "untested",
+      "reason": "Disabled (--no-dynamic).",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "active",
+      "kind": "active",
+      "label": "active/authz",
+      "state": "untested",
+      "reason": "Opt-in (--active --token); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "supabase-static",
+      "kind": "supabase-static",
+      "label": "supabase (static)",
+      "state": "passed",
+      "reason": "Supabase migrations and client usage checked statically. RLS replayed over 1 SQL migration file(s).",
+      "mandatory": false
+    },
+    {
+      "id": "supabase-live",
+      "kind": "supabase-live",
+      "label": "supabase (live)",
+      "state": "untested",
+      "reason": "Opt-in (--supabase); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "firebase",
+      "kind": "firebase",
+      "label": "firebase",
+      "state": "not-applicable",
+      "reason": "No Firebase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "ai",
+      "kind": "ai",
+      "label": "AI analysis",
+      "state": "untested",
+      "reason": "Disabled (--no-ai).",
+      "mandatory": false
+    }
+  ],
+  "findings": [
+    {
+      "rule": "rls-not-enabled",
+      "title": "Table \"profiles\" created without Row-Level Security enabled",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "line": 1,
+      "owasp": "A01:2025",
+      "cwe": "CWE-285",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: supabase/migrations/20240101000000_init.sql:1\nIssue: Table \"profiles\" created without Row-Level Security enabled (CWE-285, A01:2025)\nWhat to change: Enable RLS and add policies: ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY; then define per-row access policies.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"844f792adfb3\"."
+    },
+    {
+      "rule": "rls-not-enabled",
+      "title": "Table \"orders\" created without Row-Level Security enabled",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "line": 8,
+      "owasp": "A01:2025",
+      "cwe": "CWE-285",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: supabase/migrations/20240101000000_init.sql:8\nIssue: Table \"orders\" created without Row-Level Security enabled (CWE-285, A01:2025)\nWhat to change: Enable RLS and add policies: ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY; then define per-row access policies.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"46b2887887de\"."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+```jsonl
+{"file": "server.js", "line": 7, "issue": "Critical: jwt.decode() does not verify the signature. Any client can forge a token with arbitrary sub and role claims and be authenticated as any user. Use jwt.verify(token, secret, { algorithms: [...] }) instead."}
+{"file": "server.js", "line": 7, "issue": "Expired and not-yet-valid tokens are accepted because jwt.decode() performs no exp, nbf, iss, or aud validation. Stolen or old tokens stay valid indefinitely."}
+{"file": "server.js", "line": 9, "issue": "Unverified token claims are stored in req.user and trusted by downstream handlers, so any forged claim, including role, propagates into authorization decisions."}
+{"file": "server.js", "line": 13, "issue": "/api/me returns the role claim taken from an unverified token. Combined with the forgery issue on line 7, this lets an attacker choose their own role and gain privileges."}
+{"file": "server.js", "line": 14, "issue": "/api/billing/export has no role or ownership check. It exports billing data for whatever sub the token claims. Any authenticated user, including a forged one, can access billing data, and the sub value is reflected directly in the response."}
+{"file": "server.js", "line": 6, "issue": "The Authorization header is parsed with a naive split(' ')[1] without checking the scheme (for example, 'Bearer'). Malformed or unexpected header formats are accepted rather than rejected."}
+{"file": "server.js", "line": 16, "issue": "The server listens over plain HTTP on all interfaces with no rate limiting, so bearer tokens can be sniffed in transit and the endpoints can be brute-forced or abused. Terminate TLS and add rate limiting."}
+```
+
+The most serious problem is line 7. Because the signature is never checked, the whole auth layer can be bypassed, which also makes the role and billing checks meaningless. Fixing that with `jwt.verify` and a pinned algorithm should be the first change. I reviewed only the code you pasted and did not run it.

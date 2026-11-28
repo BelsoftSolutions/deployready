@@ -1,0 +1,11 @@
+```json
+{"file": "lib/http.js", "line": 2, "issue": "Setting NODE_TLS_REJECT_UNAUTHORIZED='0' disables TLS certificate verification for the entire Node process, not just this request. Every HTTPS connection the app or its dependencies make is open to man-in-the-middle attacks. Use a proper CA bundle (NODE_EXTRA_CA_CERTS or an https.Agent with custom ca) for staging instead."}
+{"file": "lib/http.js", "line": 7, "issue": "The url argument is passed straight to https.get with no validation or allowlist. If any part of it is attacker-influenced, this enables SSRF to internal hosts, cloud metadata endpoints, or other unintended targets."}
+{"file": "lib/http.js", "line": 9, "issue": "Response body chunks are accumulated with no size limit. A malicious or misbehaving server can send an arbitrarily large body and exhaust process memory."}
+{"file": "lib/http.js", "line": 10, "issue": "JSON.parse runs inside an event callback, not the Promise executor. Malformed JSON throws an uncaught exception that can crash the process, and the promise is never settled, so the caller never gets a rejection."}
+{"file": "lib/http.js", "line": 10, "issue": "The response status code is never checked. Error responses (4xx/5xx, including HTML error pages) are parsed as JSON and resolved as success, which can mask failures and cause downstream logic to trust error bodies."}
+{"file": "lib/http.js", "line": 7, "issue": "No request timeout is set. A stalled or slow-loris server can hang the request indefinitely, leaking sockets and pending promises."}
+{"file": "lib/http.js", "line": 9, "issue": "Chunks are concatenated as strings via data += c. A multibyte UTF-8 character split across chunk boundaries gets corrupted. Collect Buffers and call Buffer.concat(...).toString('utf8') at the end."}
+```
+
+The most serious issue is line 2. It turns off certificate validation process-wide, so the rest of the code can't be trusted over TLS until it is removed. Fixing it with a custom CA is the right move for the staging problem.

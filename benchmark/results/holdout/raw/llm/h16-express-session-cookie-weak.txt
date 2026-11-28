@@ -1,0 +1,13 @@
+```json
+{"file": "server.js", "line": 9, "issue": "httpOnly: false lets any JavaScript in the page read the session cookie via document.cookie, so any XSS can steal the session. Set httpOnly: true."}
+{"file": "server.js", "line": 9, "issue": "secure: false sends the session cookie over plain HTTP, where it can be intercepted on the network. Set secure: true and serve only over HTTPS."}
+{"file": "server.js", "line": 9, "issue": "sameSite: 'none' disables the browser's cross-site cookie restriction, which weakens CSRF protection. Use 'lax' or 'strict' unless cross-site embedding is required, and add CSRF tokens for state-changing routes."}
+{"file": "server.js", "line": 9, "issue": "maxAge of one year keeps a stolen or leaked session valid for a long time. Use a shorter lifetime, optionally with rolling sessions, and invalidate sessions on logout and password change."}
+{"file": "server.js", "line": 5, "issue": "No session store is configured, so express-session uses the default in-memory MemoryStore. It leaks memory under load, loses all sessions on restart, and does not scale across processes. Use a persistent store such as connect-redis or connect-pg-simple."}
+{"file": "server.js", "line": 6, "issue": "SESSION_SECRET is read from the environment with no check on its presence or strength. express-session throws if it is missing, but a short or guessable value would make session cookies forgeable. Require a high-entropy secret and fail startup if it is weak."}
+{"file": "server.js", "line": 12, "issue": "The server listens on plain HTTP with no transport security, and no security middleware (for example helmet for headers or rate limiting for login abuse) is in place. Terminate TLS in front of the app and add those protections."}
+```
+
+Notes:
+- The review covers only `server.js` as provided. Route handlers, authentication logic, and the deployment setup are not in the file, so they could not be checked.
+- `secure: false` and `sameSite: 'none'` conflict. Current browsers reject `SameSite=None` cookies that are not marked `Secure`, so the session may not work at all until both are fixed together.

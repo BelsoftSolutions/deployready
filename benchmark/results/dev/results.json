@@ -1,0 +1,2488 @@
+[
+ {
+  "tool": "deployready",
+  "suite": "dev",
+  "total": {
+   "tp": 65,
+   "fp": 0,
+   "fn": 0,
+   "tn": 96,
+   "extra": 1,
+   "other": 0
+  },
+  "byClass": {
+   "firebase-rules-auth-only": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rules-open": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 6,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rules-open-read": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rules-recursive-wildcard": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rules-test-mode": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-service-account-committed": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rtdb-auth-only": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "firebase-rtdb-open": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "hardcoded-secret": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 3,
+    "extra": 1,
+    "other": 0
+   },
+   "idor-missing-ownership-check": {
+    "tp": 6,
+    "fp": 0,
+    "fn": 0,
+    "tn": 8,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-permissive-policy": {
+    "tp": 14,
+    "fp": 0,
+    "fn": 0,
+    "tn": 13,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-not-enabled": {
+    "tp": 10,
+    "fp": 0,
+    "fn": 0,
+    "tn": 17,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-disabled": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "rls-no-policy": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "sql-injection": {
+    "tp": 6,
+    "fp": 0,
+    "fn": 0,
+    "tn": 10,
+    "extra": 0,
+    "other": 0
+   },
+   "possible-hardcoded-secret": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 5,
+    "extra": 0,
+    "other": 0
+   },
+   "env-not-ignored": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "eval-usage": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "command-injection": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "xss-sink": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "cors-wildcard": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "tls-verification-disabled": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "weak-hash": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-random": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "jwt-none-alg": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-cookie": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "debug-enabled": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "log-injection": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "insecure-http-url": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "py-sql-fstring": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "tn": 2,
+    "extra": 0,
+    "other": 0
+   },
+   "missing-auth-route": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 3,
+    "extra": 0,
+    "other": 0
+   },
+   "jwt-hardcoded-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   },
+   "py-flask-debug": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "py-requests-noverify": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "flask-hardcoded-secret-key": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   },
+   "supabase-service-role": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "extra": 0,
+    "other": 0
+   },
+   "next-public-secret": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "extra": 0,
+    "other": 0
+   }
+  },
+  "cases": [
+   {
+    "id": "firebase/firestore-auth-only-users-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 386,
+    "peakKb": 102384,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "firebase/firestore-open-true-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 404,
+    "peakKb": 101660,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/firestore-owner-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 358,
+    "peakKb": 101656,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "firebase/firestore-public-read-warn-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 391,
+    "peakKb": 101632,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/firestore-recursive-wildcard-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 357,
+    "peakKb": 101860,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/firestore-test-mode-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 315,
+    "peakKb": 102212,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/ignored-service-account-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 316,
+    "peakKb": 102048,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "firebase/rtdb-auth-only-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 347,
+    "peakKb": 103808,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/rtdb-open-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 397,
+    "peakKb": 105580,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "firebase/rtdb-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 370,
+    "peakKb": 101068,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "firebase/service-account-committed-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 1,
+     "other": 0
+    },
+    "durationMs": 419,
+    "peakKb": 104484,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "firebase/storage-open-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 354,
+    "peakKb": 101708,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "firebase/storage-owner-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 101076,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "firebase/web-config-apikey-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 390,
+    "peakKb": 103564,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/express-admin-guard-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 416,
+    "peakKb": 104676,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/express-mongoose-owner-check-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 367,
+    "peakKb": 104548,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/express-prisma-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 363,
+    "peakKb": 112212,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/express-prisma-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 350,
+    "peakKb": 114916,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "idor/express-public-catalog-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 322,
+    "peakKb": 103392,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/express-sql-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 357,
+    "peakKb": 105308,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "idor/fastapi-sqlalchemy-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 335,
+    "peakKb": 102772,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/fastapi-sqlalchemy-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 364,
+    "peakKb": 109980,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "idor/flask-owner-check-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 355,
+    "peakKb": 110652,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/flask-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 374,
+    "peakKb": 102692,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "idor/nextjs-supabase-rls-client-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 342,
+    "peakKb": 104308,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/nextjs-supabase-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 374,
+    "peakKb": 113060,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "idor/nextjs-supabase-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 366,
+    "peakKb": 112876,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "rls/a01-anon-select-true-invoices-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 381,
+    "peakKb": 102412,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a02-authenticated-using-true-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 324,
+    "peakKb": 102308,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a03-auth-role-authenticated-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 345,
+    "peakKb": 102576,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a04-rls-disabled-later-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 105924,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a05-schema-shadow-public-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 340,
+    "peakKb": 101536,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a06-schema-shadow-exposed-api-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 320,
+    "peakKb": 104576,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a07-alter-policy-insecure-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 334,
+    "peakKb": 104864,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a08-unlogged-table-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 315,
+    "peakKb": 102548,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a09-tautology-read-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 324,
+    "peakKb": 104104,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/a10-tautology-write-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 325,
+    "peakKb": 104404,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/s01-owner-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 363,
+    "peakKb": 101716,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/s02-dropped-and-replaced-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 389,
+    "peakKb": 103408,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/s03-public-catalog-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 383,
+    "peakKb": 101952,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/s04-tenant-membership-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 344,
+    "peakKb": 104756,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/s05-private-schema-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 392,
+    "peakKb": 101368,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/s06-service-role-and-restrictive-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 398,
+    "peakKb": 100876,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v01-rename-keeps-rls-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 388,
+    "peakKb": 104448,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v02-rename-unprotected-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 356,
+    "peakKb": 105128,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v03-set-schema-into-public-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 377,
+    "peakKb": 103856,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v04-set-schema-out-of-public-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 375,
+    "peakKb": 104124,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v05-long-history-secure-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 356,
+    "peakKb": 105640,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v06-long-history-regressed-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 380,
+    "peakKb": 105236,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v07-quoted-identifier-mismatch-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 359,
+    "peakKb": 101544,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v08-quoted-identifiers-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 332,
+    "peakKb": 102464,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v09-partition-child-unprotected-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 308,
+    "peakKb": 102012,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v10-restrictive-guard-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 316,
+    "peakKb": 101980,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v11-revoked-anon-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 391,
+    "peakKb": 112232,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v12-drop-recreate-without-rls-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 368,
+    "peakKb": 103828,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v13-config-public-table-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 390,
+    "peakKb": 102564,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v14-unknown-table-review-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 362,
+    "peakKb": 101844,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "rls/v15-config-sensitive-table-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 102516,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v16-membership-self-compare-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 384,
+    "peakKb": 102508,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v17-catalog-write-open-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 381,
+    "peakKb": 102212,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "rls/v18-disable-reenable-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 388,
+    "peakKb": 104412,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v19-do-block-enable-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 395,
+    "peakKb": 103972,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "rls/v20-auth-uid-not-null-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 385,
+    "peakKb": 101648,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v21-or-true-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 102432,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "rls/v22-search-path-private-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 376,
+    "peakKb": 101984,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/clean-project",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 16,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 424,
+    "peakKb": 112788,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/secret-tn-env-and-placeholder",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 102908,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/secret-tp-hardcoded-key",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 373,
+    "peakKb": 103112,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-fp-array-update-arith",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 377,
+    "peakKb": 102552,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-fp-crypto-hash-update",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 355,
+    "peakKb": 102076,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-fp-hash-update-template",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 102688,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-fp-orm-update",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 375,
+    "peakKb": 102664,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-fp-ui-string-delete",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 378,
+    "peakKb": 102004,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-fp-ui-string-update",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 375,
+    "peakKb": 102768,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-tn-parameterized-js",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 382,
+    "peakKb": 103232,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-tn-python-parameterized",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 389,
+    "peakKb": 102164,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/sqli-tp-concat-query",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 379,
+    "peakKb": 103304,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-const-select",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 376,
+    "peakKb": 102448,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-execute-delete",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 412,
+    "peakKb": 102408,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-lowercase",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 435,
+    "peakKb": 103760,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-python-format",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 413,
+    "peakKb": 101912,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-python-fstring",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 376,
+    "peakKb": 101572,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/sqli-tp-template-literal",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 436,
+    "peakKb": 102752,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/walker-env-production-not-ignored",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 402,
+    "peakKb": 102936,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/walker-env-staging",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 398,
+    "peakKb": 103284,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/walker-github-workflow-secret",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 381,
+    "peakKb": 102972,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "static/walker-gitignored-dir",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 401,
+    "peakKb": 102712,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "static/walker-normal-source-flagged",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 468,
+    "peakKb": 103040,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/express-admin-auth-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 400,
+    "peakKb": 103556,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/express-admin-noauth-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 384,
+    "peakKb": 105856,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "vibe/express-cors-tls-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 2,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 372,
+    "peakKb": 102636,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/express-cors-tls-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 360,
+    "peakKb": 104180,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 6,
+    "weightTotal": 6
+   },
+   {
+    "id": "vibe/express-idor-scoped-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 384,
+    "peakKb": 104312,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/express-idor-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 432,
+    "peakKb": 111540,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/express-jwt-hardcoded-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 419,
+    "peakKb": 103520,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "vibe/express-sqli-concat-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 351,
+    "peakKb": 105436,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/express-sqli-param-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 494,
+    "peakKb": 109632,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/fastapi-delete-noauth-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 421,
+    "peakKb": 104452,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 4,
+    "weightTotal": 4
+   },
+   {
+    "id": "vibe/flask-debug-sqli-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 4,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 410,
+    "peakKb": 104716,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 13,
+    "weightTotal": 13
+   },
+   {
+    "id": "vibe/nextjs-client-secrets-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 421,
+    "peakKb": 103624,
+    "alerts": 2,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 6,
+    "weightTotal": 6
+   },
+   {
+    "id": "vibe/nextjs-server-service-role-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 441,
+    "peakKb": 104772,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/python-safe-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 5,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 386,
+    "peakKb": 102160,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/supabase-never-rls-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 476,
+    "peakKb": 103956,
+    "alerts": 3,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/supabase-partial-rls-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 426,
+    "peakKb": 103648,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/supabase-rls-proper-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 484,
+    "peakKb": 101496,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/supabase-using-true-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 406,
+    "peakKb": 104920,
+    "alerts": 4,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   },
+   {
+    "id": "vibe/vite-env-ignored-tn",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 0,
+     "fp": 0,
+     "fn": 0,
+     "tn": 1,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 488,
+    "peakKb": 102800,
+    "alerts": 0,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 0,
+    "weightTotal": 0
+   },
+   {
+    "id": "vibe/vite-env-not-ignored-tp",
+    "negative": false,
+    "status": "ok",
+    "tally": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 0,
+     "tn": 0,
+     "extra": 0,
+     "other": 0
+    },
+    "durationMs": 438,
+    "peakKb": 102840,
+    "alerts": 1,
+    "missed": [],
+    "falsePositives": [],
+    "weightCaught": 3,
+    "weightTotal": 3
+   }
+  ],
+  "positiveLabels": 65,
+  "negativeCases": 0,
+  "inconclusive": 0,
+  "sevWeightedRecall": 1,
+  "negativesClean": 0,
+  "durationMs": {
+   "total": 41075,
+   "mean": 380.3240740740741,
+   "max": 494
+  },
+  "peakMb": {
+   "max": 112.22265625,
+   "mean": 101.50962094907408
+  }
+ }
+]

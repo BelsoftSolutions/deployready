@@ -1,0 +1,14 @@
+```json
+{"file": ".env", "line": 2, "issue": "Live production Stripe secret key committed in plaintext; anyone with repo access can move money or access payment data. Rotate immediately and remove from the repo."}
+{"file": ".env", "line": 3, "issue": "Production database credentials (admin user and password) committed in plaintext in DATABASE_URL, exposing the prod database to anyone with repo or file access. Rotate the password and use a secrets manager."}
+{"file": ".env", "line": 3, "issue": "Admin (superuser-level) database account used by the application instead of a least-privilege role, so any app compromise yields full database control."}
+{"file": ".env", "line": 3, "issue": "Production database hostname (db.internal.example.com) and port exposed in a file that may be shipped or shared, aiding targeted network attacks if the database is reachable."}
+{"file": ".env", "line": 1, "issue": "VITE_ prefix means Vite inlines this variable into the client bundle; if VITE_API_URL is later combined with secrets, they would be public. Currently safe, but do not add secrets with the VITE_ prefix."}
+{"file": ".env", "line": 2, "issue": "Server-side secret (STRIPE_SECRET_KEY) lives in a file in the project root; if .env is not in .gitignore (not verified here) it will be committed and served by any static or misconfigured dev server."}
+{"file": "index.html", "line": 1, "issue": "No Content-Security-Policy, X-Frame-Options, or other security headers are defined in the page; the app is open to clickjacking and makes XSS impact larger. Set CSP and frame-ancestors via server/hosting config."}
+{"file": "package.json", "line": 1, "issue": "Vite pinned to 5.2.0, an old version with known advisories (e.g., dev server path traversal and file-read issues fixed in later 5.x releases). Upgrade to the latest patched 5.x or 6.x."}
+{"file": "package.json", "line": 1, "issue": "The dev script runs 'vite' with default settings, which binds to localhost only, but exposing it with --host would publish the dev server and its file-serving to the network. Do not run the dev server on untrusted networks; avoid --host and --open in production workflows."}
+{"file": "package.json", "line": 1, "issue": "No lockfile or integrity verification is referenced and dependencies are unpinned beyond the single version; no audit step is defined. Add a lockfile and run npm audit in CI."}
+```
+
+Notes on scope: I reviewed only the three files you provided. The app source (`src/main.js`) and `.gitignore` were not included, so I could not confirm whether `.env` is ignored by git or how the API uses `VITE_API_URL`. The first two `.env` entries should be treated as already exposed: rotate the Stripe key and database password, then remove the file from git history if it was committed.

@@ -1,0 +1,1 @@
+{"description":"Expired test-mode rule: static reports the stale rule (warning); the emulator denies everything (not reproduced)","expected":[{"rule":"firebase-rules-test-mode","present":true,"file":"firestore.rules"}]}

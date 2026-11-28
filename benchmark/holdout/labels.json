@@ -1,0 +1,467 @@
+{
+  "_readme": "HOLDOUT LABELS. NEVER USE FOR RULE TUNING. Do not read this file (or benchmark/holdout/cases/**) while changing rules in src/. Ground truth is by issue CLASS, not rule id; see ../holdoutMapping.ts for tool->class mappings. Cases with an empty labels list are secure negatives: any mapped alert is a false positive.",
+  "version": 1,
+  "cases": {
+    "h01-next-service-key-client": {
+      "stack": "Next.js + Supabase",
+      "negative": false,
+      "labels": [
+        {
+          "class": "client-secret-exposure",
+          "file": "lib/supabase.ts",
+          "present": true,
+          "severity": "critical",
+          "note": "service_role key under NEXT_PUBLIC_ in a client component"
+        }
+      ]
+    },
+    "h02-next-prisma-raw-sqli": {
+      "stack": "Next.js + Prisma",
+      "negative": false,
+      "labels": [
+        {
+          "class": "sqli",
+          "file": "app/api/search/route.ts",
+          "present": true,
+          "severity": "high",
+          "note": "$queryRawUnsafe with interpolated query param"
+        }
+      ]
+    },
+    "h03-express-prisma-idor": {
+      "stack": "Express + Prisma",
+      "negative": false,
+      "labels": [
+        {
+          "class": "idor",
+          "file": "server.js",
+          "present": true,
+          "severity": "high",
+          "note": "GET /api/invoices/:id has auth but no ownership check"
+        }
+      ]
+    },
+    "h04-fastapi-command-injection": {
+      "stack": "FastAPI",
+      "negative": false,
+      "labels": [
+        {
+          "class": "command-injection",
+          "file": "main.py",
+          "present": true,
+          "severity": "critical",
+          "note": "shell=True with f-string host"
+        }
+      ]
+    },
+    "h05-flask-pickle-load": {
+      "stack": "Flask",
+      "negative": false,
+      "labels": [
+        {
+          "class": "unsafe-deserialization",
+          "file": "app.py",
+          "present": true,
+          "severity": "critical",
+          "note": "pickle.loads(request body)"
+        }
+      ]
+    },
+    "h06-stripe-webhook-unsigned": {
+      "stack": "Express + Stripe",
+      "negative": false,
+      "labels": [
+        {
+          "class": "webhook-signature-missing",
+          "file": "server.js",
+          "present": true,
+          "severity": "high",
+          "note": "Stripe webhook trusts req.body, no constructEvent"
+        }
+      ]
+    },
+    "h07-supabase-rls-never-enabled": {
+      "stack": "Supabase",
+      "negative": false,
+      "labels": [
+        {
+          "class": "rls-missing",
+          "file": "supabase/migrations/20240101000000_init.sql",
+          "present": true,
+          "severity": "critical",
+          "note": "public tables never get RLS"
+        }
+      ]
+    },
+    "h08-supabase-policy-using-true": {
+      "stack": "Supabase",
+      "negative": false,
+      "labels": [
+        {
+          "class": "rls-permissive",
+          "file": "supabase/migrations/20240201000000_notes.sql",
+          "present": true,
+          "severity": "high",
+          "note": "USING (true) policies incl. update"
+        }
+      ]
+    },
+    "h09-firebase-open-rules": {
+      "stack": "Firebase",
+      "negative": false,
+      "labels": [
+        {
+          "class": "firebase-open-rules",
+          "file": "firestore.rules",
+          "present": true,
+          "severity": "critical",
+          "note": "allow read, write: if true on all documents"
+        }
+      ]
+    },
+    "h10-flask-path-traversal": {
+      "stack": "Flask",
+      "negative": false,
+      "labels": [
+        {
+          "class": "path-traversal",
+          "file": "app.py",
+          "present": true,
+          "severity": "high",
+          "note": "send_file(join(UPLOAD_DIR, user input))"
+        }
+      ]
+    },
+    "h11-react-dangerous-html": {
+      "stack": "React",
+      "negative": false,
+      "labels": [
+        {
+          "class": "xss",
+          "file": "src/Comments.jsx",
+          "present": true,
+          "severity": "high",
+          "note": "dangerouslySetInnerHTML with user comment body"
+        }
+      ]
+    },
+    "h12-fastapi-ssrf-fetch": {
+      "stack": "FastAPI",
+      "negative": false,
+      "labels": [
+        {
+          "class": "ssrf",
+          "file": "main.py",
+          "present": true,
+          "severity": "high",
+          "note": "requests.get(user-supplied url)"
+        }
+      ]
+    },
+    "h13-express-md5-passwords": {
+      "stack": "Express + pg",
+      "negative": false,
+      "labels": [
+        {
+          "class": "weak-password-hash",
+          "file": "auth.js",
+          "present": true,
+          "severity": "high",
+          "note": "unsalted MD5 for passwords"
+        }
+      ]
+    },
+    "h14-express-jwt-decode-only": {
+      "stack": "Express",
+      "negative": false,
+      "labels": [
+        {
+          "class": "jwt-misconfig",
+          "file": "server.js",
+          "present": true,
+          "severity": "critical",
+          "note": "jwt.decode used for authentication, signature never verified"
+        }
+      ]
+    },
+    "h15-express-mass-assignment": {
+      "stack": "Express + Mongoose",
+      "negative": false,
+      "labels": [
+        {
+          "class": "mass-assignment",
+          "file": "routes.js",
+          "present": true,
+          "severity": "high",
+          "note": "User.create(req.body) / $set: req.body"
+        }
+      ]
+    },
+    "h16-express-session-cookie-weak": {
+      "stack": "Express",
+      "negative": false,
+      "labels": [
+        {
+          "class": "insecure-cookie",
+          "file": "server.js",
+          "present": true,
+          "severity": "medium",
+          "note": "httpOnly false, secure false, sameSite none, 1y"
+        }
+      ]
+    },
+    "h17-flask-yaml-load-debug": {
+      "stack": "Flask",
+      "negative": false,
+      "labels": [
+        {
+          "class": "unsafe-deserialization",
+          "file": "app.py",
+          "present": true,
+          "severity": "critical",
+          "note": "yaml.load with full Loader on request body"
+        },
+        {
+          "class": "debug-mode",
+          "file": "app.py",
+          "present": true,
+          "severity": "high",
+          "note": "debug=True on 0.0.0.0"
+        }
+      ]
+    },
+    "h18-next-open-redirect": {
+      "stack": "Next.js",
+      "negative": false,
+      "labels": [
+        {
+          "class": "open-redirect",
+          "file": "app/login/callback/route.ts",
+          "present": true,
+          "severity": "medium",
+          "note": "redirect to unvalidated ?next="
+        }
+      ]
+    },
+    "h19-tenant-list-unscoped": {
+      "stack": "Express + Prisma multi-tenant",
+      "negative": false,
+      "labels": [
+        {
+          "class": "idor",
+          "file": "server.js",
+          "present": true,
+          "severity": "high",
+          "note": "/api/projects returns every tenant's projects (no orgId filter)"
+        }
+      ]
+    },
+    "h20-express-admin-no-auth": {
+      "stack": "Express",
+      "negative": false,
+      "labels": [
+        {
+          "class": "missing-auth",
+          "file": "server.js",
+          "present": true,
+          "severity": "critical",
+          "note": "/admin/* destructive routes have no auth"
+        }
+      ]
+    },
+    "h21-vite-env-committed": {
+      "stack": "Vite",
+      "negative": false,
+      "labels": [
+        {
+          "class": "secret-committed",
+          "file": ".env",
+          "present": true,
+          "severity": "high",
+          "note": ".env with a payment-provider secret (non-provider-format value) + DB password, no .gitignore"
+        }
+      ]
+    },
+    "h22-express-cors-reflect-credentials": {
+      "stack": "Express",
+      "negative": false,
+      "labels": [
+        {
+          "class": "cors",
+          "file": "server.js",
+          "present": true,
+          "severity": "high",
+          "note": "reflects any Origin with Allow-Credentials: true"
+        }
+      ]
+    },
+    "h23-python-hardcoded-creds": {
+      "stack": "Python",
+      "negative": false,
+      "labels": [
+        {
+          "class": "hardcoded-secret",
+          "file": "config.py",
+          "present": true,
+          "severity": "high",
+          "note": "AWS keys and DB password in source"
+        }
+      ]
+    },
+    "h24-node-tls-reject-off": {
+      "stack": "Node",
+      "negative": false,
+      "labels": [
+        {
+          "class": "tls-disabled",
+          "file": "lib/http.js",
+          "present": true,
+          "severity": "high",
+          "note": "NODE_TLS_REJECT_UNAUTHORIZED=0 set in code"
+        }
+      ]
+    },
+    "h25-next-public-openai-key": {
+      "stack": "Next.js",
+      "negative": false,
+      "labels": [
+        {
+          "class": "client-secret-exposure",
+          "file": "components/Chat.tsx",
+          "present": true,
+          "severity": "high",
+          "note": "NEXT_PUBLIC_ OpenAI key + dangerouslyAllowBrowser"
+        }
+      ]
+    },
+    "h26-express-eval-input": {
+      "stack": "Express",
+      "negative": false,
+      "labels": [
+        {
+          "class": "code-injection",
+          "file": "server.js",
+          "present": true,
+          "severity": "critical",
+          "note": "eval(req.body.expression)"
+        }
+      ]
+    },
+    "h27-next-server-action-no-auth": {
+      "stack": "Next.js + Prisma",
+      "negative": false,
+      "labels": [
+        {
+          "class": "missing-auth",
+          "file": "app/actions.ts",
+          "present": true,
+          "severity": "high",
+          "note": "server actions delete/promote with no session check"
+        }
+      ]
+    },
+    "h28-express-nosql-injection": {
+      "stack": "Express + Mongoose",
+      "negative": false,
+      "labels": [
+        {
+          "class": "nosql-injection",
+          "file": "server.js",
+          "present": true,
+          "severity": "high",
+          "note": "findOne with raw req.body fields, operator injection"
+        }
+      ]
+    },
+    "n01-supabase-rls-owner-policies": {
+      "stack": "Supabase",
+      "negative": true,
+      "labels": []
+    },
+    "n02-express-prisma-scoped": {
+      "stack": "Express + Prisma",
+      "negative": true,
+      "labels": []
+    },
+    "n03-fastapi-safe-subprocess": {
+      "stack": "FastAPI",
+      "negative": true,
+      "labels": []
+    },
+    "n04-flask-safe-config": {
+      "stack": "Flask",
+      "negative": true,
+      "labels": []
+    },
+    "n05-stripe-webhook-verified": {
+      "stack": "Express + Stripe",
+      "negative": true,
+      "labels": []
+    },
+    "n06-firebase-scoped-rules": {
+      "stack": "Firebase",
+      "negative": true,
+      "labels": []
+    },
+    "n07-express-hardened": {
+      "stack": "Express",
+      "negative": true,
+      "labels": []
+    },
+    "n08-env-example-only": {
+      "stack": "Node",
+      "negative": true,
+      "labels": []
+    },
+    "n09-pg-parameterized": {
+      "stack": "Express + pg",
+      "negative": true,
+      "labels": []
+    },
+    "n10-react-safe-render": {
+      "stack": "React",
+      "negative": true,
+      "labels": []
+    },
+    "n11-fastapi-ssrf-allowlist": {
+      "stack": "FastAPI",
+      "negative": true,
+      "labels": []
+    },
+    "n12-supabase-tenant-rls": {
+      "stack": "Supabase multi-tenant",
+      "negative": true,
+      "labels": []
+    },
+    "n13-next-safe-redirect-cookies": {
+      "stack": "Next.js",
+      "negative": true,
+      "labels": []
+    },
+    "n14-next-server-action-authed": {
+      "stack": "Next.js + Prisma",
+      "negative": true,
+      "labels": []
+    },
+    "n15-python-env-secrets": {
+      "stack": "Python",
+      "negative": true,
+      "labels": []
+    },
+    "n16-express-tenant-scoped": {
+      "stack": "Express + Prisma multi-tenant",
+      "negative": true,
+      "labels": []
+    },
+    "n17-express-safe-misc": {
+      "stack": "Express",
+      "negative": true,
+      "labels": []
+    },
+    "n18-firebase-client-config": {
+      "stack": "Firebase",
+      "negative": true,
+      "labels": []
+    }
+  }
+}

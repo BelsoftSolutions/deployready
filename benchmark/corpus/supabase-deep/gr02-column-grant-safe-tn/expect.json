@@ -1,0 +1,32 @@
+{
+  "description": "Twin of gr01: only id, username and avatar_url are granted; email stays hidden",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "grant-sensitive-column",
+      "present": false
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.profiles (id, username, email) values ('00000000-0000-0000-0000-00000000000b', 'bob', 'bob@example.com');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(email) from public.profiles",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(email) from public.profiles",
+        "open": false
+      }
+    ]
+  }
+}

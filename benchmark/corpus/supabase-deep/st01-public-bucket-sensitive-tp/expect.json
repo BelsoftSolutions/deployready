@@ -1,0 +1,28 @@
+{
+  "description": "A public storage bucket named kyc-documents: identity documents are downloadable by anyone with the path",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "storage-bucket-public",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "storage-policy-permissive",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into storage.objects (bucket_id, name, owner_id) values ('kyc-documents', '00000000-0000-0000-0000-00000000000b/passport.png', '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "postgres",
+        "kind": "read",
+        "sql": "select count(*) from storage.buckets where id = 'kyc-documents' and public",
+        "open": true
+      }
+    ]
+  }
+}

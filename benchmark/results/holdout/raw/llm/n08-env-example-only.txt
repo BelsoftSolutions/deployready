@@ -1,0 +1,10 @@
+```jsonl
+{"file": ".env.example", "line": 1, "issue": "Placeholder DATABASE_URL uses a realistic user:password credential pattern. If copied unchanged into a real environment, it becomes a guessable default database credential. Use an obviously invalid placeholder such as <user>:<password>."}
+{"file": ".env.example", "line": 2, "issue": "STRIPE_SECRET_KEY placeholder has the sk_ prefix of a live secret key and sits in a committed file with no comment warning against pasting real keys here. This invites developers to put live secrets in a tracked file, and it can trip secret scanners."}
+{"file": ".env.example", "line": 3, "issue": "OPENAI_API_KEY is a committed secret slot with no warning comment. Developers may paste a real key into this tracked file, where it ends up in version history."}
+{"file": ".gitignore", "line": 2, "issue": "Only .env and .env.local are ignored. Files such as .env.production, .env.development.local, or .env.staging are not ignored and can be committed with real secrets. Use a pattern like .env* with an explicit allowlist for .env.example."}
+{"file": "src/config.js", "line": 2, "issue": "DATABASE_URL is read from the environment with no validation. If it is missing, the value is undefined and failures are unclear or handled poorly. Also, nothing enforces TLS (for example sslmode=require) on the database connection. Validate required secrets at startup and fail closed."}
+{"file": "src/config.js", "line": 1, "issue": "Raw secrets (database URL, Stripe key, OpenAI key) are exported in one plain object. Any logging, JSON serialization, or error dump of this config object will leak them. Redact secrets in logs and avoid serializing the config, for example by using getters or a redacting toString/toJSON."}
+```
+
+No critical vulnerabilities were found in these three files. The most significant risk is the `.gitignore` pattern, which fails to exclude environment-specific secret files. The rest are hardening issues: missing startup validation, the lack of a warning against committing real keys in `.env.example`, and possible secret exposure through logging of the config object.

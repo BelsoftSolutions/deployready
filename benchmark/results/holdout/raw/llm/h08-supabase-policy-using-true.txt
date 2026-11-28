@@ -1,0 +1,20 @@
+```json
+{"file": "supabase/migrations/20240201000000_notes.sql", "line": 8, "issue": "Policy 'anyone can read notes' uses `using (true)` with no `to` clause, so every role, including unauthenticated `anon`, can SELECT all rows. This exposes every user's note body and user_id to the public."}
+{"file": "supabase/migrations/20240201000000_notes.sql", "line": 9, "issue": "Policy 'anyone can update notes' uses `using (true) with check (true)` with no `to` clause, so any role, including `anon`, can UPDATE any row. Attackers can overwrite other users' note bodies and reassign `user_id` to another account, since nothing ties the update to the owner."}
+```
+
+Suggested fix: restrict reads and writes to the row owner.
+
+```sql
+drop policy "anyone can read notes" on public.notes;
+drop policy "anyone can update notes" on public.notes;
+
+create policy "owners select" on public.notes for select to authenticated
+  using (auth.uid() = user_id);
+
+create policy "owners update" on public.notes for update to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+```
+
+If notes are meant to be public, keep the select policy but only for intentionally public content. The update policy should still be owner-scoped. The insert policy on line 10 is correctly scoped, but it has no `to` clause, so you may want to add `to authenticated` there as well.

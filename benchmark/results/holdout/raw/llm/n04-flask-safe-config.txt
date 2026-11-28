@@ -1,0 +1,14 @@
+```json
+{"file": "app.py", "line": 13, "issue": "yaml.safe_load parses the untrusted request body with no size limit. YAML alias expansion (billion laughs) can exhaust CPU and memory, a denial-of-service risk. Safe loading prevents code execution, but not resource exhaustion."}
+{"file": "app.py", "line": 13, "issue": "request.data reads the entire body into memory. Flask's MAX_CONTENT_LENGTH is not set, so an attacker can send arbitrarily large payloads."}
+{"file": "app.py", "line": 12, "issue": "/api/config/import has no authentication or authorization. Any client that can reach the service can submit and parse arbitrary YAML. Because it accepts a raw body, it is also reachable cross-site via text/plain requests if any credentials or cookies are later added."}
+{"file": "app.py", "line": 17, "issue": "/download has no authentication or authorization. Anyone who can reach the service can retrieve any file in /srv/uploads by name, which may expose private uploads."}
+{"file": "app.py", "line": 18, "issue": "Path traversal is mitigated by secure_filename and send_from_directory, but the filename is still user-controlled and unvalidated. Restricting it to an allowlist of known files or IDs would be stronger defense in depth."}
+{"file": "app.py", "line": 22, "issue": "debug is enabled whenever FLASK_DEBUG=1. The Werkzeug debugger allows arbitrary code execution from the browser console if it is reachable. The 127.0.0.1 bind limits exposure, but a reverse proxy, port forward, or container port mapping would expose it. Debug mode should never be enabled outside local development."}
+```
+
+Notes:
+- The most serious issues are the two unauthenticated endpoints (lines 12 and 17). The `/download` route exposes uploaded files to anyone who can reach the service.
+- The YAML parsing on line 13 is not vulnerable to code execution because `safe_load` is used. The risks there are resource exhaustion and unbounded input.
+- The debug-mode issue (line 22) is conditional on the environment variable and the network setup.
+- I reviewed only the code you pasted. I did not run the application or test these issues.

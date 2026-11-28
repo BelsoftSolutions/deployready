@@ -1,0 +1,1 @@
+{ "name": "projects", "private": true, "dependencies": { "next": "14.2.3", "@prisma/client": "5.14.0" } }

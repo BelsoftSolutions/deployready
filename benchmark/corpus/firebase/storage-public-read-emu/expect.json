@@ -1,0 +1,1 @@
+{"description":"Public avatar reads with owner-only writes: static warns about the open read; the emulator confirms it (anonymous read, no write access)","expected":[{"rule":"firebase-rules-open-read","present":true,"file":"storage.rules"},{"rule":"firebase-rules-open","present":false}]}

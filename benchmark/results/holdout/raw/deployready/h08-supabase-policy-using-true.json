@@ -1,0 +1,171 @@
+{
+  "tool": "deployready",
+  "version": "0.5.0",
+  "target": "/tmp/bench-h08-supabase-policy-using-true-Dz1i2K/project",
+  "stack": "unknown",
+  "score": 60,
+  "scoreNote": "A score of 100 means no confirmed findings in the areas tested, not that the app is secure.",
+  "summary": {
+    "critical": 2,
+    "warning": 0,
+    "info": 0,
+    "total": 2,
+    "unverified": 0,
+    "notes": 0
+  },
+  "failOn": "none",
+  "passed": true,
+  "release": {
+    "state": "not-ready",
+    "limitedCoverage": true,
+    "reasons": [
+      "2 confirmed critical",
+      "static required but untested",
+      "secrets required but untested"
+    ],
+    "findings": {
+      "critical": 2,
+      "warning": 0,
+      "info": 0
+    },
+    "confidence": {
+      "confirmed": 2,
+      "unverified": 0,
+      "ai": 0,
+      "suspected": 0,
+      "unconfirmedBlocking": 0
+    },
+    "verification": {
+      "fixedVerified": 0,
+      "fixedUnverified": 0,
+      "open": 2
+    },
+    "accepted": 0,
+    "policy": {
+      "blockOn": [
+        "critical"
+      ],
+      "requireAreas": [
+        "static",
+        "secrets"
+      ],
+      "treatUnverifiedCriticalAs": "review-required"
+    },
+    "line": "Release: NOT READY — 2 confirmed critical; static required but untested · Coverage: static – untested · secrets – untested · dependencies – untested · live – untested · active/authz – untested · supabase (static) ✓ · supabase (live) – untested · AI analysis – untested"
+  },
+  "coverage": [
+    {
+      "id": "static",
+      "kind": "static",
+      "label": "static",
+      "state": "untested",
+      "reason": "No supported source files found (JS/TS, Python, PHP), so no static rule ran on application code.",
+      "mandatory": true
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "label": "secrets",
+      "state": "untested",
+      "reason": "No supported source files were scanned for secrets.",
+      "mandatory": true
+    },
+    {
+      "id": "dependencies",
+      "kind": "dependencies",
+      "label": "dependencies",
+      "state": "untested",
+      "reason": "Skipped (--no-deps).",
+      "mandatory": false
+    },
+    {
+      "id": "engines",
+      "kind": "engines",
+      "label": "engines (SAST)",
+      "state": "untested",
+      "reason": "Opt-in SAST engines (--engines semgrep) not run.",
+      "mandatory": false
+    },
+    {
+      "id": "dynamic",
+      "kind": "dynamic",
+      "label": "live",
+      "state": "untested",
+      "reason": "Disabled (--no-dynamic).",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "active",
+      "kind": "active",
+      "label": "active/authz",
+      "state": "untested",
+      "reason": "Opt-in (--active --token); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "supabase-static",
+      "kind": "supabase-static",
+      "label": "supabase (static)",
+      "state": "passed",
+      "reason": "Supabase migrations and client usage checked statically. RLS replayed over 1 SQL migration file(s).",
+      "mandatory": false
+    },
+    {
+      "id": "supabase-live",
+      "kind": "supabase-live",
+      "label": "supabase (live)",
+      "state": "untested",
+      "reason": "Opt-in (--supabase); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "firebase",
+      "kind": "firebase",
+      "label": "firebase",
+      "state": "not-applicable",
+      "reason": "No Firebase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "ai",
+      "kind": "ai",
+      "label": "AI analysis",
+      "state": "untested",
+      "reason": "Disabled (--no-ai).",
+      "mandatory": false
+    }
+  ],
+  "findings": [
+    {
+      "rule": "rls-permissive-policy",
+      "title": "Policy on \"notes\" does not restrict rows (SELECT open to anon, authenticated)",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "supabase/migrations/20240201000000_notes.sql",
+      "line": 8,
+      "owasp": "A01:2025",
+      "cwe": "CWE-285",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: supabase/migrations/20240201000000_notes.sql:8\nIssue: Policy on \"notes\" does not restrict rows (SELECT open to anon, authenticated) (CWE-285, A01:2025)\nWhat to change: Scope the policy to the row owner or tenant, e.g. USING ((select auth.uid()) = user_id) / WITH CHECK ((select auth.uid()) = user_id), or org membership with a correctly qualified join (m.org_id = <table>.org_id). A role check such as auth.role() = 'authenticated' is not an ownership check. If the table is meant to be public, add it to \"publicTables\" in .deployready.json.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"deb39f443450\"."
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "title": "Policy on \"notes\" does not restrict rows (UPDATE open to anon, authenticated)",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "supabase/migrations/20240201000000_notes.sql",
+      "line": 9,
+      "owasp": "A01:2025",
+      "cwe": "CWE-285",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: supabase/migrations/20240201000000_notes.sql:9\nIssue: Policy on \"notes\" does not restrict rows (UPDATE open to anon, authenticated) (CWE-285, A01:2025)\nWhat to change: Scope the policy to the row owner or tenant, e.g. USING ((select auth.uid()) = user_id) / WITH CHECK ((select auth.uid()) = user_id), or org membership with a correctly qualified join (m.org_id = <table>.org_id). A role check such as auth.role() = 'authenticated' is not an ownership check. If the table is meant to be public, add it to \"publicTables\" in .deployready.json.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"9ee88eb95e40\"."
+    }
+  ]
+}

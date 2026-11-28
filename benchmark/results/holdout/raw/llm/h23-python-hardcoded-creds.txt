@@ -1,0 +1,13 @@
+```json
+{"file": "config.py", "line": 3, "issue": "Hardcoded AWS access key ID (AWS_ACCESS_KEY_ID) in source. Anyone with read access to the code or its history can use it."}
+{"file": "config.py", "line": 4, "issue": "Hardcoded AWS secret access key (AWS_SECRET_ACCESS_KEY) in source. This exposes full credential material and enables unauthorized access to AWS resources."}
+{"file": "config.py", "line": 5, "issue": "Production database credentials (user 'app', password 'hunter2hunter2') embedded in a connection string pointing at prod-db.example.com. This exposes a production secret and a live database endpoint."}
+{"file": "config.py", "line": 5, "issue": "Connection string does not enforce TLS (no sslmode parameter), so database credentials and data may be sent unencrypted if the client default allows plaintext."}
+{"file": "config.py", "line": 7, "issue": "boto3 client is constructed with credentials passed explicitly in code rather than using the default credential chain (environment variables, shared config, or an instance/task IAM role). This forces secrets to live in source and makes rotation harder."}
+```
+
+**Notes:**
+- The AWS key ID `AKIAIOSFODNN7EXAMPLE` and secret `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` are AWS's documented placeholder values. If these are real credentials, treat them as compromised. Either way, the same pattern in real code is a serious finding.
+- The database password and host should be treated as exposed if this file has been committed or shared. Rotate the database password and the AWS keys, then purge the values from version control history.
+- Recommended fix: load secrets from environment variables or a secrets manager (e.g., AWS Secrets Manager, Vault), use an IAM role where possible, and add `?sslmode=require` to the database URL.
+- I reviewed only the contents you pasted. I did not check the rest of the repository, git history, or deployment configuration.

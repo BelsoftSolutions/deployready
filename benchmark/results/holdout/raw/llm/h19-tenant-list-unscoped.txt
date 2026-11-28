@@ -1,0 +1,12 @@
+```json
+{"file": "server.js", "line": 10, "issue": "Broken access control (IDOR / cross-tenant data exposure): /api/projects calls prisma.project.findMany with no where clause, so any authenticated user receives every organisation's projects. Fix: add where: { orgId: req.user.orgId }, as /api/members already does at line 15."}
+{"file": "server.js", "line": 10, "issue": "Unbounded query: findMany has no take/skip or pagination, so a single request can return the entire projects table. This enables data over-exposure and resource exhaustion. Add pagination limits."}
+{"file": "server.js", "line": 9, "issue": "Unhandled async errors: the route handler is async with no try/catch, and Express 4 does not catch rejected promises. A database error becomes an unhandled promise rejection, which can crash the Node process (DoS) or leave the request hanging. Wrap in try/catch, use express-async-errors, or upgrade to Express 5."}
+{"file": "server.js", "line": 18, "issue": "Insecure deployment defaults: app.listen(3000) binds to all interfaces over plain HTTP with no error handler, no security headers (e.g., helmet), and no rate limiting on the API. Bind to a specific interface behind a TLS-terminating proxy and add these protections."}
+{"file": "server.js", "line": 6, "issue": "Unverified dependency: requireAuth (./middleware/requireAuth) is not included in the review. Its correctness is critical, since the route scoping depends on it setting req.user.orgId. Review that file for token verification, expiry checks, and whether req.user is always populated."}
+```
+
+Notes:
+- The `/api/members` route (line 15) is correctly scoped to `req.user.orgId` and is not listed as a vulnerability.
+- The highest-priority fix is the missing `where` clause on line 10. Projects are tenant-scoped data, so this is a direct cross-tenant read.
+- Line numbers refer to the file as pasted. I reviewed only `server.js`, so findings about the middleware and the Prisma schema are unverified.

@@ -1,0 +1,14 @@
+```json
+{"file": "app/actions.ts", "line": 5, "issue": "deleteProject is an exported server action with no authentication check. Any client that can invoke the action can delete projects."}
+{"file": "app/actions.ts", "line": 7, "issue": "deleteProject performs no authorization or ownership check (IDOR). The id from formData is used directly in prisma.project.delete, so any caller can delete any project by id."}
+{"file": "app/actions.ts", "line": 6, "issue": "The id is read with String(formData.get('id')) and never validated. A missing field becomes the literal string \"null\", and arbitrary input is passed straight to the query."}
+{"file": "app/actions.ts", "line": 11, "issue": "setUserRole is an exported server action with no authentication or authorization check. Any caller can change any user's role, including escalating themselves or others to admin (privilege escalation)."}
+{"file": "app/actions.ts", "line": 11, "issue": "The role parameter is an unconstrained string with no allowlist or validation, and userId is not checked for ownership. Callers can assign arbitrary or invalid role values."}
+{"file": "package.json", "line": 1, "issue": "next is pinned to 14.2.3, which predates several security fixes. Based on my knowledge, it is affected by CVE-2025-29927 (middleware authorization bypass, fixed in 14.2.25) and CVE-2024-46982 (cache poisoning, fixed in 14.2.10). Verify against current advisories and upgrade to the latest 14.2.x patch."}
+{"file": "package.json", "line": 1, "issue": "@prisma/client is pinned to 5.14.0, an old release. Upgrade to a current 5.x version to pick up security and bug fixes."}
+```
+
+Notes:
+- The main risk is in `app/actions.ts`. Both actions are reachable as HTTP POST endpoints, and neither checks who is calling. Add a session check and an ownership or role check (for example, only admins may call `setUserRole`, and `deleteProject` should verify the caller owns the project) before the database call. Validate `role` against an allowlist such as a Zod enum.
+- I could only see the two files you provided. If middleware or a shared auth helper already enforces authentication, the auth findings may be mitigated. Please share those files to confirm.
+- The CVE references come from my training knowledge, not a live advisory lookup, so check them against the GitHub Advisory Database or `npm audit` before relying on them.

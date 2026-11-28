@@ -1,0 +1,156 @@
+{
+  "tool": "deployready",
+  "version": "0.5.0",
+  "target": "/tmp/bench-n06-firebase-scoped-rules-ajKUMx/project",
+  "stack": "unknown",
+  "score": 91,
+  "scoreNote": "A score of 100 means no confirmed findings in the areas tested, not that the app is secure.",
+  "summary": {
+    "critical": 0,
+    "warning": 1,
+    "info": 0,
+    "total": 1,
+    "unverified": 0,
+    "notes": 0
+  },
+  "failOn": "none",
+  "passed": true,
+  "release": {
+    "state": "insufficient-evidence",
+    "limitedCoverage": true,
+    "reasons": [
+      "static required but untested",
+      "secrets required but untested"
+    ],
+    "findings": {
+      "critical": 0,
+      "warning": 1,
+      "info": 0
+    },
+    "confidence": {
+      "confirmed": 1,
+      "unverified": 0,
+      "ai": 0,
+      "suspected": 0,
+      "unconfirmedBlocking": 0
+    },
+    "verification": {
+      "fixedVerified": 0,
+      "fixedUnverified": 0,
+      "open": 1
+    },
+    "accepted": 0,
+    "policy": {
+      "blockOn": [
+        "critical"
+      ],
+      "requireAreas": [
+        "static",
+        "secrets"
+      ],
+      "treatUnverifiedCriticalAs": "review-required"
+    },
+    "line": "Release: INSUFFICIENT EVIDENCE — static required but untested; secrets required but untested · Coverage: static – untested · secrets – untested · dependencies – untested · live – untested · active/authz – untested · firebase ✓ · AI analysis – untested"
+  },
+  "coverage": [
+    {
+      "id": "static",
+      "kind": "static",
+      "label": "static",
+      "state": "untested",
+      "reason": "No supported source files found (JS/TS, Python, PHP), so no static rule ran on application code.",
+      "mandatory": true
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "label": "secrets",
+      "state": "untested",
+      "reason": "No supported source files were scanned for secrets.",
+      "mandatory": true
+    },
+    {
+      "id": "dependencies",
+      "kind": "dependencies",
+      "label": "dependencies",
+      "state": "untested",
+      "reason": "Skipped (--no-deps).",
+      "mandatory": false
+    },
+    {
+      "id": "engines",
+      "kind": "engines",
+      "label": "engines (SAST)",
+      "state": "untested",
+      "reason": "Opt-in SAST engines (--engines semgrep) not run.",
+      "mandatory": false
+    },
+    {
+      "id": "dynamic",
+      "kind": "dynamic",
+      "label": "live",
+      "state": "untested",
+      "reason": "Disabled (--no-dynamic).",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "active",
+      "kind": "active",
+      "label": "active/authz",
+      "state": "untested",
+      "reason": "Opt-in (--active --token); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "supabase-static",
+      "kind": "supabase-static",
+      "label": "supabase (static)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "supabase-live",
+      "kind": "supabase-live",
+      "label": "supabase (live)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "firebase",
+      "kind": "firebase",
+      "label": "firebase",
+      "state": "passed",
+      "reason": "Firebase rules and config checked statically.",
+      "mandatory": false
+    },
+    {
+      "id": "ai",
+      "kind": "ai",
+      "label": "AI analysis",
+      "state": "untested",
+      "reason": "Disabled (--no-ai).",
+      "mandatory": false
+    }
+  ],
+  "findings": [
+    {
+      "rule": "firebase-rules-open-read",
+      "title": "Firestore path /posts/{postId} is publicly readable",
+      "severity": "warning",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "firestore.rules",
+      "line": 8,
+      "owasp": "A01:2025",
+      "cwe": "CWE-284",
+      "fixPrompt": "Fix one warning security issue that DeployReady found in this project.\n\nWhere: firestore.rules:8\nIssue: Firestore path /posts/{postId} is publicly readable (CWE-284, A01:2025)\nWhat to change: If this data is not meant to be public, require ownership: match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; } match /posts/{postId} { allow read: if true; allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid; allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid; }\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"d7ecbf667610\"."
+    }
+  ]
+}

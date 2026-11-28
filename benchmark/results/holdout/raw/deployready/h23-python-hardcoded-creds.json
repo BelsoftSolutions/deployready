@@ -1,0 +1,183 @@
+{
+  "tool": "deployready",
+  "version": "0.5.0",
+  "target": "/tmp/bench-h23-python-hardcoded-creds-QvvVaB/project",
+  "stack": "unknown",
+  "score": 50,
+  "scoreNote": "A score of 100 means no confirmed findings in the areas tested, not that the app is secure.",
+  "summary": {
+    "critical": 3,
+    "warning": 0,
+    "info": 0,
+    "total": 3,
+    "unverified": 0,
+    "notes": 0
+  },
+  "failOn": "none",
+  "passed": true,
+  "release": {
+    "state": "not-ready",
+    "limitedCoverage": true,
+    "reasons": [
+      "3 confirmed critical"
+    ],
+    "findings": {
+      "critical": 3,
+      "warning": 0,
+      "info": 0
+    },
+    "confidence": {
+      "confirmed": 3,
+      "unverified": 0,
+      "ai": 0,
+      "suspected": 0,
+      "unconfirmedBlocking": 0
+    },
+    "verification": {
+      "fixedVerified": 0,
+      "fixedUnverified": 0,
+      "open": 3
+    },
+    "accepted": 0,
+    "policy": {
+      "blockOn": [
+        "critical"
+      ],
+      "requireAreas": [
+        "static",
+        "secrets"
+      ],
+      "treatUnverifiedCriticalAs": "review-required"
+    },
+    "line": "Release: NOT READY — 3 confirmed critical · Coverage: static (Python) ✓ · secrets ✓ · dependencies – untested · live – untested · active/authz – untested · AI analysis – untested"
+  },
+  "coverage": [
+    {
+      "id": "static-python",
+      "kind": "static",
+      "label": "static (Python)",
+      "state": "passed",
+      "reason": "Static rules ran on Python files.",
+      "mandatory": true
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "label": "secrets",
+      "state": "passed",
+      "reason": "Secret detection ran on every scanned file.",
+      "mandatory": true
+    },
+    {
+      "id": "dependencies",
+      "kind": "dependencies",
+      "label": "dependencies",
+      "state": "untested",
+      "reason": "Skipped (--no-deps).",
+      "mandatory": false
+    },
+    {
+      "id": "engines",
+      "kind": "engines",
+      "label": "engines (SAST)",
+      "state": "untested",
+      "reason": "Opt-in SAST engines (--engines semgrep) not run.",
+      "mandatory": false
+    },
+    {
+      "id": "dynamic",
+      "kind": "dynamic",
+      "label": "live",
+      "state": "untested",
+      "reason": "Disabled (--no-dynamic).",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "active",
+      "kind": "active",
+      "label": "active/authz",
+      "state": "untested",
+      "reason": "Opt-in (--active --token); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "supabase-static",
+      "kind": "supabase-static",
+      "label": "supabase (static)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "supabase-live",
+      "kind": "supabase-live",
+      "label": "supabase (live)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "firebase",
+      "kind": "firebase",
+      "label": "firebase",
+      "state": "not-applicable",
+      "reason": "No Firebase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "ai",
+      "kind": "ai",
+      "label": "AI analysis",
+      "state": "untested",
+      "reason": "Disabled (--no-ai).",
+      "mandatory": false
+    }
+  ],
+  "findings": [
+    {
+      "rule": "hardcoded-secret",
+      "title": "Hardcoded secret / credential in source",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "config.py",
+      "line": 3,
+      "owasp": "A02:2025",
+      "cwe": "CWE-798",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: config.py:3\nIssue: Hardcoded secret / credential in source (CWE-798, A02:2025)\nWhat to change: Move the secret to an environment variable or secret manager, rotate the exposed value immediately, and ensure it is gitignored.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"08180234729c\"."
+    },
+    {
+      "rule": "hardcoded-secret",
+      "title": "Hardcoded secret / credential in source",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "config.py",
+      "line": 4,
+      "owasp": "A02:2025",
+      "cwe": "CWE-798",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: config.py:4\nIssue: Hardcoded secret / credential in source (CWE-798, A02:2025)\nWhat to change: Move the secret to an environment variable or secret manager, rotate the exposed value immediately, and ensure it is gitignored.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"97f724ed2b01\"."
+    },
+    {
+      "rule": "hardcoded-secret",
+      "title": "Hardcoded secret / credential in source",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "config.py",
+      "line": 5,
+      "owasp": "A02:2025",
+      "cwe": "CWE-798",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: config.py:5\nIssue: Hardcoded secret / credential in source (CWE-798, A02:2025)\nWhat to change: Move the secret to an environment variable or secret manager, rotate the exposed value immediately, and ensure it is gitignored.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"1bac6748d01c\"."
+    }
+  ]
+}

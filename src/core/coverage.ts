@@ -24,13 +24,15 @@ const LABEL: Record<CoverageKind, string> = {
   engines: 'engines (SAST)',
   'supabase-static': 'supabase (static)',
   'supabase-live': 'supabase (live)',
+  'supabase-drift': 'supabase (drift)',
   firebase: 'firebase',
+  'firebase-emulator': 'firebase (emulator)',
   dynamic: 'live',
   active: 'active/authz',
   ai: 'AI analysis',
 };
 
-const LIVE: ReadonlySet<CoverageKind> = new Set(['dynamic', 'active', 'supabase-live']);
+const LIVE: ReadonlySet<CoverageKind> = new Set(['dynamic', 'active', 'supabase-live', 'supabase-drift']);
 
 /** Display order (static areas first). */
 export const COVERAGE_KINDS: CoverageKind[] = [
@@ -42,7 +44,9 @@ export const COVERAGE_KINDS: CoverageKind[] = [
   'active',
   'supabase-static',
   'supabase-live',
+  'supabase-drift',
   'firebase',
+  'firebase-emulator',
   'ai',
 ];
 
@@ -54,7 +58,9 @@ const DEFAULTS: Record<Exclude<CoverageKind, 'static' | 'secrets'>, CoverageEntr
   engines: { state: 'untested', reason: 'Opt-in SAST engines (--engines semgrep) not run.' },
   'supabase-static': { state: 'untested', reason: 'Supabase checks did not run.' },
   'supabase-live': { state: 'untested', reason: 'Opt-in (--supabase); not run.' },
+  'supabase-drift': { state: 'untested', reason: 'Opt-in (--supabase-db-url); not run.' },
   firebase: { state: 'untested', reason: 'Firebase checks did not run.' },
+  'firebase-emulator': { state: 'untested', reason: 'Opt-in (--firebase-emulator); not run.' },
   dynamic: { state: 'untested', reason: 'Live (dynamic) checks did not run.' },
   active: { state: 'untested', reason: 'Opt-in (--active --token); not run.' },
   ai: { state: 'untested', reason: 'AI analysis did not run.' },
@@ -175,7 +181,7 @@ export function coverageSummary(areas: CoverageArea[]): string {
   for (const a of areas) {
     if (a.kind === 'static' || a.state === 'not-applicable') continue;
     // Opt-in SAST engines that were not asked for stay in the coverage table, not the headline.
-    if (a.kind === 'engines' && a.state === 'untested' && !a.requested) continue;
+    if ((a.kind === 'engines' || a.kind === 'firebase-emulator') && a.state === 'untested' && !a.requested) continue;
     parts.push(`${a.label} ${SYMBOL[a.state]}`);
   }
   return parts.join(' · ');

@@ -1,0 +1,32 @@
+{
+  "description": "A public avatars bucket with owner-folder upload policies: public profile pictures are intended",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "storage-bucket-public",
+      "present": false
+    },
+    {
+      "rule": "storage-policy-permissive",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into storage.objects (bucket_id, name, owner_id) values ('avatars', '00000000-0000-0000-0000-00000000000b/me.png', '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "update storage.objects set name = name where bucket_id = 'avatars'",
+        "open": false
+      },
+      {
+        "as": "anon",
+        "kind": "write",
+        "sql": "insert into storage.objects (bucket_id, name) values ('avatars', 'x.png')",
+        "open": false
+      }
+    ]
+  }
+}

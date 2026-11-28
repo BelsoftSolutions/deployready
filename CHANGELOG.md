@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0
+
+### Real authorization testing (role/permission matrix)
+- Describe who may do what in `.deployready.json` (`active.identities`, `active.policy`); `deployready policy init` drafts a policy from your routes (marked as a draft until you review it).
+- `analyze --active` tests every resource against every identity: anonymous access, user → admin (function-level authorization), cross-user and cross-tenant reads (incl. `?userId=` and nested ids), list filtering, batch ids, exports, GraphQL. In disposable environments only: editing/deleting another user's record and mass assignment (e.g. `role: admin`), proven by reading the record back.
+- A matrix in every report: allowed/denied as expected, violation (plain English + masked proof), inconclusive, untested. A violation needs leaked data or a read-back, never a status code alone.
+- Docs: docs/AUTHZ.md.
+
+### Log in once, test as real users
+- `deployready auth record <name> --url …` opens a browser, you log in, the session is saved locally (0600, gitignored). `deployready auth login …` does scripted test-account logins (credentials from env only).
+- Identities can use `session: "<name>"`; cookies and Bearer tokens (incl. Supabase `sb-*-auth-token`) are extracted automatically, expiry is detected, sessions are only sent to the origin they belong to. Playwright is an optional peer dependency. Docs: docs/AUTH-SESSIONS.md.
+
+### Deeper Supabase checks
+- Storage buckets and storage policies, SECURITY DEFINER functions (exposed, RLS-bypassing, missing `search_path`), views without `security_invoker`, privilege-escalating triggers, sensitive tables in the Realtime publication, default privileges and sensitive column grants, Edge Functions with `verify_jwt = false`. SQL cases confirmed on PostgreSQL 16.
+- Drift detection: `--supabase-db-url <read-only url>` compares your migrations with the live database (e.g. "RLS enabled in migrations but disabled in the database"). Read-only session, catalog data only; never connects without the flag.
+
+### Firebase rules proven in the official emulator
+- `--firebase-emulator` runs your Firestore/Storage rules in the Firebase Emulator Suite (if firebase-tools and Java are installed) as anonymous, owner and another user, attaching request/response proof and confirming or downgrading static findings. Localhost and `demo-` projects only.
+
+### Honest benchmarking
+- New 46-case holdout set, never used for rule tuning (CI enforces that `src/` never references it), scored separately from the development corpus. DeployReady 0.5.0, Semgrep OSS and a plain LLM were run on it with pinned versions. Development corpus: 202 cases, supported-rule precision 0.98 / recall 0.95. Holdout: DeployReady precision 0.95 / recall 0.62 — the gap is real and shapes the next releases. See benchmark/HOLDOUT-RESULTS.md (methodology, raw outputs, limitations).
+- End-to-end tests install the packed npm package and run the CLI, MCP stdio, SARIF, badge and exit codes; CI runs unit and e2e tests on Linux, Windows and macOS × Node 20/22/24.
+
 ## 0.5.0
 
 This release fixes the problems found by an independent security audit of 0.4.0. Every audit finding was reproduced against the 0.4.0 code first and is now a regression test. Two of them affected DeployReady's own privacy and CI guarantees, so please upgrade.

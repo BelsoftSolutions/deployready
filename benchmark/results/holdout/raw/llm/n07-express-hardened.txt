@@ -1,0 +1,18 @@
+```json
+{"file": "server.js", "line": 18, "issue": "Login rate limit is keyed only by IP and uses the default in-memory store. Distributed or IP-rotating attackers can bypass it, there is no per-account lockout, and limits are not shared across instances. Without a trust-proxy setting, all clients behind a reverse proxy share one IP, so one client can lock out everyone."}
+{"file": "server.js", "line": 18, "issue": "The async route handler has no try/catch. If users.byEmail or bcrypt.compare rejects, the request can hang or the error can become an unhandled promise rejection that crashes the process, depending on the Express version."}
+{"file": "server.js", "line": 19, "issue": "Input is coerced with String() and not validated. A missing email becomes the literal string \"undefined\", and objects become \"[object Object]\". Whether this allows injection depends on the users module's byEmail implementation, which was not provided."}
+{"file": "server.js", "line": 19, "issue": "The user lookup uses require('./users') inside the request handler, so the module is resolved on every login request. This is a code-quality problem, not a direct exploit."}
+{"file": "server.js", "line": 20, "issue": "User enumeration via timing: when the user does not exist, the short-circuit `!user ||` skips bcrypt.compare, so responses for unknown emails return noticeably faster than responses for existing emails."}
+{"file": "server.js", "line": 20, "issue": "No password length or type validation. bcrypt silently truncates input beyond 72 bytes, so long passwords that share a 72-byte prefix are treated as identical. Only the 100kb body limit applies."}
+{"file": "server.js", "line": 21, "issue": "JWT_SECRET is read from the environment without validation. If it is unset, jwt.sign throws and the request fails with an unhandled error. A short or default secret would make tokens forgeable. The signing algorithm is not pinned, and there is no issuer or audience claim."}
+{"file": "server.js", "line": 21, "issue": "The access token is returned in the JSON response body, which encourages client-side storage (for example localStorage) where any XSS can steal it. The token also cannot be revoked before its 1h expiry, and there is no refresh or logout mechanism."}
+{"file": "server.js", "line": 13, "issue": "The express-session middleware is configured but no route uses it, which adds attack surface. It also uses the default MemoryStore, which leaks memory in production. SESSION_SECRET is not validated, so a missing value causes startup failure or a weak secret."}
+{"file": "server.js", "line": 15, "issue": "The session cookie is marked secure: true, but the server only listens on plain HTTP (line 24), so browsers will not send the cookie over HTTP. Nothing in this file terminates TLS or sets HSTS."}
+{"file": "server.js", "line": 24, "issue": "The server listens on plain HTTP on all interfaces with no TLS, no error-handling middleware, and no NODE_ENV enforcement. Login credentials and tokens would travel unencrypted, and stack traces may be exposed if NODE_ENV is not set to production."}
+```
+
+Notes:
+- The `users` module was not included, so the injection risk on line 19 and the lookup behavior are unverified.
+- Line numbers refer to the file as provided.
+- I did not run the code or any tests. These findings come from reading the source.

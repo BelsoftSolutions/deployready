@@ -1,0 +1,15 @@
+```jsonl
+{"file": "lib/supabase.ts", "line": 6, "issue": "CRITICAL: The service role key is exposed to the browser. The NEXT_PUBLIC_ prefix causes Next.js to inline it into the client JavaScript bundle, where anyone can read it. The service role key bypasses Row Level Security, so an attacker can read, modify, or delete any data in the Supabase project and use admin APIs."}
+{"file": "lib/supabase.ts", "line": 4, "issue": "The privileged Supabase client is created in a module marked 'use client' and imported by a page component, so the admin client is instantiated in every browser session. Privileged clients must only run on the server."}
+{"file": "app/page.tsx", "line": 7, "issue": "The page queries all rows of the 'todos' table from the browser with no user filter. Because the client uses the service role key, RLS does not apply, so every user's todos are returned to any visitor. Even with the correct anon key, this query is only safe if RLS policies restrict rows to the owner."}
+{"file": "app/page.tsx", "line": 7, "issue": "Query errors are silently discarded (`data ?? []`, no check of `error`). Failed or denied requests look like empty data, which hides authorization failures and makes incidents harder to detect."}
+{"file": "package.json", "line": 1, "issue": "next is pinned to 14.2.3, which predates several published Next.js 14.2.x security fixes, including the middleware authorization bypass (CVE-2025-29927, fixed in 14.2.25). Upgrade to a patched release."}
+```
+
+**Remediation, in priority order:**
+
+1. **Rotate the service role key now.** Because it has been shipped in the client bundle, treat it as compromised, even if you have not seen abuse. Rotate it in the Supabase dashboard and update any server-side deployments.
+2. **Remove the service role key from client code.** Delete `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`. In the browser, use only `NEXT_PUBLIC_SUPABASE_URL` and the anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`). Keep any service role key in a server-only variable without the `NEXT_PUBLIC_` prefix, and use it only in server components, route handlers, or server actions.
+3. **Enable RLS on `todos`** and add policies that scope access to the owner, for example `using (auth.uid() = user_id)`. Then filter queries by user as well. Confirm RLS is enabled, since the anon key is only as safe as the policies behind it.
+4. **Handle errors explicitly.** Check `error` from the Supabase response and show or log it instead of rendering an empty list.
+5. **Upgrade Next.js** to a patched 14.2.x release (25 or later) or to a currently supported major version, then re-audit dependencies with `npm audit`.

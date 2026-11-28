@@ -3,6 +3,10 @@ name: CI
 # Runs the checks CONTRIBUTING.md asks contributors to run locally
 # (`npm test` and `npm run lint`) automatically on every push and PR,
 # so review doesn't depend on a human re-running them by hand.
+#
+# Third-party actions are pinned to commit SHAs (tag in the trailing comment):
+#   actions/checkout   v4.2.2  11bd71901bbe5b1630ceea73d27597364c9af683
+#   actions/setup-node v4.4.0  49933ea5288caeca8642d1e84afbd3f7d6820020
 
 on:
   push:
@@ -17,9 +21,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -30,6 +34,9 @@ jobs:
       - name: Lint (type-check)
         run: npm run lint
 
+      - name: Holdout isolation (nothing under src/ may reference the holdout benchmark)
+        run: npm run check:holdout
+
       - name: Test
         run: npm test
 
@@ -38,3 +45,30 @@ jobs:
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+  # Unit tests and end-to-end (npm pack -> install the tarball -> run the bin) on every OS x Node version we support.
+  matrix:
+    name: ${{ matrix.os }} / node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: End-to-end (packed tarball)
+        run: npm run test:e2e

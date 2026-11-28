@@ -1,0 +1,11 @@
+```json
+{"file": "server.js", "line": 8, "issue": "Broken access control: DELETE /admin/users/:id has no authentication or authorization middleware, so any unauthenticated client can delete any user by ID."}
+{"file": "server.js", "line": 13, "issue": "Broken access control: POST /admin/refund has no authentication or authorization, so any unauthenticated client can create refund records."}
+{"file": "server.js", "line": 14, "issue": "Mass assignment: the entire req.body is passed directly as Prisma `data`, letting the client set any column on the refund record (e.g., amount, status, userId, or internal fields) and bypass business rules."}
+{"file": "server.js", "line": 14, "issue": "Missing input validation and business logic: refund amount, currency, target order, and eligibility are not checked, enabling fraudulent or excessive refunds."}
+{"file": "server.js", "line": 9, "issue": "Unvalidated input and unhandled errors: req.params.id is used without type or format validation, and the async handler has no try/catch. Malformed IDs or missing records throw an unhandled promise rejection, which can crash the process on Node 15+ and can leak internal error details."}
+{"file": "server.js", "line": 6, "issue": "Excessive data exposure and no pagination: GET /api/products is unauthenticated, returns every product via findMany() with no select or limit, and may expose unpublished or internal fields."}
+{"file": "server.js", "line": 18, "issue": "Missing hardening: the server has no rate limiting, security headers (e.g., helmet), TLS, or audit logging. Admin endpoints are exposed on all interfaces on port 3000 with no protection."}
+```
+
+This is a static review of the pasted file only. I didn't run the code or check `db.js`, so the Prisma schema and any upstream middleware could change the severity of these findings. The most urgent fixes are adding authentication and role checks to both `/admin` routes and replacing `req.body` with an explicit, validated set of fields.

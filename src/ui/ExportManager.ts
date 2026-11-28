@@ -9,6 +9,7 @@ import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
 import { SCORE_DISCLAIMER } from '../core/releaseState';
 import type { Finding, ScanReport, Severity } from '../types';
 import { sanitizeReport } from './sanitize';
+import { authzMarkdown } from '../active/authzReport';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
 export class ExportManager {
@@ -53,6 +54,7 @@ export class ExportManager {
       }
       lines.push('');
     }
+    lines.push(...authzMarkdown(report.authz));
 
     if (report.aiSummary) {
       lines.push(`## AI Summary (unverified)`);

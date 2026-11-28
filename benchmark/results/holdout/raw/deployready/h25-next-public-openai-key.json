@@ -1,0 +1,155 @@
+{
+  "tool": "deployready",
+  "version": "0.5.0",
+  "target": "/tmp/bench-h25-next-public-openai-key-K7AWeO/project",
+  "stack": "nextjs",
+  "score": 75,
+  "scoreNote": "A score of 100 means no confirmed findings in the areas tested, not that the app is secure.",
+  "summary": {
+    "critical": 1,
+    "warning": 0,
+    "info": 0,
+    "total": 1,
+    "unverified": 0,
+    "notes": 0
+  },
+  "failOn": "none",
+  "passed": true,
+  "release": {
+    "state": "not-ready",
+    "limitedCoverage": true,
+    "reasons": [
+      "1 confirmed critical"
+    ],
+    "findings": {
+      "critical": 1,
+      "warning": 0,
+      "info": 0
+    },
+    "confidence": {
+      "confirmed": 1,
+      "unverified": 0,
+      "ai": 0,
+      "suspected": 0,
+      "unconfirmedBlocking": 0
+    },
+    "verification": {
+      "fixedVerified": 0,
+      "fixedUnverified": 0,
+      "open": 1
+    },
+    "accepted": 0,
+    "policy": {
+      "blockOn": [
+        "critical"
+      ],
+      "requireAreas": [
+        "static",
+        "secrets"
+      ],
+      "treatUnverifiedCriticalAs": "review-required"
+    },
+    "line": "Release: NOT READY — 1 confirmed critical · Coverage: static (JS/TS) ✓ · secrets ✓ · dependencies – untested · live – untested · active/authz – untested · AI analysis – untested"
+  },
+  "coverage": [
+    {
+      "id": "static-javascript",
+      "kind": "static",
+      "label": "static (JS/TS)",
+      "state": "passed",
+      "reason": "Static rules ran on JS/TS files.",
+      "mandatory": true
+    },
+    {
+      "id": "secrets",
+      "kind": "secrets",
+      "label": "secrets",
+      "state": "passed",
+      "reason": "Secret detection ran on every scanned file.",
+      "mandatory": true
+    },
+    {
+      "id": "dependencies",
+      "kind": "dependencies",
+      "label": "dependencies",
+      "state": "untested",
+      "reason": "Skipped (--no-deps).",
+      "mandatory": false
+    },
+    {
+      "id": "engines",
+      "kind": "engines",
+      "label": "engines (SAST)",
+      "state": "untested",
+      "reason": "Opt-in SAST engines (--engines semgrep) not run.",
+      "mandatory": false
+    },
+    {
+      "id": "dynamic",
+      "kind": "dynamic",
+      "label": "live",
+      "state": "untested",
+      "reason": "Disabled (--no-dynamic).",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "active",
+      "kind": "active",
+      "label": "active/authz",
+      "state": "untested",
+      "reason": "Opt-in (--active --token); not run.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "supabase-static",
+      "kind": "supabase-static",
+      "label": "supabase (static)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "supabase-live",
+      "kind": "supabase-live",
+      "label": "supabase (live)",
+      "state": "not-applicable",
+      "reason": "No Supabase project detected.",
+      "live": true,
+      "mandatory": false
+    },
+    {
+      "id": "firebase",
+      "kind": "firebase",
+      "label": "firebase",
+      "state": "not-applicable",
+      "reason": "No Firebase project detected.",
+      "mandatory": false
+    },
+    {
+      "id": "ai",
+      "kind": "ai",
+      "label": "AI analysis",
+      "state": "untested",
+      "reason": "Disabled (--no-ai).",
+      "mandatory": false
+    }
+  ],
+  "findings": [
+    {
+      "rule": "next-public-secret",
+      "title": "Secret exposed to the browser through a NEXT_PUBLIC_/VITE_ environment variable",
+      "severity": "critical",
+      "category": "security",
+      "source": "static",
+      "unverified": false,
+      "note": false,
+      "file": "components/Chat.tsx",
+      "line": 5,
+      "owasp": "A02:2025",
+      "cwe": "CWE-200",
+      "fixPrompt": "Fix one critical security issue that DeployReady found in this project.\n\nWhere: components/Chat.tsx:5\nIssue: Secret exposed to the browser through a NEXT_PUBLIC_/VITE_ environment variable (CWE-200, A02:2025)\nWhat to change: Variables with a NEXT_PUBLIC_/VITE_/REACT_APP_ prefix are inlined into the public JavaScript bundle, so anyone can read this value. Keep the secret in a server-only variable (no prefix) and call the service from an API route or server action; rotate the exposed key.\n\nKeep the fix minimal: change only what this issue needs, do not change behaviour or refactor unrelated code, and never put real secrets in code or in your reply (use environment variables).\nTo confirm: re-run `npx deployready@latest analyze` and check this issue is gone, or call the DeployReady MCP `verify` tool with id \"e56b663dc39e\"."
+    }
+  ]
+}
