@@ -36,6 +36,8 @@ import { startMcpServer } from '../mcp/server';
 import { badgeMarkdown, badgeSvg } from '../ui/badge';
 import { toSarif } from '../ui/Sarif';
 import { renderJson } from '../ui/sanitize';
+import { parseOwnedHosts } from '../active/scope';
+import { describeSession, loadSession, recordSession, scriptedLogin } from '../auth';
 
 const VERSION = getVersion();
 
@@ -111,6 +113,7 @@ export function buildProgram(): Command {
     .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--firebase-emulator', 'prove Firebase security rules with the Firebase Emulator Suite (needs your own firebase-tools + Java; localhost only; see docs/FIREBASE.md)', false)
     .option('--safety-level <level>', 'active-scan safety level: passive | read-only (default) | controlled-active | stateful')
     .option('--dry-run', 'list the active requests (or the authorization-matrix plan) that would be sent, without sending any', false)
     .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
@@ -155,6 +158,7 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          firebaseEmulator: Boolean(opts.firebaseEmulator),
           engines: { noDeps: !opts.deps, engines: opts.engines as string | undefined, offline: opts.offline as boolean, semgrepConfig: opts.semgrepConfig as string | undefined },
           supabase: {
             live: opts.supabase,
@@ -341,7 +345,85 @@ export function buildProgram(): Command {
       });
     });
 
+  const auth = program
+    .command('auth')
+    .description('Save a logged-in browser session (cookies + localStorage) for authenticated testing; sessions are secrets');
+
+  auth
+    .command('record')
+    .description('Open a browser, log in by hand, press Enter: saves .deployready/sessions/<name>.json (mode 0600)')
+    .argument('<name>', 'session name')
+    .requiredOption('--url <loginUrl>', 'login page URL (loopback, or a host you own)')
+    .option('--i-own-this-target <host>', 'confirm you own a non-loopback host (repeatable, comma-separated)', collect, [] as string[])
+    .option('--root <dir>', 'project root that holds .deployready/', '.')
+    .action(async (name: string, opts: { url: string; iOwnThisTarget: string[]; root: string }) => {
+      await guard(async () => {
+        const file = await recordSession({
+          root: opts.root,
+          name,
+          url: opts.url,
+          ownedHosts: parseOwnedHosts(opts.iOwnThisTarget),
+          log: (m) => logger.info(m),
+        });
+        logger.success(`Session "${name}" saved to ${file} (values are not shown).`);
+        logger.info(describeSession(loadSession(opts.root, name)));
+      });
+    });
+
+  auth
+    .command('login')
+    .description('Scripted form login for a TEST account (credentials from env vars only)')
+    .argument('<name>', 'session name')
+    .requiredOption('--url <loginUrl>', 'login page URL (loopback, or a host you own)')
+    .requiredOption('--username-env <VAR>', 'env var holding the username')
+    .requiredOption('--password-env <VAR>', 'env var holding the password')
+    .option('--username-selector <css>', 'CSS selector of the username field')
+    .option('--password-selector <css>', 'CSS selector of the password field')
+    .option('--submit-selector <css>', 'CSS selector of the submit button')
+    .option('--i-own-this-target <host>', 'confirm you own a non-loopback host (repeatable, comma-separated)', collect, [] as string[])
+    .option('--root <dir>', 'project root that holds .deployready/', '.')
+    .action(
+      async (
+        name: string,
+        opts: {
+          url: string;
+          usernameEnv: string;
+          passwordEnv: string;
+          usernameSelector?: string;
+          passwordSelector?: string;
+          submitSelector?: string;
+          iOwnThisTarget: string[];
+          root: string;
+        },
+      ) => {
+        await guard(async () => {
+          const username = process.env[opts.usernameEnv];
+          const password = process.env[opts.passwordEnv];
+          if (!username || !password) {
+            throw new Error(`Set the ${opts.usernameEnv} and ${opts.passwordEnv} environment variables (credentials are never taken from flags).`);
+          }
+          const file = await scriptedLogin({
+            root: opts.root,
+            name,
+            url: opts.url,
+            username,
+            password,
+            ...(opts.usernameSelector ? { usernameSelector: opts.usernameSelector } : {}),
+            ...(opts.passwordSelector ? { passwordSelector: opts.passwordSelector } : {}),
+            ...(opts.submitSelector ? { submitSelector: opts.submitSelector } : {}),
+            ownedHosts: parseOwnedHosts(opts.iOwnThisTarget),
+          });
+          logger.success(`Session "${name}" saved to ${file} (values are not shown).`);
+          logger.info(describeSession(loadSession(opts.root, name)));
+        });
+      },
+    );
+
   return program;
+}
+
+function collect(value: string, prev: string[]): string[] {
+  return [...prev, value];
 }
 
 /** Run an async action, turning any error into a clean message + exit code. */

@@ -232,6 +232,7 @@ export type CoverageKind =
   | 'supabase-static'
   | 'supabase-live'
   | 'firebase'
+  | 'firebase-emulator'
   | 'dynamic'
   | 'active'
   | 'ai';

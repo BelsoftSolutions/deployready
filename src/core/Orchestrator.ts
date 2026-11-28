@@ -95,6 +95,8 @@ export interface AnalyzeOptions {
   activeRequested?: boolean;
   /** Release policy override; default: config `releasePolicy`, then the built-in policy. */
   releasePolicy?: Partial<ReleasePolicy>;
+  /** `--firebase-emulator`: prove Firebase rules with the user-installed Firebase Emulator Suite (localhost only). */
+  firebaseEmulator?: boolean;
   /** External engine adapters (npm audit, OSV-Scanner, pip-audit, Semgrep); see docs/ENGINES.md. */
   engines?: EngineStepOptions;
 }
@@ -168,6 +170,7 @@ export class Orchestrator {
       cov.set('supabase-live', sb.coverage.live.state, sb.coverage.live.reason, { requested: sb.coverage.live.requested });
     }
     if (fb.coverage) cov.set('firebase', fb.coverage.state, fb.coverage.reason);
+    if (fb.emulatorCoverage) cov.set('firebase-emulator', fb.emulatorCoverage.state, fb.emulatorCoverage.reason, { requested: fb.emulatorCoverage.requested });
 
     // ---- 2d. External engines (installed + applicable only; failures are reported, never silent) ----
     const eng = await runEngines(projectPath, opts.engines ?? {});
@@ -178,7 +181,7 @@ export class Orchestrator {
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
       [...deduped.native, ...deduped.engine],
-      [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
+      [...dynamicFindings, ...activeFindings, ...sb.liveFindings, ...fb.liveFindings],
     );
 
     // ---- 4. Build report ----

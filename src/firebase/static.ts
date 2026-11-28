@@ -114,8 +114,8 @@ const MAX_FILES = 20000;
 const MAX_JSON_BYTES = 256 * 1024;
 const MAX_RULES_BYTES = 1024 * 1024;
 
-/** Walk the project and run the static checks. */
-export async function scanFirebaseStatic(root: string): Promise<FirebaseScan> {
+/** Walk the project and read the Firebase-relevant files (rules, JSON configs) plus root-ignore scopes. */
+export async function readFirebaseFiles(root: string): Promise<{ files: SourceFile[]; scopes: IgnoreScope[] }> {
   const files: SourceFile[] = [];
   let scopes: IgnoreScope[] = [];
   try {
@@ -154,5 +154,11 @@ export async function scanFirebaseStatic(root: string): Promise<FirebaseScan> {
     }
   };
   await walk(root, '');
+  return { files, scopes };
+}
+
+/** Walk the project and run the static checks. */
+export async function scanFirebaseStatic(root: string): Promise<FirebaseScan> {
+  const { files, scopes } = await readFirebaseFiles(root);
   return scanFirebaseFiles(files, (p) => isIgnored(scopes, p, false));
 }
