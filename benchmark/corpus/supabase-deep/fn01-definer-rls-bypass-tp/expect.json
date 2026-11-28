@@ -1,0 +1,42 @@
+{
+  "description": "A SECURITY DEFINER RPC in public returns invoices for whatever user id the caller passes (anon can call it: default EXECUTE)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "security-definer-rls-bypass",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "security-definer-search-path",
+      "present": false
+    },
+    {
+      "rule": "security-definer-exposed",
+      "present": false
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices_for('00000000-0000-0000-0000-00000000000b')",
+        "open": true
+      },
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": false
+      }
+    ]
+  }
+}

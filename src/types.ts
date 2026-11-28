@@ -231,6 +231,7 @@ export type CoverageKind =
   | 'engines'
   | 'supabase-static'
   | 'supabase-live'
+  | 'supabase-drift'
   | 'firebase'
   | 'firebase-emulator'
   | 'dynamic'

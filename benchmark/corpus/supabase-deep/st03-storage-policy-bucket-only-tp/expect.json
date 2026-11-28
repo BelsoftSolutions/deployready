@@ -1,0 +1,34 @@
+{
+  "description": "A private documents bucket whose SELECT/DELETE policies only check bucket_id: any signed-in user reads and deletes everyone's files",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "storage-policy-permissive",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "storage-bucket-public",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into storage.objects (bucket_id, name, owner_id) values ('documents', '00000000-0000-0000-0000-00000000000b/contract.pdf', '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from storage.objects where bucket_id = 'documents'",
+        "open": true
+      },
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "delete from storage.objects where bucket_id = 'documents'",
+        "open": true
+      }
+    ]
+  }
+}

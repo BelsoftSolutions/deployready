@@ -1,0 +1,32 @@
+{
+  "description": "The handle_new_user trigger copies raw_user_meta_data->>'role' (set by the signing-up user) into user_roles: anyone signs up as admin",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "trigger-privilege-escalation",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "security-definer-search-path",
+      "present": false
+    },
+    {
+      "rule": "security-definer-exposed",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into auth.users (id, raw_user_meta_data) values ('00000000-0000-0000-0000-00000000000a', '{\"role\": \"admin\"}');",
+    "probes": [
+      {
+        "as": "postgres",
+        "kind": "read",
+        "sql": "select count(*) from public.user_roles where role = 'admin'",
+        "open": true
+      }
+    ]
+  }
+}

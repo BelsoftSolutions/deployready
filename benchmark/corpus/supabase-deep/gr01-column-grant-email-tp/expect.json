@@ -1,0 +1,28 @@
+{
+  "description": "Column-level grants meant to hide private columns, but email is in the list: anon reads every user's email",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "grant-sensitive-column",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.profiles (id, username, email) values ('00000000-0000-0000-0000-00000000000b', 'bob', 'bob@example.com');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(email) from public.profiles",
+        "open": true
+      }
+    ]
+  }
+}

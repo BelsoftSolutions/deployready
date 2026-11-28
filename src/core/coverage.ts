@@ -24,6 +24,7 @@ const LABEL: Record<CoverageKind, string> = {
   engines: 'engines (SAST)',
   'supabase-static': 'supabase (static)',
   'supabase-live': 'supabase (live)',
+  'supabase-drift': 'supabase (drift)',
   firebase: 'firebase',
   'firebase-emulator': 'firebase (emulator)',
   dynamic: 'live',
@@ -31,7 +32,7 @@ const LABEL: Record<CoverageKind, string> = {
   ai: 'AI analysis',
 };
 
-const LIVE: ReadonlySet<CoverageKind> = new Set(['dynamic', 'active', 'supabase-live']);
+const LIVE: ReadonlySet<CoverageKind> = new Set(['dynamic', 'active', 'supabase-live', 'supabase-drift']);
 
 /** Display order (static areas first). */
 export const COVERAGE_KINDS: CoverageKind[] = [
@@ -43,6 +44,7 @@ export const COVERAGE_KINDS: CoverageKind[] = [
   'active',
   'supabase-static',
   'supabase-live',
+  'supabase-drift',
   'firebase',
   'firebase-emulator',
   'ai',
@@ -56,6 +58,7 @@ const DEFAULTS: Record<Exclude<CoverageKind, 'static' | 'secrets'>, CoverageEntr
   engines: { state: 'untested', reason: 'Opt-in SAST engines (--engines semgrep) not run.' },
   'supabase-static': { state: 'untested', reason: 'Supabase checks did not run.' },
   'supabase-live': { state: 'untested', reason: 'Opt-in (--supabase); not run.' },
+  'supabase-drift': { state: 'untested', reason: 'Opt-in (--supabase-db-url); not run.' },
   firebase: { state: 'untested', reason: 'Firebase checks did not run.' },
   'firebase-emulator': { state: 'untested', reason: 'Opt-in (--firebase-emulator); not run.' },
   dynamic: { state: 'untested', reason: 'Live (dynamic) checks did not run.' },

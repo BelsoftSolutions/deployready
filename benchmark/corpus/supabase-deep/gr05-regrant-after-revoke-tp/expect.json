@@ -1,0 +1,30 @@
+{
+  "description": "A table locked down with REVOKE ALL FROM anon is re-opened by a later GRANT ALL ON ALL TABLES IN SCHEMA public TO anon",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "grant-all-tables-anon",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "warning"
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "write",
+        "sql": "insert into public.audit_log (action) values ('forged')",
+        "open": true
+      }
+    ]
+  }
+}

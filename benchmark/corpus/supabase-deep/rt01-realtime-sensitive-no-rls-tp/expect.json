@@ -1,0 +1,30 @@
+{
+  "description": "A messages table without RLS is added to the supabase_realtime publication: every message is broadcast to anyone",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "realtime-table-exposed",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    },
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.messages (sender_id, recipient_id, body) values ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000b', 'hi');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.messages m join pg_publication_tables p on p.pubname = 'supabase_realtime' and p.tablename = 'messages'",
+        "open": true
+      }
+    ]
+  }
+}

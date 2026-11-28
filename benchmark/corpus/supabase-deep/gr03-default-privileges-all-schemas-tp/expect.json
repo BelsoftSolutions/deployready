@@ -1,0 +1,24 @@
+{
+  "description": "ALTER DEFAULT PRIVILEGES without IN SCHEMA grants anon ALL on every future table, including private schemas",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "grant-default-privileges-anon",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "warning"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "",
+    "probes": [
+      {
+        "as": "postgres",
+        "kind": "read",
+        "sql": "create table private.later (x int); select has_table_privilege('anon', 'private.later', 'insert')::int",
+        "open": true
+      }
+    ]
+  }
+}

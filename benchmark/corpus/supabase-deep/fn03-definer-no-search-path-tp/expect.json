@@ -1,0 +1,32 @@
+{
+  "description": "A SECURITY DEFINER helper in a private schema without SET search_path: a caller's temp table shadows the real one (CWE-426)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "security-definer-search-path",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "warning"
+    },
+    {
+      "rule": "security-definer-rls-bypass",
+      "present": false
+    },
+    {
+      "rule": "security-definer-exposed",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "create temp table invoices (id int); insert into invoices select generate_series(1, 999); select (private.invoice_count() = 999)::int",
+        "open": true
+      }
+    ]
+  }
+}

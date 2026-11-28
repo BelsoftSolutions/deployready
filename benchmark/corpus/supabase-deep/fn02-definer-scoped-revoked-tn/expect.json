@@ -1,0 +1,38 @@
+{
+  "description": "Twin of fn01: the definer function filters by auth.uid(), pins search_path and EXECUTE is revoked from anon",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "security-definer-rls-bypass",
+      "present": false
+    },
+    {
+      "rule": "security-definer-search-path",
+      "present": false
+    },
+    {
+      "rule": "security-definer-exposed",
+      "present": true,
+      "file": "supabase/migrations/20240101000000_init.sql",
+      "severity": "info"
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select public.my_invoice_total()",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select public.my_invoice_total()",
+        "open": false
+      }
+    ]
+  }
+}

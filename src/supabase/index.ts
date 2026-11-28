@@ -11,7 +11,11 @@ import { SupabaseHttp, type Transport } from './http';
 import { checkOwnership } from './guard';
 import { classifyKey, normalizeProjectUrl, projectRefFromUrl } from './keys';
 import { runLiveChecks, type TestUser } from './live';
-import { scanSupabaseStatic, type DetectedSupabase } from './static';
+import { scanSupabaseStatic, type DetectedSupabase, type StaticResult } from './static';
+import { compareDrift, driftFindings, isDbUrl, maskDbUrl, readCatalog, withReadOnlyDb, type LiveCatalog } from './drift';
+import { replayMigrations } from '../analysis/postgres/model';
+import { loadRlsConfig } from '../analysis/postgres/config';
+import { DEFAULT_EXPOSED } from '../analysis/postgres/access';
 import type { CoverageState, Finding } from '../types';
 
 export interface SupabaseOptions {
@@ -25,6 +29,11 @@ export interface SupabaseOptions {
   crossUser?: boolean;
   /** Minimum ms between requests (default 250). */
   delayMs?: number;
+  /**
+   * Drift check: a read-only Postgres connection string you own (`--supabase-db-url <url>`), or
+   * `true` to take it from $SUPABASE_DB_URL (`--supabase-db-url` without a value).
+   */
+  dbUrl?: string | boolean;
 }
 
 export interface Credentials {
@@ -41,6 +50,8 @@ export interface SupabaseRunDeps {
   managementTransport?: Transport;
   /** Asked once ownership is proven, before any data-plane request. */
   confirm?: (target: string, mode: string) => Promise<boolean>;
+  /** Test hook: returns the live catalog instead of connecting with `pg`. */
+  readCatalog?: (dbUrl: string, schemas: string[]) => Promise<LiveCatalog>;
 }
 
 export interface SupabaseRunResult {
@@ -56,6 +67,11 @@ export interface SupabaseRunResult {
   liveRan?: boolean;
   /** Live checks were declined at the prompt. */
   declined?: boolean;
+  /** Edge Function check outcome (static). */
+  edge?: StaticResult['edgeFunctions'];
+  /** Drift check outcome: undefined when not requested. */
+  drift?: { state: 'passed' | 'failed' | 'untested'; reason: string };
+  driftFindings?: Finding[];
 }
 
 export const ENV = {
@@ -63,6 +79,7 @@ export const ENV = {
   anonKey: 'SUPABASE_ANON_KEY',
   serviceKey: 'SUPABASE_SERVICE_ROLE_KEY',
   accessToken: 'SUPABASE_ACCESS_TOKEN',
+  dbUrl: 'SUPABASE_DB_URL',
   userAEmail: 'SUPABASE_TEST_USER_A_EMAIL',
   userAPassword: 'SUPABASE_TEST_USER_A_PASSWORD',
   userBEmail: 'SUPABASE_TEST_USER_B_EMAIL',
@@ -96,13 +113,25 @@ export async function runSupabase(
   deps: SupabaseRunDeps = {},
 ): Promise<SupabaseRunResult> {
   const notes: string[] = [];
-  const { findings: staticFindings, detected } = await scanSupabaseStatic(projectPath);
+  const st = await scanSupabaseStatic(projectPath);
+  const { findings: staticFindings, detected } = st;
   const result: SupabaseRunResult = {
     staticFindings,
     liveFindings: [],
     notes,
-    detected: Boolean(detected.url || detected.migrationTables.length || staticFindings.length),
+    detected: Boolean(detected.url || detected.migrationTables.length || detected.sqlFiles || detected.configFiles || staticFindings.length),
+    edge: st.edgeFunctions,
   };
+  const env = deps.env ?? process.env;
+  if (opts.dbUrl) {
+    const d = await runDriftStep(projectPath, opts, env, st, deps, notes);
+    result.drift = d.coverage;
+    result.driftFindings = d.findings;
+    if (result.drift.state === 'passed') result.detected = true;
+  } else if (env[ENV.dbUrl]) {
+    notes.push(`${ENV.dbUrl} is set: pass --supabase-db-url to compare your migrations with the live database (read-only).`);
+  }
+  result.liveFindings.push(...(result.driftFindings ?? []));
 
   if (!opts.live) {
     if (detected.url) {
@@ -113,7 +142,7 @@ export async function runSupabase(
     return result;
   }
 
-  const creds = resolveCredentials(opts, deps.env ?? process.env, detected);
+  const creds = resolveCredentials(opts, env, detected);
   if (!creds.url) {
     notes.push(`Supabase live checks skipped: no project URL (set ${ENV.url} or --supabase-url).`);
     return result;
@@ -183,13 +212,52 @@ export async function runSupabase(
     fallbackTables: detected.migrationTables,
     crossUser,
   });
-  result.liveFindings = live.findings;
+  result.liveFindings.push(...live.findings);
   result.liveRan = true;
   notes.push(...live.notes);
   notes.push(
     `Supabase live checks done: ${live.tablesChecked} table(s), ${http.sent} request(s), ${live.findings.length} finding(s). Read-only; no writes were made.`,
   );
   return result;
+}
+
+/** Drift: replay the migrations, read the live catalog read-only, compare. Never throws. */
+async function runDriftStep(
+  projectPath: string,
+  opts: SupabaseOptions,
+  env: NodeJS.ProcessEnv,
+  st: StaticResult,
+  deps: SupabaseRunDeps,
+  notes: string[],
+): Promise<{ coverage: NonNullable<SupabaseRunResult['drift']>; findings: Finding[] }> {
+  const url = typeof opts.dbUrl === 'string' ? opts.dbUrl.trim() : (env[ENV.dbUrl] ?? '').trim();
+  const skip = (reason: string): { coverage: NonNullable<SupabaseRunResult['drift']>; findings: Finding[] } => {
+    notes.push(`Supabase drift check skipped: ${reason}`);
+    return { coverage: { state: 'untested', reason }, findings: [] };
+  };
+  if (!url) return skip(`no connection string (pass --supabase-db-url <url> or set ${ENV.dbUrl}).`);
+  if (!isDbUrl(url)) return skip('the connection string is not a postgres:// URL.');
+  const sql = (st.sql ?? []).map((f) => ({ relPath: f.relPath, source: f.source }));
+  if (!sql.length) return skip('no SQL migrations in the project to compare with.');
+  const where = maskDbUrl(url);
+  if (deps.confirm && !(await deps.confirm(where, 'read-only database connection'))) {
+    return { coverage: { state: 'untested', reason: 'Declined at the prompt.' }, findings: [] };
+  }
+  try {
+    const cfg = await loadRlsConfig(projectPath);
+    const schemas = cfg.exposedSchemas ?? DEFAULT_EXPOSED;
+    const catalog = deps.readCatalog ? await deps.readCatalog(url, schemas) : await withReadOnlyDb(url, (q) => readCatalog(q, schemas));
+    const issues = compareDrift(replayMigrations(sql), catalog, cfg);
+    notes.push(`Supabase drift check done against ${where}: ${catalog.tables.length} table(s), ${catalog.policies.length} policy(ies), ${issues.length} difference(s). Read-only; nothing was written.`);
+    return {
+      coverage: { state: 'passed', reason: `Migrations (${sql.length} SQL file(s)) compared with the live catalog of ${where}, read-only.` },
+      findings: driftFindings(issues, url),
+    };
+  } catch (err) {
+    const msg = redact(((err as Error).message || 'connection failed').replace(url, where));
+    notes.push(`Supabase drift check failed: ${msg}`);
+    return { coverage: { state: 'failed', reason: `Drift check errored: ${msg}` }, findings: [] };
+  }
 }
 
 /** Orchestrator hook: runs the module with terminal prompts and logging. Never throws. */
@@ -215,7 +283,7 @@ export async function supabaseStep(
           },
     });
     for (const n of res.notes) (res.refused ? logger.warn : say)(redact(n));
-    return { staticFindings: res.staticFindings, liveFindings: res.liveFindings, coverage: supabaseCoverage(res, Boolean(opts.supabase?.live)) };
+    return { staticFindings: res.staticFindings, liveFindings: res.liveFindings, coverage: supabaseCoverage(res, Boolean(opts.supabase?.live), Boolean(opts.supabase?.dbUrl)) };
   } catch (err) {
     const msg = redact((err as Error).message);
     logger.warn(`Supabase checks failed: ${msg}`);
@@ -228,6 +296,9 @@ export async function supabaseStep(
         live: opts.supabase?.live
           ? { state: 'failed', reason: `Supabase checks errored: ${msg}`, requested: true }
           : { state: 'untested', reason: 'Opt-in (--supabase); not run.' },
+        drift: opts.supabase?.dbUrl
+          ? { state: 'failed', reason: `Supabase checks errored: ${msg}`, requested: true }
+          : { state: 'untested', reason: 'Opt-in (--supabase-db-url); not run.' },
       },
     };
   }
@@ -236,13 +307,25 @@ export async function supabaseStep(
 export interface SupabaseCoverage {
   static: { state: CoverageState; reason: string };
   live: { state: CoverageState; reason: string; requested?: boolean };
+  drift: { state: CoverageState; reason: string; requested?: boolean };
 }
 
 /** Coverage of the Supabase areas from one run's result. */
-export function supabaseCoverage(res: SupabaseRunResult, liveRequested: boolean): SupabaseCoverage {
-  const stat: SupabaseCoverage['static'] = res.detected
-    ? { state: 'passed', reason: 'Supabase migrations and client usage checked statically.' }
+export function supabaseCoverage(res: SupabaseRunResult, liveRequested: boolean, driftRequested = false): SupabaseCoverage {
+  const edge = res.edge;
+  const edgeText = edge?.checked
+    ? ` Edge Functions: ${edge.checked} with verify_jwt = false checked for auth.`
+    : '';
+  const missing = edge?.missing.length ? ` Not checked (code not found): ${edge.missing.join(', ')}.` : '';
+  let stat: SupabaseCoverage['static'] = res.detected
+    ? { state: 'passed', reason: `Supabase migrations and client usage checked statically.${edgeText}${missing}` }
     : { state: 'not-applicable', reason: 'No Supabase project detected.' };
+  if (edge?.error) stat = { state: 'failed', reason: `Edge Function check errored: ${redact(edge.error)}` };
+  const drift: SupabaseCoverage['drift'] = !driftRequested
+    ? res.detected
+      ? { state: 'untested', reason: 'Opt-in (--supabase-db-url); not run.' }
+      : { state: 'not-applicable', reason: 'No Supabase project detected.' }
+    : { ...(res.drift ?? { state: 'untested', reason: 'Drift check did not run.' }), requested: true };
   let live: SupabaseCoverage['live'];
   if (!liveRequested) {
     live = res.detected
@@ -256,5 +339,5 @@ export function supabaseCoverage(res: SupabaseRunResult, liveRequested: boolean)
     const why = res.notes.find((n) => /skipped|refused/i.test(n)) ?? 'Live checks did not run.';
     live = { state: 'untested', reason: why, requested: true };
   }
-  return { static: stat, live };
+  return { static: stat, live, drift };
 }
