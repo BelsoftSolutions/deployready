@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.5.0
+
+This release fixes the problems found by an independent security audit of 0.4.0. Every audit finding was reproduced against the 0.4.0 code first and is now a regression test. Two of them affected DeployReady's own privacy and CI guarantees, so please upgrade.
+
+### Security fixes in DeployReady itself
+- **Secret redaction (privacy).** In 0.4.0 some credential formats could reach reports, AI prompts or MCP output unredacted: passwords inside raw JSON text, Supabase `sb_secret_` keys, GitHub fine-grained tokens (`github_pat_`), multi-line private keys, and passwords that merely start with words like "test" or "demo". Detection and redaction are now separate, many more formats are covered, and canary tests push a fake key of every type through every output channel (terminal, JSON, markdown, HTML, SARIF, fix prompts, MCP, AI prompts, logs, proof) and fail if any leaks.
+- **CI baseline could let a new issue through.** A second secret in a file that already had an accepted one, or a warning escalating to critical, passed the baseline gate. Baselines (v2) now use move-stable, collision-resistant fingerprints that never contain secret values, track severity separately, and report new, escalated, reopened, expired and stale entries. v1 baselines still load with a migration warning.
+- **MCP paths were not confined.** A tool call could scan or modify any directory, e.g. `apply_safe_fixes` with a path outside the project. Every path is now resolved (symlinks included) and must stay inside the server root.
+- **`--yes` / `--json` sent data to external AI without consent.** External AI now needs an interactive yes, `--allow-external-ai`, or `"allowExternalAi": true`.
+- **Opening the HTML report went through a shell**, so a project path containing `$(...)` could run commands. Reports now open without a shell.
+- An AI-proposed fix can no longer write the `«REDACTED»` placeholder into your file in place of the real value.
+
+### Accuracy fixes
+- **Supabase RLS** is now migration-aware: migrations are replayed in order and only the final database state is judged (schemas, quoted names, renames, unlogged tables, ENABLE/DISABLE/FORCE, CREATE/ALTER/DROP POLICY, grants, always-true conditions such as `1=1`). On a reconstruction of the audit's 16 cases, 0.4.0 caught 1 of 10 insecure setups; 0.5.0 handles all 16, plus 22 more variations, with labels confirmed on a real PostgreSQL 16. Data sensitivity and `.deployready.json` settings (`publicTables`, `sensitiveTables`, `tenantColumns`, `exposedSchemas`) decide whether open reads are critical, need review, or are intended.
+- **Authorization (IDOR) verdicts** compare responses field by field instead of whole bodies: changing timestamps or request ids no longer hide a leak, partial leaks are caught, a 404 that still contains another user's data is a finding, and an endpoint that merely echoes the requested id is no longer a false alarm. Verdicts: confirmed, suspected, verified-denied, inconclusive.
+
+### Release state and coverage
+- Every report now has a **release state** (ready, ready with accepted risks, review required, not ready, insufficient evidence) and **coverage per area** (passed, failed, untested, inconclusive, not applicable, each with a reason), separate from the score. A scanner step that errors can no longer look like a pass, an unverified AI critical can no longer hide behind 100/100, and an empty or unsupported project is "insufficient evidence", not "passed".
+- `--fail-on-release-state <state>` gates on it (exit code 3 for insufficient evidence). Existing `--fail-on` behaviour and exit codes are unchanged.
+
+### Safer active testing
+- Safety levels: passive, read-only (default), controlled-active and stateful (only for environments you declare disposable). The DELETE/PATCH probe is now **off by default** (controlled-active).
+- Request budget (200 by default), no cross-host redirects, side-effect-looking GET routes skipped, and `--dry-run` to preview planned requests.
+
+### New: dependency vulnerabilities and engine adapters
+- Dependency CVEs via npm/pnpm audit, plus OSV-Scanner and pip-audit when installed. Optional Gitleaks and Semgrep (opt-in, metrics off). Engines that fail show as coverage errors, never as clean results.
+- Dependency checks contact the package registry with dependency names and versions (never source code) and say so every time; `--offline` skips them.
+
+### Breaking: MCP server is least-privilege by default
+- `deployready mcp` now registers only read-only, static tools: `scan`, `get_finding`, `verify` (static re-check), `score`, `supabase_check` (static).
+- `apply_safe_fixes` needs `deployready mcp --allow-fixes` (e.g. `claude mcp add deployready -- npx -y deployready@latest mcp --allow-fixes`). Calling it without the flag returns an error naming the flag.
+- Live checks need `--allow-live`: new `scan_live` and `supabase_check_live` tools; `scan(dynamic: true)` and `supabase_check(live: true)` are refused without the flag; `verify` only re-checks live findings with it.
+- Every `path` argument is confined to the server root (realpath; `..`, other absolute paths and symlink escapes are refused). Previously a tool call could scan or modify any directory.
+- Tool results carry `schemaVersion: 1` and a `dataNotice`; `get_finding` moved the file text from `file_content` to `untrusted_repository_content.file_content`, fenced by BEGIN/END markers. Tools carry `readOnlyHint` / `destructiveHint` annotations.
+
+### Breaking: external AI consent
+- `--yes` / `--json` no longer approve sending the redacted report to an external AI provider (API or claude/codex CLI). Use `--allow-external-ai` or `"allowExternalAi": true`; otherwise non-interactive runs skip AI and record it as untested coverage. `warnBeforeExternalSend: false` no longer skips the interactive prompt. Ollama needs no consent.
+
 ## 0.4.0
 
 ### Agent loop (MCP)

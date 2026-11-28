@@ -5,7 +5,7 @@
 import { logger } from '../utils/logger';
 import { redact } from '../utils/redact';
 import { scanFirebaseStatic } from './static';
-import type { Finding } from '../types';
+import type { CoverageState, Finding } from '../types';
 
 export { scanFirebaseStatic, scanFirebaseFiles } from './static';
 export { scanFirebaseRules, scanRtdbRules } from './rules';
@@ -14,13 +14,18 @@ export { scanFirebaseRules, scanRtdbRules } from './rules';
 export async function firebaseStep(
   projectPath: string,
   opts: { json?: boolean },
-): Promise<{ staticFindings: Finding[] }> {
+): Promise<{ staticFindings: Finding[]; coverage?: { state: CoverageState; reason: string } }> {
   try {
     const res = await scanFirebaseStatic(projectPath);
     for (const n of res.notes) (opts.json ? logger.stderr : logger.info.bind(logger))(redact(n));
-    return { staticFindings: res.findings };
+    const coverage = res.detected
+      ? { state: 'passed' as const, reason: 'Firebase rules and config checked statically.' }
+      : { state: 'not-applicable' as const, reason: 'No Firebase project detected.' };
+    return { staticFindings: res.findings, coverage };
   } catch (err) {
-    logger.warn(`Firebase checks failed: ${redact((err as Error).message)}`);
-    return { staticFindings: [] };
+    const msg = redact((err as Error).message);
+    logger.warn(`Firebase checks failed: ${msg}`);
+    // A crashed step is never a pass.
+    return { staticFindings: [], coverage: { state: 'failed', reason: `Firebase checks errored: ${msg}` } };
   }
 }

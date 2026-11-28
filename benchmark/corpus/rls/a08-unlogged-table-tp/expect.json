@@ -1,0 +1,23 @@
+{
+  "description": "Audit (6): create unlogged table without RLS — unlogged tables are still exposed through the API",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.payments (user_id, card_last4) values ('00000000-0000-0000-0000-00000000000b', '4242');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.payments",
+        "open": true
+      }
+    ]
+  }
+}

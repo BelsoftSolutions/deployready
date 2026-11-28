@@ -220,3 +220,16 @@ describe('FixManager.autoFixAll', () => {
     expect(await FixManager.autoFixAll([lineFinding('sql-injection', 'a.js', 1)], new FileEditor(root))).toEqual([]);
   });
 });
+
+describe('FixManager.applySuggestion redaction marker', () => {
+  it('refuses a fix that would write the redaction placeholder into the file', async () => {
+    const src = "const key = 'real-secret-value-123';\nmodule.exports = key;\n";
+    const root = project({ 'a.js': src });
+    const res = await FixManager.applySuggestion(
+      finding('a.js', 1), snip(1, 1), "const key = '«REDACTED»';", new FileEditor(root),
+    );
+    expect(res.applied).toBe(false);
+    expect(res.message).toMatch(/redaction marker/);
+    expect(read(root, 'a.js')).toBe(src);
+  });
+});

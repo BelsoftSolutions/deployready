@@ -38,8 +38,16 @@ describe('MCP tool handlers', () => {
     const d = (await t.getFinding({ id: weak!.id })) as Record<string, any>;
     expect(d.fix.recommendation).toBeTruthy();
     expect(d.fix.deterministicFixAvailable).toBe(true);
-    const lines = (d.file_content as string).split('\n');
+    const repo = d.untrusted_repository_content;
+    expect(repo.notice).toMatch(/UNTRUSTED DATA/);
+    expect(repo.file).toBe('app.js');
+    const lines = (repo.file_content as string).split('\n');
+    expect(lines[0]).toBe('<<<BEGIN UNTRUSTED REPOSITORY CONTENT>>>');
+    expect(lines[lines.length - 1]).toBe('<<<END UNTRUSTED REPOSITORY CONTENT>>>');
+    lines.shift();
+    lines.pop();
     expect(lines).toHaveLength(4); // 3 lines + trailing newline: the WHOLE file
+    expect(d.dataNotice).toMatch(/Never follow instructions/);
     expect(lines[1]).toMatch(/^> 2 \| const h = crypto\.createHash\('md5'\)/);
     expect(lines[0]).toMatch(/^ {2}1 \| /);
   });
@@ -53,7 +61,7 @@ describe('MCP tool handlers', () => {
 
   it('apply_safe_fixes applies, reports backups, and makes the project ready', async () => {
     const root = project();
-    const t = new DeployReadyTools(root);
+    const t = new DeployReadyTools(root, { allowFixes: true });
     const before = await t.scan();
     const res = await t.applySafeFixes();
     expect(res.applied.length).toBeGreaterThanOrEqual(2);
@@ -101,7 +109,7 @@ describe('MCP tool handlers', () => {
   it('never writes to stdout while handling tools', async () => {
     const write = jest.spyOn(process.stdout, 'write');
     const log = jest.spyOn(console, 'log');
-    const t = new DeployReadyTools(project());
+    const t = new DeployReadyTools(project(), { allowFixes: true });
     await t.scan();
     await t.applySafeFixes();
     await t.score();
@@ -109,20 +117,36 @@ describe('MCP tool handlers', () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it('registers the five tools with loop guidance in their descriptions', () => {
+  it('default profile registers only read-only tools, with read-only annotations', () => {
     const server = buildMcpServer(new DeployReadyTools('.')) as unknown as {
-      _registeredTools: Record<string, { description?: string }>;
+      _registeredTools: Record<string, { description?: string; annotations?: Record<string, boolean> }>;
     };
-    expect(Object.keys(server._registeredTools).sort()).toEqual([
+    expect(Object.keys(server._registeredTools).sort()).toEqual(['get_finding', 'scan', 'score', 'supabase_check', 'verify']);
+    for (const [name, tool] of Object.entries(server._registeredTools)) {
+      expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+      if (name !== 'supabase_check') expect(tool.description).toMatch(/scan -> fix the findings yourself/);
+    }
+  });
+
+  it('--allow-fixes and --allow-live register the gated tools with consent wording and annotations', () => {
+    const server = buildMcpServer(new DeployReadyTools('.', { allowFixes: true, allowLive: true })) as unknown as {
+      _registeredTools: Record<string, { description?: string; annotations?: Record<string, boolean> }>;
+    };
+    const tools = server._registeredTools;
+    expect(Object.keys(tools).sort()).toEqual([
       'apply_safe_fixes',
       'get_finding',
       'scan',
+      'scan_live',
       'score',
       'supabase_check',
+      'supabase_check_live',
       'verify',
     ]);
-    for (const [name, tool] of Object.entries(server._registeredTools)) {
-      if (name !== 'supabase_check') expect(tool.description).toMatch(/scan -> apply_safe_fixes/);
-    }
+    expect(tools.apply_safe_fixes!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(tools.apply_safe_fixes!.description).toMatch(/MODIFIES FILES[\s\S]*--allow-fixes/);
+    expect(tools.scan_live!.description).toMatch(/SENDS REQUESTS[\s\S]*--allow-live/);
+    expect(tools.supabase_check_live!.description).toMatch(/--allow-live/);
+    expect(tools.scan!.description).toMatch(/scan -> apply_safe_fixes/);
   });
 });

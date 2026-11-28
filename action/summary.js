@@ -11,6 +11,7 @@ const fs = require('fs');
 const MARKER = '<!-- deployready -->';
 const RANK = { critical: 0, warning: 1, info: 2 };
 const TOP_N = 10;
+const SCORE_NOTE = 'A score of 100 means no confirmed findings in the areas tested, not that the app is secure.';
 
 /** Escape text for use inside a markdown table cell / inline code-free line. */
 function esc(s) {
@@ -35,21 +36,40 @@ function buildSummary(report, opts) {
     return lines.join('\n') + '\n';
   }
   const s = report.summary;
-  const failed = o.exitCode != null && Number(o.exitCode) !== 0;
+  const code = o.exitCode == null ? null : Number(o.exitCode);
+  const failed = code != null && code !== 0;
+  const gate = !failed
+    ? 'gate passed'
+    : code === 3
+      ? 'gate failed: insufficient evidence (a required check errored or did not run)'
+      : `gate failed (fail-on: ${o.failOn || report.failOn || 'critical'}${report.failOnReleaseState ? `, fail-on-release-state: ${report.failOnReleaseState}` : ''})`;
+  lines.push(`**Score: ${report.score}/100** - ${gate}`, '');
+  const rel = report.release;
+  if (rel && typeof rel === 'object' && rel.line) lines.push(`**${esc(rel.line)}**`, '');
   lines.push(
-    `**Score: ${report.score}/100** - ${failed ? `gate failed (fail-on: ${o.failOn || report.failOn || 'critical'})` : 'gate passed'}`,
+    `_${SCORE_NOTE}_`,
     '',
     '| Critical | Warning | Info |',
     '| ---: | ---: | ---: |',
     `| ${s.critical} | ${s.warning} | ${s.info} |`,
     '',
   );
+  const b = report.baseline;
+  if (b && typeof b === 'object') {
+    const n = (x) => (Array.isArray(x) ? x.length : 0);
+    lines.push(
+      `Baseline: ${n(b.new)} new, ${n(b.escalated)} escalated, ${n(b.reopened)} reopened, ${n(b.expired)} expired, ${n(b.stale)} stale (${Number(b.known) || 0} known, suppressed).`,
+      '',
+    );
+  }
   const findings = (Array.isArray(report.findings) ? report.findings : [])
     .filter((f) => !f.unverified && !f.note)
     .slice()
     .sort((a, b) => (RANK[a.severity] ?? 3) - (RANK[b.severity] ?? 3));
+  const unverified = (Array.isArray(report.findings) ? report.findings : []).filter((f) => f.unverified).length;
+  if (unverified) lines.push(`${unverified} unverified AI suggestion(s) not counted above: review them in the full report.`, '');
   if (findings.length === 0) {
-    lines.push('No findings. Nice work.');
+    lines.push('No confirmed findings in the areas tested.');
   } else {
     lines.push(`### Top ${Math.min(TOP_N, findings.length)} of ${findings.length} findings`, '', '| Severity | Finding | Location |', '| --- | --- | --- |');
     for (const f of findings.slice(0, TOP_N)) {

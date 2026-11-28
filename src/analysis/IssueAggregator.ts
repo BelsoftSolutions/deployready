@@ -35,13 +35,14 @@ export class IssueAggregator {
    * richer source: dynamic (confirmed live) > static > ai (inferred).
    */
   private static dedupe(findings: Finding[]): Finding[] {
-    const rank = { dynamic: 0, static: 1, ai: 2 } as const;
+    const rank = { dynamic: 0, static: 1, engine: 1.5, ai: 2 } as const;
+    const rankOf = (f: Finding): number => rank[f.source.startsWith('engine:') ? 'engine' : (f.source as 'dynamic' | 'static' | 'ai')];
     const best = new Map<string, Finding>();
 
     for (const f of findings) {
       const key = `${f.rule}|${f.file ?? ''}|${f.line ?? ''}|${f.endpoint ?? ''}`;
       const existing = best.get(key);
-      if (!existing || rank[f.source] < rank[existing.source]) {
+      if (!existing || rankOf(f) < rankOf(existing)) {
         best.set(key, f);
       }
     }

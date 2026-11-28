@@ -1,0 +1,28 @@
+{
+  "description": "Seven migrations: a secure messages table regresses in the last one (policy dropped, using (true) added)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240701000000_feed.sql"
+    },
+    {
+      "rule": "rls-no-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.messages values (1, '00000000-0000-0000-0000-00000000000b', 'x');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.messages",
+        "open": true
+      }
+    ]
+  }
+}

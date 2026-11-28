@@ -1,0 +1,23 @@
+{
+  "description": "using (true) SELECT on a table whose sensitivity is unknown: warning, review required",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "warning"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.widgets values (1, 'x');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.widgets",
+        "open": true
+      }
+    ]
+  }
+}

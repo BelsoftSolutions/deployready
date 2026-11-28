@@ -5,6 +5,7 @@
  */
 import { makeFinding } from '../utils/finding';
 import { sanitizeLine, sanitizeText } from '../utils/sanitize';
+import { redact } from '../utils/redact';
 import type { AiAnalysis, Category, Finding, Severity } from '../types';
 
 const SEVERITIES: Severity[] = ['critical', 'warning', 'info'];
@@ -19,10 +20,10 @@ const MAX_LONG_FIELD = 2000;
 export function parseAiResponse(text: string): AiAnalysis {
   const json = extractJson(text);
   if (!json) {
-    return { summary: sanitizeText(text).trim().slice(0, 2000), findings: [] };
+    return { summary: redact(sanitizeText(text).trim().slice(0, 2000)), findings: [] };
   }
 
-  const summary = typeof json.summary === 'string' ? sanitizeText(json.summary).slice(0, MAX_SUMMARY) : '';
+  const summary = typeof json.summary === 'string' ? redact(sanitizeText(json.summary).slice(0, MAX_SUMMARY)) : '';
   const rawFindings = Array.isArray(json.findings) ? json.findings : [];
   const findings: Finding[] = [];
 
@@ -57,11 +58,11 @@ function str(v: unknown): string {
 }
 
 function line(v: unknown, max: number): string {
-  return sanitizeLine(str(v)).trim().slice(0, max);
+  return redact(sanitizeLine(str(v)).trim().slice(0, max));
 }
 
 function longText(v: unknown, max: number): string {
-  return sanitizeText(str(v)).slice(0, max);
+  return redact(sanitizeText(str(v)).slice(0, max));
 }
 
 /** Extract the first balanced {...} block and JSON.parse it. */

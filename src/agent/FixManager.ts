@@ -14,6 +14,7 @@ import type { Snippet } from './FileEditor';
 import { LINE_FIXERS, fixLine } from './lineFixers';
 import type { ModelRouter, FixSuggestion } from '../ai/ModelRouter';
 import { hasDangerousControl } from '../utils/sanitize';
+import { PLACEHOLDER } from '../utils/redact';
 import type { Finding } from '../types';
 
 export interface AutoFixResult {
@@ -133,6 +134,12 @@ export class FixManager {
 
     if (hasDangerousControl(newCode)) {
       return reject('the proposed code contains control or terminal escape characters.');
+    }
+
+    // The model only ever saw a redacted snippet. If it copied a redaction marker back,
+    // applying it would overwrite the user's real value with the placeholder text.
+    if (newCode.includes(PLACEHOLDER)) {
+      return reject(`the proposed code contains the redaction marker ${PLACEHOLDER} (the model saw a redacted value). Apply this part by hand.`);
     }
 
     let preview;

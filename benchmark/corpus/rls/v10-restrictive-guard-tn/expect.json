@@ -1,0 +1,22 @@
+{
+  "description": "A broad permissive policy narrowed by a restrictive owner guard",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.documents values (1, '00000000-0000-0000-0000-00000000000b', 'x');",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.documents",
+        "open": false
+      }
+    ]
+  }
+}

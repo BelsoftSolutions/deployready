@@ -40,6 +40,7 @@ export async function verifyAiFindings(findings: Finding[], projectRoot: string)
       file,
       source: 'ai',
       severity: 'info',
+      suggestedSeverity: f.suggestedSeverity ?? f.severity,
       unverified: true,
       description: `AI-suggested severity: ${f.severity}. ${f.description}`.trim(),
     });

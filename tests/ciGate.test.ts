@@ -6,6 +6,7 @@ import {
   fingerprint,
   serializeBaseline,
   readBaseline,
+  parseBaseline,
   newFindings,
   summarize,
 } from '../src/core/CiGate';
@@ -64,8 +65,8 @@ describe('toCiJson', () => {
 });
 
 describe('EXIT codes', () => {
-  it('uses 0/1/2', () => {
-    expect(EXIT).toEqual({ OK: 0, ERROR: 1, GATE: 2 });
+  it('uses 0/1/2, plus 3 for insufficient evidence (only with --fail-on-release-state)', () => {
+    expect(EXIT).toEqual({ OK: 0, ERROR: 1, GATE: 2, INSUFFICIENT_EVIDENCE: 3 });
   });
 });
 
@@ -81,26 +82,20 @@ describe('baseline', () => {
     expect(fingerprint(f({ file: 'a.js' }))).not.toBe(fingerprint(f({ file: 'b.js' })));
   });
 
-  it('serialize -> read round-trips the fingerprint set', () => {
+  it('serialize -> parse round-trips v2 entries', () => {
     const findings = [f({ file: 'a.js' }), f({ file: 'b.js', rule: 'eval-usage' })];
-    const set = readBaseline(serializeBaseline(findings));
-    expect(set.has(fingerprint(findings[0]))).toBe(true);
-    expect(set.has(fingerprint(findings[1]))).toBe(true);
-    expect(set.size).toBe(2);
+    const b = parseBaseline(serializeBaseline(findings));
+    expect(b.version).toBe(2);
+    expect(b.entries).toHaveLength(2);
+    expect(readBaseline(serializeBaseline(findings)).size).toBe(2);
   });
 
-  it('newFindings returns only findings absent from the baseline', () => {
+  it('legacy newFindings (v1 key set) returns only findings absent from the set', () => {
     const known = f({ file: 'a.js' });
     const fresh = f({ file: 'c.js', rule: 'cors-wildcard', severity: 'warning' });
-    const baseline = readBaseline(serializeBaseline([known]));
-    const result = newFindings([known, fresh], baseline);
+    const result = newFindings([known, fresh], new Set([fingerprint(known)]));
     expect(result).toHaveLength(1);
     expect(result[0].file).toBe('c.js');
-  });
-
-  it('a known finding that moved lines still counts as known', () => {
-    const baseline = readBaseline(serializeBaseline([f({ line: 10 })]));
-    expect(newFindings([f({ line: 99 })], baseline)).toHaveLength(0);
   });
 
   it('summarize recomputes a severity breakdown for a finding subset', () => {

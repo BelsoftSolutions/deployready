@@ -9,6 +9,9 @@
  *   report itself must not become an XSS vector when opened in a browser.
  */
 import type { Finding, Proof, ScanReport, Severity } from '../types';
+import { SCORE_DISCLAIMER } from '../core/releaseState';
+import { coverageSymbol } from '../core/coverage';
+import { sanitizeReport } from './sanitize';
 import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { isNote, isUnverified } from '../analysis/ScoreCalculator';
 import { buildFixPrompt } from '../agent/fixPrompt';
@@ -26,7 +29,8 @@ const UNVERIFIED_COLOR = '#a78bfa';
 const NOTE_COLOR = '#9ca3af';
 
 export class HtmlReporter {
-  static render(report: ScanReport): string {
+  static render(raw: ScanReport): string {
+    const report = sanitizeReport(raw);
     const scoreColor = report.score >= 80 ? ACCENT : report.score >= 50 ? '#f59e0b' : '#ef4444';
     const { critical, warning, info } = report.summary;
     const unverified = report.findings.filter(isUnverified).length;
@@ -57,6 +61,8 @@ export class HtmlReporter {
       <h1>Production Readiness</h1>
       <p class="target">${esc(report.target)}</p>
       <p class="when">Scanned ${esc(report.startedAt)} · v${esc(report.version)}</p>
+      ${report.release ? `<p class="release release-${esc(report.release.state)}">${esc(report.release.line)}</p>` : ''}
+      <p class="disclaimer">${esc(SCORE_DISCLAIMER)}</p>
       <div class="cards">
         ${card('Critical', critical, COLORS.critical)}
         ${card('Warning', warning, COLORS.warning)}
@@ -66,6 +72,8 @@ export class HtmlReporter {
       </div>
     </div>
   </section>
+
+  ${renderCoverage(report)}
 
   ${report.aiSummary ? `<section class="ai"><h2>🤖 AI Summary (unverified)</h2><p>${esc(report.aiSummary)}</p></section>` : ''}
 
@@ -167,6 +175,19 @@ ${rows}
 </section>`;
 }
 
+/** Per-area coverage table: what ran, what did not, and why. */
+function renderCoverage(report: ScanReport): string {
+  const areas = report.coverage ?? [];
+  if (!areas.length) return '';
+  const rows = areas
+    .map(
+      (a) =>
+        `<tr class="cov-${esc(a.state)}"><td>${esc(a.label)}${a.mandatory ? ' <span class="req">required</span>' : ''}</td><td>${esc(coverageSymbol(a.state))}${a.state === 'passed' ? ' passed' : ''}</td><td>${esc(a.reason)}</td></tr>`,
+    )
+    .join('');
+  return `<section class="coverage"><h2>Coverage</h2><table><thead><tr><th>Area</th><th>State</th><th>Why</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+}
+
 function card(label: string, n: number, color: string): string {
   return `<div class="stat"><div class="stat-n" style="color:${color}">${n}</div><div class="stat-l">${label}</div></div>`;
 }
@@ -228,6 +249,9 @@ main{max-width:980px;margin:0 auto;padding:28px}
 .gauge-inner{width:124px;height:124px;border-radius:50%;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .score{font-size:44px;font-weight:800;line-height:1;font-family:ui-monospace,monospace}.score-label{color:#888;font-size:13px}
 .hero-side h1{margin:0 0 4px;font-size:24px;font-family:ui-monospace,"JetBrains Mono",monospace}
+.release{margin:8px 0 0;font-weight:700;font-family:ui-monospace,monospace;font-size:13px}.release-ready,.release-ready-with-accepted-risks{color:#00ff88}.release-review-required{color:#f59e0b}.release-not-ready,.release-insufficient-evidence{color:#ef4444}
+.disclaimer{margin:4px 0 0;color:#888;font-size:12px}
+.coverage table{width:100%;border-collapse:collapse;font-size:13px}.coverage td,.coverage th{text-align:left;padding:4px 8px;border-bottom:1px solid #222}.cov-failed td{color:#ef4444}.cov-untested td,.cov-inconclusive td{color:#f59e0b}.cov-not-applicable td{color:#666}.req{font-size:11px;color:#888}
 .target{margin:0;color:#cbd5e1;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all}
 .when{margin:2px 0 14px;color:#666;font-size:12px}
 .cards{display:flex;gap:12px}

@@ -15,10 +15,15 @@ import {
   toCiJson,
   EXIT,
   serializeBaseline,
-  readBaseline,
-  newFindings,
+  parseBaseline,
+  compareToBaseline,
+  gatedFindings,
+  describeComparison,
   summarize,
+  releaseExitCode,
+  type BaselineComparison,
 } from '../core/CiGate';
+import { parseReleasePolicy, parseReleaseStateThreshold, withRelease } from '../core/releaseState';
 import { logger, setVerbose, setQuiet } from '../utils/logger';
 import { getVersion } from '../utils/version';
 import { renderTokenHelp } from '../active/tokenHelp';
@@ -26,6 +31,7 @@ import { runAnalyzeFix } from '../mcp/analyzeFix';
 import { startMcpServer } from '../mcp/server';
 import { badgeMarkdown, badgeSvg } from '../ui/badge';
 import { toSarif } from '../ui/Sarif';
+import { renderJson } from '../ui/sanitize';
 
 const VERSION = getVersion();
 
@@ -58,10 +64,11 @@ export function buildProgram(): Command {
     .command('analyze')
     .description('Run a single non-interactive scan and print results')
     .argument('[path]', 'path to the project', '.')
-    .option('-y, --yes', 'auto-approve all prompts (non-interactive)', false)
+    .option('-y, --yes', 'auto-approve prompts (non-interactive); never approves sending data to an external AI provider, see --allow-external-ai', false)
     .option('--fix', 'apply safe deterministic fixes (with backups), then re-scan and report the new score', false)
     .option('--no-dynamic', 'skip live localhost testing')
     .option('--no-ai', 'skip AI analysis (local results only)')
+    .option('--allow-external-ai', 'allow sending the redacted report to an external AI provider (API or claude/codex CLI) without a prompt; needed for AI in --yes/--json/CI runs', false)
     .option('--aggressive', 'enable aggressive tests (rate-limit burst)', false)
     .option('--export', 'write deployready-report.md to the project root', false)
     .option('--html', 'write an HTML dashboard (deployready-report.html)', false)
@@ -74,6 +81,10 @@ export function buildProgram(): Command {
       'none',
     )
     .option(
+      '--fail-on-release-state <state>',
+      'exit 2 if the release state is at/worse than this (ready-with-accepted-risks | review-required | not-ready | insufficient-evidence); exit 3 when it is insufficient-evidence',
+    )
+    .option(
       '--baseline <file>',
       'gate only on findings NOT in this baseline file (existing issues are grandfathered)',
     )
@@ -81,6 +92,7 @@ export function buildProgram(): Command {
       '--write-baseline <file>',
       'write the current findings to a baseline file and exit 0 (accept current state)',
     )
+    .option('--strict-baseline', 'also fail (exit 2) when the baseline has stale suppressions (entries with no matching finding)', false)
     .option(
       '--probe-common-paths',
       'opt in to the common-path probe: also request a fixed, printed list of well-known paths (/.env, /.git/config, ...) on your local app; see docs/COMMON-PATH-PROBE.md',
@@ -95,7 +107,13 @@ export function buildProgram(): Command {
     .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--safety-level <level>', 'active-scan safety level: passive | read-only (default) | controlled-active | stateful')
+    .option('--dry-run', 'list the active requests that would be sent, without sending any', false)
     .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
+    .option('--no-deps', 'skip dependency-vulnerability engines (npm/pnpm audit, OSV-Scanner, pip-audit)')
+    .option('--engines <list>', 'comma-separated engines to run (npm-audit, osv-scanner, pip-audit, semgrep, all); semgrep runs only when named; see docs/ENGINES.md')
+    .option('--offline', 'skip engines that contact a network service (they send package names/versions, never source code)', false)
+    .option('--semgrep-config <path-or-registry>', 'rules for the opt-in semgrep engine (never defaulted; metrics are off)')
     .option(
       '--i-own-this-target <host>',
       'confirm you own this non-loopback host so active probes may target it (repeatable; exact host only)',
@@ -105,6 +123,7 @@ export function buildProgram(): Command {
     .action(async (path: string, opts) => {
       await guard(async () => {
         const failOn = parseFailOn(opts.failOn);
+        const releaseThreshold = opts.failOnReleaseState ? parseReleaseStateThreshold(opts.failOnReleaseState) : undefined;
         if (opts.json) setQuiet(true); // keep stdout clean for JSON consumers
 
         // Active scan needs a token; if asked for without one, show how to get it.
@@ -122,6 +141,7 @@ export function buildProgram(): Command {
           yes: opts.yes || opts.json, // JSON mode is non-interactive
           noDynamic: !opts.dynamic, // commander sets .dynamic=false for --no-dynamic
           noAi: !opts.ai,
+          allowExternalAi: opts.allowExternalAi === true,
           aggressive: opts.aggressive,
           probeCommonPaths: opts.probeCommonPaths as boolean | undefined, // undefined = not on the command line
           export: opts.export,
@@ -131,6 +151,7 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          engines: { noDeps: !opts.deps, engines: opts.engines as string | undefined, offline: opts.offline as boolean, semgrepConfig: opts.semgrepConfig as string | undefined },
           supabase: {
             live: opts.supabase,
             url: opts.supabaseUrl,
@@ -141,14 +162,27 @@ export function buildProgram(): Command {
           },
           activeUrl: opts.activeUrl as string | undefined,
           ownedHosts: opts.iOwnThisTarget as string[],
+          activeRequested: Boolean(opts.active),
+          safetyLevel: opts.safetyLevel as string | undefined,
+          dryRun: Boolean(opts.dryRun),
         };
         let report = await Orchestrator.analyze(path, analyzeOpts);
         const fixOutcome = opts.fix ? await runAnalyzeFix(path, report, analyzeOpts, opts) : undefined;
         if (fixOutcome) report = fixOutcome.report;
+        const releaseCtx = {
+          policy: report.release?.policy ?? parseReleasePolicy(undefined).policy,
+          policyWarnings: report.release?.policyWarnings,
+          verification: report.release?.verification
+            ? { fixedVerified: report.release.verification.fixedVerified, fixedUnverified: report.release.verification.fixedUnverified }
+            : undefined,
+        };
 
         // Accept the current findings as the baseline, then stop (no gating).
         if (opts.writeBaseline) {
-          const body = serializeBaseline(report.findings);
+          const previous = fs.existsSync(opts.writeBaseline)
+            ? parseBaseline(fs.readFileSync(opts.writeBaseline, 'utf8'))
+            : undefined;
+          const body = serializeBaseline(report.findings, { root: report.target, previous });
           fs.writeFileSync(opts.writeBaseline, body);
           logger.success(`Wrote baseline with ${report.summary.total} finding(s) to ${opts.writeBaseline}.`);
           return;
@@ -161,22 +195,27 @@ export function buildProgram(): Command {
 
         // Gate on new findings only when a baseline is supplied.
         let gateSummary = report.summary;
+        let cmp: BaselineComparison | undefined;
         if (opts.baseline) {
           const baseline = fs.existsSync(opts.baseline)
-            ? readBaseline(fs.readFileSync(opts.baseline, 'utf8'))
-            : new Set<string>();
-          const fresh = newFindings(report.findings, baseline);
-          gateSummary = summarize(fresh);
+            ? parseBaseline(fs.readFileSync(opts.baseline, 'utf8'))
+            : { version: 2, entries: [], warnings: [] };
+          cmp = compareToBaseline(report.findings, baseline, { root: report.target });
+          gateSummary = summarize(gatedFindings(cmp));
+          // Grandfathered findings are accepted risks: they do not block, but the release state says so.
+          const before = report.release?.state;
+          report = withRelease(report, { ...releaseCtx, accepted: cmp.known });
           if (!opts.json) {
-            const suppressed = report.summary.total - gateSummary.total;
-            logger.info(`Baseline: ${suppressed} known finding(s) grandfathered; gating on ${gateSummary.total} new.`);
+            for (const w of cmp.warnings) logger.warn(w);
+            logger.info(`Baseline: ${cmp.known.length} known finding(s) grandfathered.\n${describeComparison(cmp).join('\n')}`);
+            if (report.release && report.release.state !== before) logger.info(report.release.line);
           }
         }
 
         if (opts.json) {
-          const body = toCiJson(report, failOn);
+          const body = toCiJson(report, failOn, cmp, { failOnReleaseState: releaseThreshold });
           if (fixOutcome) body.fix = fixOutcome.fix;
-          process.stdout.write(JSON.stringify(body, null, 2) + '\n');
+          process.stdout.write(renderJson(body));
         }
 
         if (shouldFail(gateSummary, failOn)) {
@@ -185,6 +224,15 @@ export function buildProgram(): Command {
             `Gate failed: ${scope} at or above "${failOn}" (${gateSummary.critical} critical, ${gateSummary.warning} warning, ${gateSummary.info} info).`,
           );
           process.exitCode = EXIT.GATE;
+        } else if (opts.strictBaseline && cmp && cmp.stale.length > 0) {
+          logger.error(`Gate failed: ${cmp.stale.length} stale baseline suppression(s) (--strict-baseline). Re-run with --write-baseline.`);
+          process.exitCode = EXIT.GATE;
+        } else if (releaseExitCode(report.release, releaseThreshold) !== EXIT.OK) {
+          const code = releaseExitCode(report.release, releaseThreshold);
+          logger.error(
+            `Gate failed: release state "${report.release?.state}" is at or worse than "${releaseThreshold}" (--fail-on-release-state). ${report.release?.line ?? ''}`,
+          );
+          process.exitCode = code;
         }
       });
     });
@@ -259,10 +307,12 @@ export function buildProgram(): Command {
   program
     .command('mcp')
     .description('Start the MCP server (stdio) so your coding agent can scan, fix and verify')
-    .argument('[path]', 'default project for tool calls', '.')
-    .action(async (path: string) => {
+    .argument('[path]', 'server root: tool calls may only use this directory and its subdirectories', '.')
+    .option('--allow-fixes', 'also expose apply_safe_fixes, which writes files (with backups) in the project', false)
+    .option('--allow-live', 'also expose tools that send requests: scan_live, supabase_check_live, live verify', false)
+    .action(async (path: string, opts: { allowFixes?: boolean; allowLive?: boolean }) => {
       await guard(async () => {
-        await startMcpServer(path);
+        await startMcpServer(path, { allowFixes: opts.allowFixes === true, allowLive: opts.allowLive === true });
       });
     });
 

@@ -1,7 +1,7 @@
 import { IssueAggregator } from '../src/analysis/IssueAggregator';
 import { ScoreCalculator, isNonScored } from '../src/analysis/ScoreCalculator';
 import { SeverityScorer } from '../src/analysis/SeverityScorer';
-import { newFindings, readBaseline, serializeBaseline, shouldFail, summarize, toCiJson } from '../src/core/CiGate';
+import { compareToBaseline, gatedFindings, parseBaseline, serializeBaseline, shouldFail, summarize, toCiJson } from '../src/core/CiGate';
 import { ExportManager } from '../src/ui/ExportManager';
 import { HtmlReporter } from '../src/ui/HtmlReporter';
 import { IssuePresenter } from '../src/ui/IssuePresenter';
@@ -147,12 +147,13 @@ describe('CiGate with notes', () => {
 
   it('the baseline excludes notes and never grandfathers them', () => {
     const body = serializeBaseline([note(), realInfo()]);
-    const set = readBaseline(body);
-    expect(set.size).toBe(1);
-    const poisoned = new Set([...set, 'missing-rate-limit::/login']);
-    const fresh = newFindings([note(), realInfo()], poisoned);
+    const base = parseBaseline(body);
+    expect(base.entries).toHaveLength(1);
+    const c = compareToBaseline([note(), realInfo()], base);
+    expect(c.known).toHaveLength(1);
+    const fresh = gatedFindings(c);
     expect(fresh).toHaveLength(1);
-    expect(fresh.map((f) => f.rule)).toEqual(['missing-rate-limit']);
+    expect(fresh[0]?.note).toBe(true);
     expect(summarize(fresh)).toMatchObject({ total: 0, notes: 1 });
     expect(shouldFail(summarize(fresh), 'info')).toBe(false);
   });

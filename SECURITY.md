@@ -14,7 +14,8 @@ Include the version (`deployready --version`), what you did, and what you expect
 
 | Version | Supported |
 |---|---|
-| 0.4.x | yes |
+| 0.5.x | yes |
+| 0.4.x | no, please upgrade: 0.5.0 fixes secret-redaction and CI-baseline issues found in 0.4.x |
 | < 0.4 | no, please upgrade |
 
 ## What leaves your machine
