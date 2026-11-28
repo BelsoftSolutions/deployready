@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: BelsoftSolutions/deployready@v0.4.0
+      - uses: BelsoftSolutions/deployready@v0.5.0
 ```
 
 ## Inputs
