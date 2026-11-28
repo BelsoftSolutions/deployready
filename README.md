@@ -109,7 +109,7 @@ deployready › exit
 ```bash
 npx deployready@latest init                              # first-time setup (pick model, store key)
 npx deployready@latest analyze ./my-app                  # single non-interactive scan, prints results
-npx deployready@latest analyze . --no-ai --no-dynamic    # static only, fully offline
+npx deployready@latest analyze . --no-ai --no-dynamic --offline  # static only, fully offline (--offline skips dependency audits)
 npx deployready@latest report ./my-app                   # scan and export the markdown report
 npx deployready@latest badge ./my-app                    # print a markdown score badge
 npx deployready@latest config                            # show the active config (secrets never printed)
@@ -124,6 +124,8 @@ npx deployready@latest config                            # show the active confi
 | `--no-dynamic` | skip live localhost testing |
 | `--no-ai` | skip AI analysis (local results only) |
 | `--aggressive` | enable aggressive tests (rate-limit burst) |
+| `--no-deps` / `--offline` | skip dependency-audit engines / skip every engine that uses the network |
+| `--engines <list>` / `--semgrep-config <rules>` | choose engines (`npm-audit,osv-scanner,pip-audit,semgrep`); Semgrep is opt-in and needs your rules ([docs/ENGINES.md](docs/ENGINES.md)) |
 | `--export` | write `deployready-report.md` |
 | `--html` / `--open` | write an HTML dashboard / and open it in your browser |
 | `--json` | print a machine-readable JSON report (implies `--yes`) |
@@ -137,6 +139,8 @@ npx deployready@latest config                            # show the active confi
 | `--token-b <jwt>` | a second user's JWT — enables tenant / IDOR isolation tests |
 | `--active-url <url>` | base URL for the active scan (default: the app found on localhost) |
 | `--i-own-this-target <host>` | confirm you own a non-loopback host so active probes may target it (repeatable, exact host) |
+| `--safety-level <level>` | active-scan safety level: `passive`, `read-only` (default), `controlled-active` (adds the write-route probe), `stateful` (needs a disposable target) |
+| `--dry-run` | list the active requests that would be sent, without sending any |
 | `-v, --verbose` | verbose debug output |
 
 **CI gate:** exit codes are `0` (clean), `2` (gate failed), `1` (tool error), and `3` (insufficient evidence: a required check errored or did not run; only with `--fail-on-release-state`). Without `--fail-on-release-state` the exit codes are exactly as before. When both gates fail, `--fail-on` wins (`2`).
@@ -278,9 +282,51 @@ npx deployready@latest analyze . --active --token "<your-JWT>" --token-b "<secon
 - **Broken tenant isolation** — swaps `org_id`/tenant to reach another tenant's data.
 - **Privilege escalation** — forges a `role: admin` claim and checks whether a forbidden route opens up.
 - **JWT not verified** — checks whether the server accepts a forged `alg:none` token.
-- **Unauthenticated write routes** — sends each discovered `DELETE`/`PATCH` route once with **no credentials**, aimed at a record id that cannot exist (`__deployready_probe_<random>__`), with no body. A `2xx` (when a random-path control does not also answer `2xx`) means the route handles writes for anonymous callers; `401`/`403` means auth is enforced; anything else is not reported.
+- **Unauthenticated write routes** (safety level `controlled-active` only) — sends each discovered `DELETE`/`PATCH` route once with **no credentials**, aimed at a record id that cannot exist (`__deployready_probe_<random>__`), with no body. A `2xx` (when a random-path control does not also answer `2xx`) means the route handles writes for anonymous callers; `401`/`403` means auth is enforced; anything else is not reported.
 
-It is **opt-in and consented** and **loopback-only**. The tampering checks are GET-only. The write-route probe never addresses real data: it only probes routes whose every path parameter can be filled with a non-existent id, skips routes without a parameter (e.g. `DELETE /api/session`), skips `PUT` (often an upsert, so it could create data), and never runs on a non-loopback host. Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
+**How an IDOR / tenant verdict is reached.** Status codes are never taken as proof, and the whole response is never compared byte for byte. For each swapped id the scan fetches your own resource twice (`$TOKEN`) and the owner's resource twice (`$TOKEN_B`), then compares JSON field by field (nested objects; arrays order-insensitive):
+
+- fields whose value changes between two requests of the same identity (request ids, timestamps, nonces), well-known volatile names, and your configured `ignoredFields` are ignored;
+- **owner markers** are the owner's stable values that never appear in your own copy (their email, amount, name, notes, ...); keys are classified as sensitive by name (email, amount, total, address, phone, ssn, card, token, secret, message, notes, ...);
+- the tampered response — **including the body of a 401/403/404** — is searched for those markers. An echo of only the requested id (`{"error":"not found","id":"<id>"}`, `{"requested":"<id>"}`) is not disclosure;
+- when owner data shows up, one anonymous request (no credentials) tells a public resource apart from a leak.
+
+| Verdict | Meaning | Reported |
+|---|---|---|
+| `confirmed-vulnerable` | the owner's private values came back (a sensitive field, two or more values, or the owner's full record) | critical finding |
+| `suspected` | something owner-like came back, but too little to prove it (or no working owner baseline) | warning finding, "Suspected:" |
+| `verified-denied` | the owner can read it; you got none of it (a clean refusal, an id echo, or your own data because the server ignored the id) | no |
+| `inconclusive` | neither proven safe nor vulnerable (e.g. the owner's own request failed) | no |
+| `untested` | not run (request budget used up, no claim to swap) | no |
+| `intentionally-public` | declared in `publicRoutes`, or anyone (even anonymous) gets the same non-sensitive data | no |
+
+Each finding says which fields were disclosed (values masked and redacted, e.g. `customer.email (sensitive) = b***@e***.test`), why that violates the policy, and how it was established (baselines compared, fields ignored, anonymous control). The proof's response body has the owner's values masked, and tokens appear only as `$TOKEN` / `$TOKEN_B`.
+
+**Safety levels** (`--safety-level`, or `"active": { "safetyLevel": ... }` in the config):
+
+| Level | What is sent |
+|---|---|
+| `passive` | nothing (the plan is printed, like `--dry-run`) |
+| `read-only` *(default for `--active`)* | GET probes only. A GET is never assumed to be side-effect-free: routes on the `unsafeRoutes` denylist and routes whose path suggests a side effect (logout, delete, send, pay, charge, export, webhook, reset, ...) are skipped |
+| `controlled-active` | read-only plus the unauthenticated `DELETE`/`PATCH` probe above (loopback only) |
+| `stateful` | may change state (side-effect-looking GETs are no longer skipped; the denylist still is). **Refused** unless the config declares `"disposableEnvironment": true` and the target is loopback or a host you declared you own |
+
+`--dry-run` lists every request the active scan would send (with `$TOKEN` placeholders), every skipped route and why, and the request budget, and sends nothing. Every run has a hard request budget (default 200, `"active": { "maxRequests": N }`) shared by all checks. Redirects are never followed across hosts; a same-host redirect of a GET is followed (at most 3 hops) only after the scope check passes again for the new URL.
+
+```json
+{
+  "active": {
+    "safetyLevel": "read-only",
+    "maxRequests": 200,
+    "unsafeRoutes": ["GET /api/reports/*/regenerate", "/internal/*"],
+    "ignoredFields": ["meta.buildId", "etag"],
+    "publicRoutes": ["/api/products/*"],
+    "disposableEnvironment": false
+  }
+}
+```
+
+It is **opt-in and consented** and **loopback-only**. The tampering checks are GET-only. The write-route probe is off unless you choose `controlled-active`, and never addresses real data: it only probes routes whose every path parameter can be filled with a non-existent id, skips routes without a parameter (e.g. `DELETE /api/session`), skips `PUT` (often an upsert, so it could create data), and never runs on a non-loopback host. Need a token? Run `--active` without one and DeployReady prints step-by-step instructions for grabbing your JWT from the browser.
 
 Every live finding carries **proof**: a copy-pasteable `curl` command (your tokens appear only as `$TOKEN` / `$TOKEN_B`), the status, a truncated response and the control request that shows the endpoint otherwise works, all redacted. It appears in `show`, the terminal report, the markdown/HTML reports and `--json`. `verify` reports `fixed` only with proof (the attack fails **and** a control request still works); otherwise it says `inconclusive` and why.
 
@@ -337,6 +383,7 @@ To report a vulnerability in DeployReady itself, see [SECURITY.md](SECURITY.md).
 - All terminal output and any AI payload pass through a central **secret redactor**.
 - Dynamic testing is **loopback-only** and **GET-only** by default; aggressive tests require explicit consent. It only requests routes your code (or your OpenAPI/Swagger file) defines, plus up to 25 same-origin paths your running app itself advertises in pages it already served (links, `Link:` headers, and a `robots.txt`/`sitemap.xml`/OpenAPI document only if your project or one of those responses points at it; one level deep, never logout/delete-style links) — it never guesses paths like `/admin` or `/.env`, and never invents ids for routes with path parameters (those are listed as "could not check"). Use `--verbose` to see every request decision.
 - File scanning is confined to the project root, with symlink/traversal protection and size caps.
+- **Dependency audits contact a registry.** If a lockfile exists, `analyze` runs `npm audit` (and OSV-Scanner / pip-audit if you have them installed), which sends dependency names and versions, never source code, to the npm registry / OSV / PyPI. Use `--offline` to skip them, `--no-deps` to turn dependency engines off. Semgrep is opt-in and needs your own rules. See [docs/ENGINES.md](docs/ENGINES.md).
 
 ## Configuration
 

@@ -1,6 +1,8 @@
 /**
  * MCP tool handlers. Plain async functions so tests (and the stdio server) call the same code.
  * Everything here is non-interactive: no prompts, no AI analysis. Nothing may write to stdout.
+ * Every response is redacted (redactDeep), including get_finding's whole-file content: an agent
+ * reading the file through us never sees a secret it contains.
  */
 import * as path from 'path';
 import { Orchestrator } from '../core/Orchestrator';
@@ -16,6 +18,7 @@ import { assess } from './readiness';
 import type { Readiness } from './readiness';
 import type { CoverageArea, Finding, Proof, ReleaseAssessment, ScanReport } from '../types';
 import { SCORE_DISCLAIMER, withRelease } from '../core/releaseState';
+import { redact, redactDeep } from '../utils/redact';
 
 const EVIDENCE_MAX = 200;
 const FILE_MAX_BYTES = 256 * 1024;
@@ -101,6 +104,10 @@ export class DeployReadyTools {
   }
 
   async getFinding(args: { id: string; path?: string }): Promise<Record<string, unknown>> {
+    return redactDeep(await this.getFindingRaw(args));
+  }
+
+  private async getFindingRaw(args: { id: string; path?: string }): Promise<Record<string, unknown>> {
     const { entry, finding } = this.find(args.id, args.path);
     const out: Record<string, unknown> = {
       ...summarize(finding),
@@ -120,7 +127,7 @@ export class DeployReadyTools {
         out.file_content = renderFile(content, finding.line);
         out.file_truncated = Buffer.byteLength(content) > FILE_MAX_BYTES;
       } catch (err) {
-        out.file_error = (err as Error).message;
+        out.file_error = redact((err as Error).message);
       }
     }
     return out;
@@ -152,7 +159,7 @@ export class DeployReadyTools {
     if (active) ctx.active = active;
     const res = await Verifier.verify(finding, ctx);
     entry.verified.set(finding.id, res.status);
-    return { id: finding.id, status: res.status, detail: res.detail, ...(res.proof ? { proof: res.proof } : {}) };
+    return redactDeep({ id: finding.id, status: res.status, detail: res.detail, ...(res.proof ? { proof: res.proof } : {}) });
   }
 
   async score(args: { path?: string } = {}): Promise<
@@ -196,7 +203,7 @@ export class DeployReadyTools {
 
 function summarize(f: Finding): FindingSummary {
   const ev = f.evidence && f.evidence.length > EVIDENCE_MAX ? f.evidence.slice(0, EVIDENCE_MAX) + '…' : f.evidence;
-  return {
+  return redactDeep({
     id: f.id,
     rule: f.rule,
     severity: f.severity,
@@ -208,12 +215,12 @@ function summarize(f: Finding): FindingSummary {
     evidence: ev,
     proof: f.proof,
     note: f.note ? true : undefined,
-  };
+  });
 }
 
-/** Whole file, numbered, with the finding's line marked `>`. */
+/** Whole file (secrets redacted, line count preserved), numbered, with the finding's line marked `>`. */
 function renderFile(content: string, line?: number): string {
-  const text = content.length > FILE_MAX_BYTES ? content.slice(0, FILE_MAX_BYTES) : content;
+  const text = redact(content.length > FILE_MAX_BYTES ? content.slice(0, FILE_MAX_BYTES) : content);
   const lines = text.split(/\r?\n/);
   const width = String(lines.length).length;
   return lines.map((l, i) => `${i + 1 === line ? '>' : ' '} ${String(i + 1).padStart(width)} | ${l}`).join('\n');

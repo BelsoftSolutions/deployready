@@ -8,7 +8,7 @@ export type Severity = 'critical' | 'warning' | 'info';
 export type Category = 'security' | 'performance' | 'architecture' | 'config';
 
 /** Where a finding originated. Used for dedup precedence and reporting. */
-export type FindingSource = 'static' | 'dynamic' | 'ai';
+export type FindingSource = 'static' | 'dynamic' | 'ai' | `engine:${string}`;
 
 /** A single issue surfaced by any analyzer. The atomic unit of a report. */
 export interface Finding {
@@ -208,6 +208,8 @@ export interface ScanReport {
   coverage?: CoverageArea[];
   /** Policy-driven release verdict, separate from the numeric score (see src/core/releaseState.ts). */
   release?: ReleaseAssessment;
+  /** Outcome of each external engine adapter (ran / skipped / error) with coverage. */
+  engineRuns?: import('./adapters/types').EngineRunSummary[];
 }
 
 // ---- Coverage + release state ---------------------------------------------------
@@ -307,6 +309,30 @@ export interface AppConfig {
   ownedTargets?: string[];
   /** Release-state policy (see README "Score and release state"); missing keys use the defaults. */
   releasePolicy?: Partial<ReleasePolicy>;
+  /** Active-scan safety and verdict settings (see README, "Active testing"). */
+  active?: ActiveConfigSection;
+  /** Alias of `active.unsafeRoutes`. */
+  unsafeRoutes?: string[];
+  /** Alias of `active.disposableEnvironment`. */
+  disposableEnvironment?: boolean;
+}
+
+/** Active-scan safety levels, least to most invasive. */
+export type SafetyLevel = 'passive' | 'read-only' | 'controlled-active' | 'stateful';
+
+/** The `"active"` section of the config file. */
+export interface ActiveConfigSection {
+  safetyLevel?: SafetyLevel;
+  /** Route denylist: exact paths or globs (`*` = any characters), optionally prefixed by a method (`GET /api/export*`). */
+  unsafeRoutes?: string[];
+  /** Fields the verdict engine ignores (key names or dotted paths), on top of the volatile ones it learns. */
+  ignoredFields?: string[];
+  /** Routes that are public by design: cross-identity reads there are reported as intentionally-public. */
+  publicRoutes?: string[];
+  /** Hard cap on active requests per run (default 200). */
+  maxRequests?: number;
+  /** Required for the stateful level: the target holds only disposable test data. */
+  disposableEnvironment?: boolean;
 }
 
 /** A single tool result returned by an AI handler. */

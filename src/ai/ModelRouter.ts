@@ -84,7 +84,7 @@ export class ModelRouter {
   }
 
   async analyze(report: ScanReport): Promise<AiAnalysis> {
-    const { handler, contextTokens } = this.resolveHandler();
+    const { handler, contextTokens } = this.redactingHandler();
     const fitted = ContextChunker.fit(report, contextTokens);
     const prompt = PromptBuilder.build(fitted);
     return handler.analyze(prompt);
@@ -95,12 +95,28 @@ export class ModelRouter {
    * before sending. Caller is responsible for obtaining the user's consent.
    */
   async suggestFix(finding: Finding, snippet: string, imports: string[] = []): Promise<FixSuggestion> {
-    const { handler } = this.resolveHandler();
+    const { handler } = this.redactingHandler();
     const prompt = PromptBuilder.buildFixPrompt(finding, redact(snippet), imports.length ? redact(imports.join('\n')) : undefined);
     const raw = await handler.complete(prompt);
     const parsed = extractFix(raw);
     if (!parsed) throw new Error('The model did not return a usable fix.');
     return parsed;
+  }
+
+  /**
+   * The resolved handler behind a guard that redacts every prompt (system + user) right before it
+   * leaves the process, whichever provider (API, CLI stdin, Ollama) is behind it.
+   */
+  private redactingHandler(): { handler: Handler; contextTokens: number } {
+    const { handler, contextTokens } = this.resolveHandler();
+    const clean = (p: { system: string; user: string }) => ({ system: redact(p.system), user: redact(p.user) });
+    return {
+      contextTokens,
+      handler: {
+        analyze: (p) => handler.analyze(clean(p)),
+        complete: (p) => handler.complete(clean(p)),
+      },
+    };
   }
 
   private resolveHandler(): { handler: Handler; contextTokens: number } {

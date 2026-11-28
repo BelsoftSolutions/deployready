@@ -34,6 +34,9 @@ import { firebaseStep } from '../firebase';
 import { assertActiveTarget, parseOwnedHosts } from '../active/scope';
 import { planMutationProbes, runMutationProbes } from '../active/mutationProbe';
 import { assertLoopback } from '../dynamic/httpClient';
+import { runEngines, dedupeAgainstNative, type EngineStepOptions } from '../adapters';
+import { allowsMutationProbes, assertSafetyAllowed, resolveActivePolicy, type ActivePolicy } from '../active/safety';
+import { previewActivePlan } from '../active/dryRun';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ReleasePolicy, ScanReport } from '../types';
 import { CoverageRecorder, buildCoverage } from './coverage';
 import { parseReleasePolicy, withRelease } from './releaseState';
@@ -65,6 +68,10 @@ export interface AnalyzeOptions {
   activeUrl?: string;
   /** Non-loopback hosts the user explicitly confirmed they own (--i-own-this-target). */
   ownedHosts?: string[];
+  /** Active-scan safety level (passive | read-only | controlled-active | stateful); default read-only. */
+  safetyLevel?: string;
+  /** List the active requests that would be sent, without sending any. */
+  dryRun?: boolean;
   /**
    * Opt-in common-path probe. Tri-state: `true`/`false` = given on the command line,
    * `undefined` = not given (then the config key applies, in interactive runs only).
@@ -78,6 +85,8 @@ export interface AnalyzeOptions {
   activeRequested?: boolean;
   /** Release policy override; default: config `releasePolicy`, then the built-in policy. */
   releasePolicy?: Partial<ReleasePolicy>;
+  /** External engine adapters (npm audit, OSV-Scanner, pip-audit, Semgrep); see docs/ENGINES.md. */
+  engines?: EngineStepOptions;
 }
 
 interface ProbeDecision {
@@ -144,9 +153,14 @@ export class Orchestrator {
     }
     if (fb.coverage) cov.set('firebase', fb.coverage.state, fb.coverage.reason);
 
+    // ---- 2d. External engines (installed + applicable only; failures are reported, never silent) ----
+    const eng = await runEngines(projectPath, opts.engines ?? {});
+    const deduped = dedupeAgainstNative([...staticFindings, ...sb.staticFindings, ...fb.staticFindings], eng.findings);
+    if (!opts.json) for (const r of eng.runs) if (r.status === 'error') logger.warn(`Engine ${r.id} incomplete: ${r.reason}`);
+
     // ---- 3. Aggregate (active findings are dynamic-sourced) ----
     let agg = IssueAggregator.process(
-      [...staticFindings, ...sb.staticFindings, ...fb.staticFindings],
+      [...deduped.native, ...deduped.engine],
       [...dynamicFindings, ...activeFindings, ...sb.liveFindings],
     );
 
@@ -162,6 +176,7 @@ export class Orchestrator {
       findings: agg.findings,
       score: agg.score,
       summary: agg.summary,
+      engineRuns: eng.runs,
     };
 
     // ---- 5. Optional AI analysis ----
@@ -383,7 +398,9 @@ export class Orchestrator {
   /**
    * Active authorization testing: replays the user's own authenticated GET
    * requests with a tampered identity to prove access control holds. Opt-in
-   * (`--active --token …`), consented, loopback-only, GET-only.
+   * (`--active --token …`), consented, loopback-only unless an owned host is
+   * declared, and bounded by the safety level (default read-only: GET only,
+   * side-effect-looking and denylisted routes skipped) and a request budget.
    */
   private static async runActive(graph: CodeGraph, opts: AnalyzeOptions, cov: CoverageRecorder = new CoverageRecorder()): Promise<Finding[]> {
     const skip = (reason: string): void => cov.set('active', 'untested', reason, { requested: true });
@@ -403,7 +420,19 @@ export class Orchestrator {
       return [skippedScanNote('active-skipped', 0, [])];
     }
 
-    const plan = planActiveRequests(graph.routes, claims);
+    const config = await ConfigManager.load();
+    let policy: ActivePolicy;
+    try {
+      policy = resolveActivePolicy(config, { safetyLevel: opts.safetyLevel });
+    } catch (err) {
+      logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
+      return [];
+    }
+
+    const plan = planActiveRequests(graph.routes, claims, {
+      safetyLevel: policy.safetyLevel === 'passive' ? 'read-only' : policy.safetyLevel, // passive still previews the read-only plan
+      unsafeRoutes: policy.unsafeRoutes,
+    });
     for (const line of plan.log) logger.debug(line);
     if (plan.requests.length === 0) {
       logger.info('Active scan: no discovered route can be requested with your token — skipping.');
@@ -411,7 +440,6 @@ export class Orchestrator {
       return [skippedScanNote('active-skipped', graph.routes.length, plan.skipped)];
     }
 
-    const config = await ConfigManager.load();
     // Ownership guard: loopback only, unless the user named the host they own.
     let owned: string[];
     try {
@@ -421,7 +449,8 @@ export class Orchestrator {
       skip(`Owned-target list rejected: ${(err as Error).message}`);
       return [];
     }
-    let app: { baseUrl: string };
+    const preview = opts.dryRun || policy.safetyLevel === 'passive';
+    let app: { baseUrl: string } | undefined;
     if (opts.activeUrl) {
       try {
         assertActiveTarget(opts.activeUrl, owned);
@@ -432,7 +461,7 @@ export class Orchestrator {
       }
       app = { baseUrl: opts.activeUrl };
       logger.info(`Active scan target: ${app.baseUrl}`);
-    } else {
+    } else if (!preview) {
       const detect = ora('Active scan: looking for a local server on localhost…').start();
       const local = await LocalhostDetector.find(config.defaultPorts);
       if (!local) {
@@ -445,24 +474,50 @@ export class Orchestrator {
     }
     let loopback = true;
     try {
-      assertLoopback(app.baseUrl);
+      assertLoopback(app?.baseUrl ?? 'http://localhost');
     } catch {
       loopback = false;
     }
-    // Write-route probe: loopback only, never on an owned remote host.
-    const mutation = loopback ? planMutationProbes(graph.routes) : { targets: [], skipped: [] };
+    if (app) {
+      try {
+        assertSafetyAllowed(policy, app.baseUrl, owned);
+      } catch (err) {
+        logger.warn(`Active scan: ${(err as Error).message} Skipping.`);
+        return [];
+      }
+    }
+    // Write-route probe: controlled-active or higher, loopback only, never on an owned remote host.
+    const mutation =
+      loopback && allowsMutationProbes(policy.safetyLevel)
+        ? planMutationProbes(graph.routes, undefined, { unsafeRoutes: policy.unsafeRoutes })
+        : { targets: [], skipped: [] };
     for (const s of mutation.skipped) logger.debug(`[active] skip ${s.method} ${s.path}: ${s.reason}`);
+
+    if (preview) {
+      const dry = previewActivePlan({
+        baseUrl: app?.baseUrl,
+        safetyLevel: policy.safetyLevel,
+        requests: plan.requests,
+        tokenBClaims: opts.tokenB ? decodeJwt(opts.tokenB)?.payload ?? null : null,
+        mutationTargets: mutation.targets,
+        skipped: [...plan.skipped, ...mutation.skipped],
+        maxRequests: policy.maxRequests,
+      });
+      for (const line of dry.lines) logger.info(line);
+      return [];
+    }
+    const target = app!;
 
     if (!opts.yes) {
       const { ok } = await inquirer.prompt<{ ok: boolean }>([
         {
           type: 'confirm',
           name: 'ok',
-          message: `Run ACTIVE authenticated tests against ${app.baseUrl}? Sends real GET requests as your token, including identity-tampered variants${
+          message: `Run ACTIVE authenticated tests (safety level "${policy.safetyLevel}", at most ${policy.maxRequests} requests) against ${target.baseUrl}? Sends real GET requests as your token, including identity-tampered variants${
             mutation.targets.length
               ? `, plus ${mutation.targets.length} unauthenticated DELETE/PATCH request(s) aimed at a record id that cannot exist (no body; no real data is addressed)`
               : ' (no writes)'
-          }.`,
+          }. Preview them first with --dry-run.`,
           default: false,
         },
       ]);
@@ -474,13 +529,33 @@ export class Orchestrator {
     }
 
     const { requests } = plan;
-    const adapter = createActiveHttpAdapter({ baseUrl: app.baseUrl, ownedHosts: owned });
+    const adapter = createActiveHttpAdapter({ baseUrl: target.baseUrl, ownedHosts: owned, maxRequests: policy.maxRequests });
     const spinner = ora(`Active scan: probing ${requests.length} endpoint(s)…`).start();
     try {
-      const findings = await runActiveScan({ token: opts.token, tokenB: opts.tokenB, requests, baseUrl: app.baseUrl }, adapter);
-      if (mutation.targets.length) findings.push(...(await runMutationProbes(mutation.targets, adapter, { baseUrl: app.baseUrl })));
-      spinner.succeed(`Active scan done — ${findings.length} access-control finding(s).`);
-      cov.set('active', 'passed', `Probed ${requests.length} endpoint(s) on ${app.baseUrl} with the test identity.`, { requested: true });
+      const verdicts = new Map<string, number>();
+      const findings = await runActiveScan(
+        {
+          token: opts.token,
+          tokenB: opts.tokenB,
+          requests,
+          baseUrl: target.baseUrl,
+          maxRequests: policy.maxRequests,
+          ignoredFields: policy.ignoredFields,
+          publicRoutes: policy.publicRoutes,
+          onObserve: (o) => {
+            if (o.kind === 'cross') verdicts.set(o.verdict, (verdicts.get(o.verdict) ?? 0) + 1);
+            if (o.kind === 'untested') verdicts.set('untested', (verdicts.get('untested') ?? 0) + 1);
+            if (o.kind === 'cross' || o.kind === 'untested') {
+              logger.debug(`[active] ${o.kind === 'cross' ? `${o.verdict} ${o.tamperedPath}` : `untested ${o.endpoint}`}: ${o.reason}`);
+            }
+          },
+        },
+        adapter,
+      );
+      if (mutation.targets.length) findings.push(...(await runMutationProbes(mutation.targets, adapter, { baseUrl: target.baseUrl })));
+      const summary = [...verdicts].map(([v, c]) => `${c} ${v}`).join(', ');
+      spinner.succeed(`Active scan done — ${findings.length} access-control finding(s)${summary ? ` (cross-identity checks: ${summary})` : ''}.`);
+      cov.set('active', 'passed', `Probed ${requests.length} endpoint(s) on ${target.baseUrl} with the test identity${summary ? ` (cross-identity checks: ${summary})` : ''}.`, { requested: true });
       return findings;
     } catch (err) {
       spinner.fail(`Active scan failed: ${(err as Error).message}`);

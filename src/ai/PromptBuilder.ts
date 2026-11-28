@@ -5,7 +5,7 @@
  * JSON summary of findings + architecture. This is the core privacy/token
  * advantage of DeployReady over "send your whole repo to an LLM" tools.
  */
-import { redactObject } from '../utils/redact';
+import { redact, redactObject } from '../utils/redact';
 import type { Finding, ScanReport } from '../types';
 
 export interface BuiltPrompt {
@@ -62,7 +62,9 @@ export class PromptBuilder {
 
     return {
       system: SYSTEM,
-      user: `Here is the structured scan report:\n${JSON.stringify(payload, null, 2)}`,
+      // Second pass over the serialized text: catches secrets in titles/paths that the
+      // per-field pass saw only in fragments. Idempotent, so preview() == what is sent.
+      user: redact(`Here is the structured scan report:\n${JSON.stringify(payload, null, 2)}`),
     };
   }
 
@@ -87,14 +89,16 @@ If a READ-ONLY context block is given (the file's imports), use it to understand
     const context = readOnlyContext
       ? `READ-ONLY context (the file's imports; do not include in your answer):\n\`\`\`\n${readOnlyContext}\n\`\`\`\n\n`
       : '';
-    const user = `Issue: ${finding.title}
+    // Callers redact the snippet already; redacting the whole prompt again is the last guard
+    // (multi-line private keys, secrets in titles/recommendations from AI findings).
+    const user = redact(`Issue: ${finding.title}
 Severity: ${finding.severity}${finding.owasp ? ` (${finding.owasp})` : ''}
 Recommendation: ${finding.recommendation}
 
 ${context}Code snippet to fix (the whole enclosing unit; return it complete):
 \`\`\`
 ${snippet}
-\`\`\``;
+\`\`\``);
     return { system, user };
   }
 }

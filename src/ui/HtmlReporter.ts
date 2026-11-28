@@ -11,6 +11,7 @@
 import type { Finding, Proof, ScanReport, Severity } from '../types';
 import { SCORE_DISCLAIMER } from '../core/releaseState';
 import { coverageSymbol } from '../core/coverage';
+import { sanitizeReport } from './sanitize';
 import { PlatformRecommender, type PlatformPick } from '../deploy/PlatformRecommender';
 import { isNote, isUnverified } from '../analysis/ScoreCalculator';
 import { buildFixPrompt } from '../agent/fixPrompt';
@@ -28,7 +29,8 @@ const UNVERIFIED_COLOR = '#a78bfa';
 const NOTE_COLOR = '#9ca3af';
 
 export class HtmlReporter {
-  static render(report: ScanReport): string {
+  static render(raw: ScanReport): string {
+    const report = sanitizeReport(raw);
     const scoreColor = report.score >= 80 ? ACCENT : report.score >= 50 ? '#f59e0b' : '#ef4444';
     const { critical, warning, info } = report.summary;
     const unverified = report.findings.filter(isUnverified).length;

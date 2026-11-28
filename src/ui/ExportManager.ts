@@ -8,6 +8,7 @@ import { HtmlReporter } from './HtmlReporter';
 import { isNote, isNonScored, isUnverified } from '../analysis/ScoreCalculator';
 import { SCORE_DISCLAIMER } from '../core/releaseState';
 import type { Finding, ScanReport, Severity } from '../types';
+import { sanitizeReport } from './sanitize';
 import { COMMON_PATH_TITLE, OUTCOME_LABEL, capLine, commonPathReport, controlLine, guessedFindings, isGuessed } from './commonPathSection';
 
 export class ExportManager {
@@ -25,7 +26,8 @@ export class ExportManager {
     return file;
   }
 
-  static toMarkdown(report: ScanReport): string {
+  static toMarkdown(raw: ScanReport): string {
+    const report = sanitizeReport(raw);
     const lines: string[] = [];
     lines.push(`# DeployReady Report`);
     lines.push('');
