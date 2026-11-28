@@ -38,6 +38,10 @@ import { assertLoopback } from '../dynamic/httpClient';
 import { runEngines, dedupeAgainstNative, type EngineStepOptions } from '../adapters';
 import { allowsMutationProbes, assertSafetyAllowed, resolveActivePolicy, type ActivePolicy } from '../active/safety';
 import { previewActivePlan } from '../active/dryRun';
+import { authzSettings, loadProjectActiveConfig, mergeActiveConfig } from '../active/projectConfig';
+import { runAuthzStep } from '../active/authzStep';
+import type { AuthzMatrix } from '../active/authzTypes';
+import type { AppConfig } from '../types';
 import type { CodeGraph, CommonPathReport, DynamicResults, Finding, ReleasePolicy, ScanReport } from '../types';
 import { CoverageRecorder, buildCoverage, recordEngineCoverage } from './coverage';
 import { parseReleasePolicy, withRelease } from './releaseState';
@@ -146,8 +150,11 @@ export class Orchestrator {
 
     // ---- 2b. Active (authenticated) authorization testing, opt-in + consent ----
     let activeFindings: Finding[] = [];
+    let authz: AuthzMatrix | undefined;
     if (opts.active) {
-      activeFindings = await Orchestrator.runActive(graph, opts, cov);
+      const step = await Orchestrator.activeStep(projectPath, graph, opts, cov);
+      activeFindings = step.findings;
+      authz = step.authz;
     } else if (opts.activeRequested) {
       cov.set('active', 'untested', '--active was given without a --token; nothing was tested.', { requested: true });
     }
@@ -187,6 +194,7 @@ export class Orchestrator {
       score: agg.score,
       summary: agg.summary,
       engineRuns: eng.runs,
+      ...(authz ? { authz } : {}),
     };
 
     // ---- 5. Optional AI analysis ----
@@ -418,13 +426,33 @@ export class Orchestrator {
   }
 
   /**
+   * Active step: the policy-driven authorization matrix when the project declares
+   * `active.policy` / identities (.deployready.json), else the token-based scan.
+   */
+  private static async activeStep(
+    projectPath: string,
+    graph: CodeGraph,
+    opts: AnalyzeOptions,
+    cov: CoverageRecorder,
+  ): Promise<{ findings: Finding[]; authz?: AuthzMatrix }> {
+    const project = await loadProjectActiveConfig(projectPath);
+    if (project.error) logger.warn(`Ignoring the project config: ${project.error}.`);
+    const config = mergeActiveConfig(await ConfigManager.load(), project);
+    const settings = authzSettings(config.active as Record<string, unknown> | undefined, project.file ?? 'the user config (~/.deployready/config.json)');
+    if (settings.policy || (settings.identities.length > 0 && !opts.token)) {
+      return runAuthzStep(projectPath, graph, opts, config, settings, cov);
+    }
+    return { findings: await Orchestrator.runActive(graph, opts, cov, config) };
+  }
+
+  /**
    * Active authorization testing: replays the user's own authenticated GET
    * requests with a tampered identity to prove access control holds. Opt-in
    * (`--active --token …`), consented, loopback-only unless an owned host is
    * declared, and bounded by the safety level (default read-only: GET only,
    * side-effect-looking and denylisted routes skipped) and a request budget.
    */
-  private static async runActive(graph: CodeGraph, opts: AnalyzeOptions, cov: CoverageRecorder = new CoverageRecorder()): Promise<Finding[]> {
+  private static async runActive(graph: CodeGraph, opts: AnalyzeOptions, cov: CoverageRecorder = new CoverageRecorder(), loaded?: AppConfig): Promise<Finding[]> {
     const skip = (reason: string): void => cov.set('active', 'untested', reason, { requested: true });
     if (!opts.token) {
       skip('--active was given without a --token; nothing was tested.');
@@ -442,7 +470,7 @@ export class Orchestrator {
       return [skippedScanNote('active-skipped', 0, [])];
     }
 
-    const config = await ConfigManager.load();
+    const config = loaded ?? (await ConfigManager.load());
     let policy: ActivePolicy;
     try {
       policy = resolveActivePolicy(config, { safetyLevel: opts.safetyLevel });

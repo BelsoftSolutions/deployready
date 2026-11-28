@@ -94,6 +94,8 @@ export interface AuthzResult {
   matchedValues: string[];
   /** True when the decision would change with an anonymous control (runner sends one, then re-assesses). */
   wantsAnonymousControl: boolean;
+  /** How many stable owner values (markers) the comparison could look for (0 = no owner data to compare). */
+  markerCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,11 +378,13 @@ export function assessAuthz(input: AuthzInput): AuthzResult {
     .filter(Boolean)
     .join('; ');
 
+  let markerCount = 0;
   const result = (
     verdict: AuthzVerdict,
     reason: string,
     extra: Partial<Pick<AuthzResult, 'disclosed' | 'matchedValues' | 'wantsAnonymousControl'>> = {},
   ): AuthzResult => ({
+    markerCount,
     verdict,
     reason,
     method: `${method}.`,
@@ -456,6 +460,7 @@ export function assessAuthz(input: AuthzInput): AuthzResult {
     }
   }
 
+  markerCount = markers.length;
   const matched = markers.filter((m) => present(m, t, ignore));
   const disclosed: DisclosedField[] = matched.map((m) => ({ path: m.path, sensitive: m.sensitive, masked: maskValue(m.value, m.kind) }));
   const matchedValues = matched.map((m) => m.value);
