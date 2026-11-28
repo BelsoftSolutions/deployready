@@ -1,0 +1,29 @@
+{
+  "description": "Audit (7b): unrestricted writes via with check (true and true) and using (1=1) / with check (not false)",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.orders (user_id, total_cents) values ('00000000-0000-0000-0000-00000000000b', 100);",
+    "probes": [
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "insert into public.orders (user_id, total_cents) values ('00000000-0000-0000-0000-00000000000b', 1)",
+        "open": true
+      },
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "update public.orders set total_cents = 0",
+        "open": true
+      }
+    ]
+  }
+}

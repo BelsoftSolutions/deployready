@@ -29,6 +29,54 @@ MCP: the `supabase_check` tool takes `path`, `live` and `crossUser`. It reads cr
 
 This module decodes key values. Name-based detection (the string `service_role`, secret-named public variables) is handled by the general `supabase-service-role` rule. The static pass also finds the project URL, the anon key (it must belong to the same project ref) and the tables in your SQL migrations, for use by the live checks.
 
+### Row-Level Security in your migrations (static, always on)
+
+DeployReady replays your SQL in migration order and judges only the final state. Files under a `migrations/` directory (such as `supabase/migrations/<timestamp>_*.sql` or Prisma's numbered folders) run first, in natural filename order. Every other `.sql` file runs after them. While replaying, it tracks:
+
+- tables: `CREATE` (including `UNLOGGED`, `PARTITION BY` and `PARTITION OF`; `TEMP` tables are skipped), `DROP`, `RENAME`, `SET SCHEMA`, `ALTER SCHEMA ... RENAME`, columns, schema-qualified and `"Quoted"` names, and `SET search_path`
+- RLS: `ENABLE`, `DISABLE`, `FORCE` and `NO FORCE ROW LEVEL SECURITY`
+- policies: `CREATE`, `ALTER` (including `RENAME`) and `DROP POLICY`, permissive or restrictive, the command, the roles, `USING` and `WITH CHECK`
+- privileges: Supabase's default grants on `public`, `GRANT` and `REVOKE` (including `ALL TABLES IN SCHEMA`), and `ALTER DEFAULT PRIVILEGES`
+- `DO` blocks: plain statements inside them, such as `if not exists (...) then create policy ...`, and `execute '<literal>'` are applied
+
+A policy that was dropped, a table that was renamed or moved, and RLS that was disabled and then re-enabled are all judged as they end up.
+
+| Rule | Severity | What it means |
+| --- | --- | --- |
+| `rls-not-enabled` | critical on sensitive tables, otherwise warning | An API-exposed table ends up without RLS. This covers tables that were never enabled, re-created after a `DROP`, renamed or moved into `public`, unlogged tables, partitions of a protected parent, and a same-named table in another schema or with different quoting. It only fires when the project is clearly Supabase or enables RLS somewhere else. |
+| `rls-disabled` | critical | The final word on an exposed table is `DISABLE ROW LEVEL SECURITY`. A disable that a later migration reverts is not reported. |
+| `rls-permissive-policy` | critical, warning, or not reported (see below) | A permissive policy is true for every row for `anon` or for any signed-in user, a restrictive policy does not narrow it, and the role holds the table privilege. |
+| `rls-no-policy` | info | RLS is on but no policy remains. Every request is denied. |
+
+An expression counts as true for every row when it folds to TRUE for that role. Examples: `true`, `1 = 1`, `'a' = 'a'`, `true and true`, `not false`, `x or true`, `col = col`, `'t'::boolean`. Checks such as `auth.role() = 'authenticated'`, `auth.uid() is not null`, `auth.jwt() ->> 'role' = 'authenticated'` and `current_user = 'authenticated'` are true for any signed-in user, so they verify a role, not ownership. One more case is covered: a membership subquery whose join compares a column with itself (`exists (select 1 from members m where ... and m.org_id = org_id)`, where the unqualified `org_id` resolves to `m.org_id`). Anything the scanner cannot evaluate, such as owner checks, helper functions or unparseable expressions, is treated as restrictive, so it never produces a finding.
+
+**Data sensitivity** sets the severity of an open read:
+
+- **Sensitive tables** are critical. A table is sensitive if `sensitiveTables` lists it, if its name suggests private data (invoices, payments, transactions, orders, messages, profiles, users, roles, auth, secrets, customers, documents, and so on), or if it has a per-user or per-tenant column (`user_id`, `owner_id`, `org_id`, `tenant_id`, `team_id`, `workspace_id`, and so on, plus `tenantColumns`).
+- **Unknown tables** get a warning: "review required: is public read intended?".
+- **Public tables** get no finding. A table is public if `publicTables` lists it, if it is catalog data (products, categories, tags, ...), or if it is content with a publish flag (posts or articles with `published`, `is_public`, `status`, ...).
+
+Open writes are critical on sensitive tables and a warning everywhere else.
+
+**Exposed schemas.** Only schemas served by the Data API matter for `anon` and `authenticated`. The default is `public` (and `graphql_public`). If `supabase/config.toml` sets `[api] schemas = [...]`, that list is used instead. `exposedSchemas` in the project config overrides both.
+
+**Project config.** Put a `.deployready.json` in the project root, or the same object under a `"deployready"` key in `package.json`:
+
+```json
+{
+  "publicTables": ["announcements", "public.changelog"],
+  "sensitiveTables": ["widgets"],
+  "tenantColumns": ["shop_id"],
+  "exposedSchemas": ["public", "api"]
+}
+```
+
+**Parser choice.** `pgsql-ast-parser` (MIT, pure JS) was rejected because it cannot parse `CREATE POLICY`, `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, `GRANT` or `PARTITION BY`. `libpg-query` (MIT, the real Postgres grammar compiled to WASM, about 1.8 MB, no native build) parses all of them. It is not used at runtime, for three reasons: it would add a large dependency with a single maintainer to every install; it is asynchronous; and one bad statement fails the whole file. Instead, `src/analysis/postgres/` uses a small, tolerant statement-level parser that skips what it does not understand. It was cross-checked against libpg-query on every SQL file in `benchmark/corpus/rls` plus a pg_dump-style file: all 72 policies agree on table, command, roles, permissive/restrictive and clause presence.
+
+**Ground truth.** `benchmark/corpus/rls` contains 38 labelled cases: 16 reconstruct an external audit (10 insecure, 6 secure), and 22 are variations. Every label was confirmed against PostgreSQL 16 with `benchmark/rlsPgProof.ts`. That script applies the migrations to a Supabase-like database (anon, authenticated and service_role roles, default grants, `auth.uid()` and `auth.role()`) and reads or writes another user's rows as `anon` and as a signed-in user.
+
+**Not covered yet:** storage policies, `SECURITY DEFINER` functions and `search_path` hijacking, views (and `security_invoker`), triggers, Realtime, column-level grants as a restriction, and drift between your migrations and the live database. Use `--supabase` for the live checks.
+
 ### Live (`--supabase`, ownership-gated, read-only)
 
 | Rule | Severity | How it is proven |

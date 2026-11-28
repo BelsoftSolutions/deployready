@@ -1,0 +1,34 @@
+{
+  "description": "Audit (1): anon SELECT using (true) on a private invoices table — anyone with the anon key reads every customer invoice",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240101000000_invoices.sql"
+    },
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": true
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.invoices",
+        "open": true
+      }
+    ]
+  }
+}

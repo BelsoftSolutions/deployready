@@ -1,0 +1,23 @@
+{
+  "description": "Public product catalog read is fine, but anyone may also insert products (with check (true))",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "warning"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "write",
+        "sql": "insert into public.products (name, price_cents) values ('free', 0)",
+        "open": true
+      }
+    ]
+  }
+}

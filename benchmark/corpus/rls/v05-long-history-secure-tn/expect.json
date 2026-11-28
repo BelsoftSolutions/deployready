@@ -1,0 +1,38 @@
+{
+  "description": "Eight migrations: open prototype policies, renames, a re-created table and ALTER POLICY end in an owner-scoped final state",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into public.messages values (1, '00000000-0000-0000-0000-00000000000b', 'x');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.messages",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "read",
+        "sql": "select count(*) from public.messages",
+        "open": false
+      },
+      {
+        "as": "user_a",
+        "kind": "write",
+        "sql": "insert into public.messages values (2, '00000000-0000-0000-0000-00000000000b', 'y')",
+        "open": false
+      }
+    ]
+  }
+}

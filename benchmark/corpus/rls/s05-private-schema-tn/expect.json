@@ -1,0 +1,26 @@
+{
+  "description": "Audit secure (5): a table without RLS in a schema the API does not expose; public tables are protected",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": false
+    },
+    {
+      "rule": "rls-permissive-policy",
+      "present": false
+    }
+  ],
+  "groundTruth": {
+    "insecure": false,
+    "seed": "insert into private.audit_log (actor, action) values ('00000000-0000-0000-0000-00000000000b', 'login');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from private.audit_log",
+        "open": false
+      }
+    ]
+  }
+}

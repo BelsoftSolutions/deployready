@@ -1,0 +1,29 @@
+{
+  "description": "Audit (7a): unrestricted SELECT written as an equivalent boolean: using (1 = 1) and using ('a' = 'a')",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-permissive-policy",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.messages (sender_id, body) values ('00000000-0000-0000-0000-00000000000b', 'hi'); insert into public.profiles (id, full_name) values ('00000000-0000-0000-0000-00000000000b', 'B');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.messages",
+        "open": true
+      },
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.profiles",
+        "open": true
+      }
+    ]
+  }
+}

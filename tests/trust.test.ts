@@ -179,14 +179,20 @@ describe('RLS (Supabase-aware)', () => {
     ]);
   });
 
-  it('allows a public SELECT using (true) and service_role-only true policies', () => {
+  it('allows a public SELECT using (true) on published content and service_role-only true policies', () => {
     const sql = [
-      'create table posts (id int);',
+      'create table posts (id int, published boolean);',
       'alter table posts enable row level security;',
       'create policy "read" on posts for select using (true);',
       'create policy "svc" on posts for all to service_role using (true) with check (true);',
     ].join('\n');
     expect(analyzeRls([{ relPath: 'a.sql', source: sql }])).toEqual([]);
+  });
+
+  it('asks for review (warning) when a table of unknown sensitivity is world-readable', () => {
+    const sql = ['create table posts (id int);', 'alter table posts enable row level security;', 'create policy "read" on posts for select using (true);'].join('\n');
+    const [i] = analyzeRls([{ relPath: 'a.sql', source: sql }]);
+    expect([i?.kind, i?.severity, i?.readOnly]).toEqual(['permissive', 'warning', true]);
   });
 });
 

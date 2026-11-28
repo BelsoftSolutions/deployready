@@ -1,0 +1,24 @@
+{
+  "description": "Audit (4b, vice versa): public.invoices has RLS, api.invoices does not, and supabase/config.toml exposes the api schema",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical",
+      "file": "supabase/migrations/20240201000000_api_schema.sql"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into api.invoices (user_id, amount_cents) values ('00000000-0000-0000-0000-00000000000b', 4200);",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from api.invoices",
+        "open": true
+      }
+    ]
+  }
+}

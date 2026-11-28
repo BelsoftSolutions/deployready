@@ -1,0 +1,23 @@
+{
+  "description": "A staging table without RLS is renamed into the real customers table",
+  "strict": true,
+  "expected": [
+    {
+      "rule": "rls-not-enabled",
+      "present": true,
+      "severity": "critical"
+    }
+  ],
+  "groundTruth": {
+    "insecure": true,
+    "seed": "insert into public.customers values (1, 'b@example.com', '00000000-0000-0000-0000-00000000000b');",
+    "probes": [
+      {
+        "as": "anon",
+        "kind": "read",
+        "sql": "select count(*) from public.customers",
+        "open": true
+      }
+    ]
+  }
+}
