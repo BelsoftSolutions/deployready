@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Breaking: MCP server is least-privilege by default
+- `deployready mcp` now registers only read-only, static tools: `scan`, `get_finding`, `verify` (static re-check), `score`, `supabase_check` (static).
+- `apply_safe_fixes` needs `deployready mcp --allow-fixes` (e.g. `claude mcp add deployready -- npx -y deployready@latest mcp --allow-fixes`). Calling it without the flag returns an error naming the flag.
+- Live checks need `--allow-live`: new `scan_live` and `supabase_check_live` tools; `scan(dynamic: true)` and `supabase_check(live: true)` are refused without the flag; `verify` only re-checks live findings with it.
+- Every `path` argument is confined to the server root (realpath; `..`, other absolute paths and symlink escapes are refused). Previously a tool call could scan or modify any directory.
+- Tool results carry `schemaVersion: 1` and a `dataNotice`; `get_finding` moved the file text from `file_content` to `untrusted_repository_content.file_content`, fenced by BEGIN/END markers. Tools carry `readOnlyHint` / `destructiveHint` annotations.
+
+### Breaking: external AI consent
+- `--yes` / `--json` no longer approve sending the redacted report to an external AI provider (API or claude/codex CLI). Use `--allow-external-ai` or `"allowExternalAi": true`; otherwise non-interactive runs skip AI and record it as untested coverage. `warnBeforeExternalSend: false` no longer skips the interactive prompt. Ollama needs no consent.
+
 ## 0.4.0
 
 ### Agent loop (MCP)

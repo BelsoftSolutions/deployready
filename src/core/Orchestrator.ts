@@ -19,7 +19,6 @@ import { runCommonPathProbe, MAX_PROBE_REQUESTS } from '../dynamic/commonPaths/p
 import { PROBE_PATHS } from '../dynamic/commonPaths/signatures';
 import { ModelRouter } from '../ai/ModelRouter';
 import { EXTERNAL_AI_BLOCKED, externalSendDecision } from '../ai/consent';
-import { makeNote } from '../utils/finding';
 import { verifyAiFindings, droppedNote } from '../ai/verifyAiFindings';
 import { ConfigManager } from '../config/ConfigManager';
 import { IssuePresenter } from '../ui/IssuePresenter';
@@ -624,7 +623,9 @@ export class Orchestrator {
     const decision = externalSendDecision(router.sendsExternally, config, { interactive, allowExternalAi: opts.allowExternalAi });
     if (decision === 'blocked') {
       logger.warn(EXTERNAL_AI_BLOCKED);
-      return withAiSkippedNote(report);
+      // Untested, not failed: nothing went wrong, the user simply did not opt in.
+      cov.set('ai', 'untested', 'Skipped: no consent to send the redacted report to an external AI provider in a non-interactive run (pass --allow-external-ai or set allowExternalAi: true).');
+      return report;
     }
     if (decision === 'approved') logger.info(`${router.consentNotice('report')} (pre-approved by --allow-external-ai / allowExternalAi)`);
     if (decision === 'ask') {
@@ -665,21 +666,4 @@ export class Orchestrator {
       return report; // degrade gracefully — local results still stand
     }
   }
-}
-
-/**
- * Record that AI analysis did not run for lack of consent. Non-scored note (like dynamic-skipped)
- * so JSON/CI consumers see the gap; it never changes the score or the gate.
- */
-function withAiSkippedNote(report: ScanReport): ScanReport {
-  const note = makeNote({
-    rule: 'ai-skipped-no-consent',
-    title: 'AI analysis not run: external send not approved',
-    category: 'security',
-    source: 'static', // a local could-not-check note, not model output (source 'ai' would count as an AI suggestion)
-    description: EXTERNAL_AI_BLOCKED,
-    recommendation: 'Run interactively to be asked, or pass --allow-external-ai if sending the redacted report to your AI provider is acceptable.',
-  });
-  const merged = IssueAggregator.process(report.findings, [note]);
-  return { ...report, findings: merged.findings, score: merged.score, summary: merged.summary };
 }

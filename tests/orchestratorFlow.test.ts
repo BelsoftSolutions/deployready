@@ -422,14 +422,14 @@ describe('Orchestrator: AI step gates', () => {
     ['--yes', { yes: true }],
     ['--json', { json: true }],
     ['--yes --json', { yes: true, json: true }],
-  ])('%s alone never sends to an external provider: AI is skipped with a note', async (_label, extra) => {
+  ])('%s alone never sends to an external provider: AI is recorded as untested coverage', async (_label, extra) => {
     const r = await Orchestrator.analyze(dir, { noDynamic: true, ...extra });
     expect(mockPrompt).not.toHaveBeenCalled();
     expect(mockRouter.analyze).not.toHaveBeenCalled();
     expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('--allow-external-ai'));
-    const note = r.findings.find((f) => f.rule === 'ai-skipped-no-consent');
-    expect(note).toMatchObject({ note: true, severity: 'info' });
-    expect(r.summary.notes).toBe(1);
+    const ai = r.coverage?.find((c) => c.kind === 'ai');
+    expect(ai).toMatchObject({ state: 'untested' });
+    expect(ai?.reason).toMatch(/no consent[\s\S]*--allow-external-ai/);
   });
 
   it('warnBeforeExternalSend: false is not consent in a non-interactive run', async () => {

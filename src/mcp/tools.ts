@@ -224,6 +224,7 @@ export class DeployReadyTools {
     const { entry, finding } = this.find(args.id, args.path);
     if (finding.source === 'dynamic' && !this.profile.allowLive) {
       // A live re-check sends requests; the read-only server never does.
+      entry.verified.set(finding.id, 'inconclusive');
       return { id: finding.id, status: 'inconclusive', detail: `Not re-checked: this is a live finding and re-checking it sends requests. ${LIVE_DISABLED}` };
     }
     const ctx: VerifyContext = { target: entry.target };
