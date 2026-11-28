@@ -35,7 +35,7 @@ export const DEFAULT_RELEASE_POLICY: ReleasePolicy = {
 };
 
 const SEVERITIES: Severity[] = ['critical', 'warning', 'info'];
-const AREA_NAMES = ['static', 'secrets', 'dependencies', 'engines', 'supabase-static', 'supabase-live', 'firebase', 'dynamic', 'active', 'ai'];
+const AREA_NAMES = ['static', 'secrets', 'dependencies', 'engines', 'supabase-static', 'supabase-live', 'firebase', 'firebase-emulator', 'dynamic', 'active', 'ai'];
 
 /** Normalize a config value into a full policy. Invalid entries are dropped and reported, never fatal. */
 export function parseReleasePolicy(raw: unknown): { policy: ReleasePolicy; warnings: string[] } {

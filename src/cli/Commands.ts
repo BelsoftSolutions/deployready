@@ -109,6 +109,7 @@ export function buildProgram(): Command {
     .option('--supabase-service-key <key>', 'service_role key proving ownership (prefer $SUPABASE_SERVICE_ROLE_KEY)')
     .option('--supabase-access-token <token>', 'Supabase access token proving ownership (prefer $SUPABASE_ACCESS_TOKEN)')
     .option('--supabase-cross-user', 'also test whether test user A can read user B\'s rows ($SUPABASE_TEST_USER_A_EMAIL/_PASSWORD, _B_)', false)
+    .option('--firebase-emulator', 'prove Firebase security rules with the Firebase Emulator Suite (needs your own firebase-tools + Java; localhost only; see docs/FIREBASE.md)', false)
     .option('--safety-level <level>', 'active-scan safety level: passive | read-only (default) | controlled-active | stateful')
     .option('--dry-run', 'list the active requests that would be sent, without sending any', false)
     .option('--active-url <url>', 'base URL for the active scan (default: the app found on localhost); non-loopback needs --i-own-this-target')
@@ -153,6 +154,7 @@ export function buildProgram(): Command {
           active,
           token: opts.token,
           tokenB: opts.tokenB,
+          firebaseEmulator: Boolean(opts.firebaseEmulator),
           engines: { noDeps: !opts.deps, engines: opts.engines as string | undefined, offline: opts.offline as boolean, semgrepConfig: opts.semgrepConfig as string | undefined },
           supabase: {
             live: opts.supabase,
