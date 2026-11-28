@@ -1,9 +1,9 @@
 {
   "name": "deployready",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Local-first, AI-optional production-readiness scanner for your app. Finds security, performance, and architecture issues before you deploy.",
   "license": "MIT",
-  "author": "Belal \u00b7 Belsoft Solutions",
+  "author": "Belal · Belsoft Solutions",
   "homepage": "https://deployready.dev",
   "repository": {
     "type": "git",
